@@ -1,0 +1,52 @@
+# CTY-1: the views (zones, value, whole), riding along, the help card, the idle view, the remote, the secret
+spin PRESET 9
+wait 4000
+tap GLO
+tap GLO
+spin K3 1
+wait 400
+shot scr_zones.png
+spin K3 1
+wait 400
+shot scr_value.png
+spin K3 -2
+spin K2 2
+wait 2500
+shot scr_whole.png
+spin K2 -2
+tap HOME
+tap SEL
+wait 2500
+press LFO
+wait 1200
+shot scr_help.png
+release LFO
+expect view 0
+spin K4 1
+wait 62000
+expect full 1
+shot scr_idle.png
+tap HOME
+expect full 0
+press SEL
+tap EDIT
+release SEL
+expect game 1
+wait 3000
+key w2 down
+wait 4000
+key w2 up
+shot scr_game.png
+tap HOME
+expect game 0
+press SEL
+tap GLO
+release SEL
+expect remote 1
+midi BF 75 7F
+wait 50
+expect remote 2
+press SEL
+tap GLO
+release SEL
+expect remote 0

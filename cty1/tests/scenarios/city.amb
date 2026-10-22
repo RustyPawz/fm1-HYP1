@@ -1,0 +1,67 @@
+# CTY-1: the city founds and grows, the music plays, the pages walk, the cities change and save
+wait 2000
+expect playing 1
+expect stage 0
+expect piece 0
+expect week >0
+shot city_town.png
+spin K1 3
+expect par0 5
+wait 70000
+expect stage >0
+expect cars >0
+expect peds >0
+shot city_suburb.png
+tap HOME
+expect notes >200
+expect hits >10
+spin SELECT 1
+expect view 1
+spin SELECT 10
+expect view 11
+spin SELECT -11
+expect view 0
+tap LFO
+expect view 3
+tap LFO
+expect view 4
+tap GLO
+expect view 9
+tap GLO
+expect view 10
+tap GLO
+expect view 11
+tap HOME
+tap PLAY
+expect playing 0
+tap PLAY
+expect playing 1
+tap REC
+expect hold 1
+tap REC
+expect hold 0
+spin PRESET 2
+expect piece 2
+expect stage 0
+spin K2 2
+tap SAVE
+wait 3000
+expect stage 2
+tap GLO
+tap SAVE
+expect store_writes 1
+expect dirty 0
+reboot
+wait 500
+expect piece 2
+expect par1 2
+wait 3000
+expect stage 2
+shot city_startas.png
+tap EDIT
+wait 3000
+expect stage 2
+press SAVE
+wait 1700
+release SAVE
+expect par1 0

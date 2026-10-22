@@ -1,0 +1,47 @@
+# CTY-1: every incident called from the black keys, the weather and the hour, the camera follows
+spin PRESET 4
+wait 6000
+expect stage >1
+tap FX
+tapkey b0
+wait 1500
+shot ev_bolt.png
+tapkey b1
+wait 600
+expect quake 1
+shot ev_quake.png
+wait 9000
+tapkey b2
+wait 200
+expect robbery 1
+wait 2500
+shot ev_robbery.png
+tapkey b3
+wait 200
+expect crash 1
+wait 2500
+shot ev_crash.png
+tapkey b4
+wait 200
+expect ufo 1
+wait 5000
+shot ev_ufo.png
+tapkey b5
+tap LFO
+tapkey b3
+wait 500
+expect hour >21
+tapkey b1
+wait 500
+expect hour 12
+tap LFO
+tapkey b4
+wait 8000
+expect weather 3
+shot ev_storm.png
+tapkey b6
+wait 8000
+expect weather 5
+shot ev_snow.png
+expect notes >100
+expect peak_db_max -0.5

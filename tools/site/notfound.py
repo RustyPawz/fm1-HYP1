@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 PRODUCTS = [("", "hyp1", "HYP-1", "hyp/"), ("lof/", "lof1", "LOF-1", "lof/"), ("eco/", "eco1", "ECO-1", "eco/"),
-            ("grav/", "grav1", "GRAV-1", "grav/")]
+            ("grav/", "grav1", "GRAV-1", "grav/"), ("cty/", "cty1", "CTY-1", "cty/")]
 
 PAGE = """<!doctype html>
 <html lang="en">
@@ -63,7 +63,7 @@ li a:hover { border-color: var(--orange); }
   Object.keys(LATEST).forEach(function (k) { add(ROOT + LATEST[k][2], LATEST[k][1]); });
   add(ROOT + "open1/", "OPEN-1, the next idea");
   /* an old download: <folder>firmware/<anything>.fwsc -> that firmware's current file */
-  var m = rel.match(/^((?:lof|eco|grav)\\/)?firmware\\/[^\\/]+\\.fwsc$/i);
+  var m = rel.match(/^((?:lof|eco|grav|cty)\\/)?firmware\\/[^\\/]+\\.fwsc$/i);
   if (m) {
     var f = LATEST[m[1] || ""];
     if (f) {

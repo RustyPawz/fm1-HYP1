@@ -1,0 +1,656 @@
+# CTY-1's renders: the simulator's screens and lights (tools/site/mockups.py runs this). 'echo @name' then
+# 'leds' names the lights that go with a shot. (Written by hand from a short generator; the clock's ticks repeat.)
+splash 3200
+reboot
+wait 900
+shot splash.png
+wait 1500
+shot splash_cty.png
+wait 1200
+# Stonedale (a city already), a while in
+spin PRESET 4
+wait 14000
+tap HOME
+wait 400
+shot city.png
+echo @city
+leds
+tap ENV
+wait 400
+shot music.png
+echo @music
+leds
+tap ARP
+wait 400
+shot sound.png
+echo @sound
+leds
+tap LFO
+wait 400
+shot time.png
+echo @time
+leds
+tap LFO
+wait 400
+shot weather.png
+echo @weather
+leds
+tap SEQ
+wait 400
+shot voices.png
+echo @voices
+leds
+tap SEQ
+wait 400
+shot voices2.png
+echo @voices2
+leds
+tap FX
+wait 400
+shot events.png
+echo @events
+leds
+tap FX
+wait 400
+shot events2.png
+echo @events2
+leds
+tap GLO
+wait 400
+shot setup.png
+echo @setup
+leds
+tap GLO
+wait 400
+shot display.png
+echo @display
+leds
+tap GLO
+wait 400
+shot midiout.png
+echo @midiout
+leds
+press LFO
+wait 1200
+shot help.png
+echo @help
+leds
+release LFO
+wait 300
+tap FX
+tapkey b0
+wait 1700
+shot bolt.png
+echo @bolt
+leds
+wait 6000
+tapkey b1
+wait 900
+shot quake.png
+echo @quake
+leds
+wait 9000
+tapkey b2
+wait 3000
+shot robbery.png
+echo @robbery
+leds
+wait 9000
+tapkey b3
+wait 3000
+shot crash.png
+echo @crash
+leds
+wait 12000
+tapkey b4
+wait 4500
+shot ufo.png
+echo @ufo
+leds
+wait 12000
+tap LFO
+tapkey b3
+wait 3000
+shot night.png
+echo @night
+leds
+tapkey b1
+tap LFO
+tapkey b4
+wait 8000
+shot storm.png
+echo @storm
+leds
+tapkey b6
+wait 8000
+shot snow.png
+echo @snow
+leds
+tapkey b1
+wait 7000
+tap GLO
+tap GLO
+spin K3 1
+wait 400
+shot zones.png
+echo @zones
+leds
+spin K3 1
+wait 400
+shot value.png
+spin K3 -2
+spin K2 2
+wait 2500
+shot whole.png
+echo @whole
+leds
+spin K2 -2
+tap HOME
+wait 500
+shot t_asphalt.png
+tap GLO
+tap GLO
+spin K1 1
+tap HOME
+wait 500
+shot t_neon.png
+tap GLO
+tap GLO
+spin K1 1
+tap HOME
+wait 500
+shot t_blueprint.png
+tap GLO
+tap GLO
+spin K1 1
+tap HOME
+wait 500
+shot t_sunset.png
+tap GLO
+tap GLO
+spin K1 1
+tap HOME
+wait 500
+shot t_terminal.png
+tap GLO
+tap GLO
+spin K1 1
+tap HOME
+wait 500
+shot t_mono.png
+tap GLO
+tap GLO
+spin K1 -5
+wait 300
+tap HOME
+tap SEL
+wait 3000
+shot ride.png
+echo @ride
+leds
+spin PRESET -4
+wait 9000
+shot c_brighton.png
+echo @c_brighton
+leds
+spin PRESET 1
+wait 9000
+shot c_cedarport.png
+echo @c_cedarport
+leds
+spin PRESET 1
+wait 9000
+shot c_faircrest.png
+echo @c_faircrest
+leds
+spin PRESET 1
+wait 9000
+shot c_westhaven.png
+echo @c_westhaven
+leds
+spin PRESET 1
+wait 9000
+shot c_stonedale.png
+echo @c_stonedale
+leds
+spin PRESET 1
+wait 9000
+shot c_stonegate.png
+echo @c_stonegate
+leds
+spin PRESET 1
+wait 9000
+shot c_ashcrest.png
+echo @c_ashcrest
+leds
+spin PRESET 1
+wait 9000
+shot c_lakecrest.png
+echo @c_lakecrest
+leds
+spin PRESET 1
+wait 9000
+shot c_belhaven.png
+echo @c_belhaven
+leds
+spin PRESET 1
+wait 9000
+shot c_sunview.png
+echo @c_sunview
+leds
+spin PRESET -9
+wait 3000
+press SEL
+tap EDIT
+release SEL
+wait 2500
+key w2 down
+wait 3500
+key w2 up
+wait 500
+shot game.png
+echo @game
+leds
+tap HOME
+wait 500
+tap GLO
+midi FA 0 0
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+shot synced_setup.png
+echo @synced
+leds
+tap HOME
+midi F8 0 0
+wait 20
+shot synced.png
+midi FC 0 0
+wait 300
+tap PLAY
+# the idle view: a minute untouched
+wait 62000
+shot full.png
+echo @full
+leds

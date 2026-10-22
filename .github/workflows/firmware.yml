@@ -2,9 +2,9 @@
 # HYP-1 on GitHub: every push to the default branch builds the firmware with JieLi's toolchain (Linux
 # x86-64, as GitHub's runners are), runs the tests, and publishes the site to this repository's GitHub
 # Pages: the web installer with this build in it, the browser emulator, and the .fwsc to download.
-# LOF-1 (lof1/), ECO-1 (eco1/) and GRAV-1 (grav1/), experimental, versions 0.x, are built alongside, their
-# pages under lof/, eco/ and grav/, and a dropdown on every page switches between them. The root is a front
-# page for all four (tools/site/hub.py); HYP-1's own landing is under hyp/.
+# LOF-1 (lof1/), ECO-1 (eco1/), GRAV-1 (grav1/) and CTY-1 (cty1/), experimental, versions 0.x, are built alongside, their
+# pages under lof/, eco/, grav/ and cty/, and a dropdown on every page switches between them. The root is a front
+# page for them all (tools/site/hub.py); HYP-1's own landing is under hyp/.
 #
 # Once, in the repository's Settings > Pages: Source = "GitHub Actions". Then the installer is at
 #   https://<you>.github.io/<repo>/install/
@@ -73,6 +73,7 @@ jobs:
           echo "LV=0.$((N / 100 % 100)).$((N % 100))" >> "$GITHUB_ENV"     # LOF-1: 0.x while it's experimental
           echo "EV=0.$((N / 100 % 100)).$((N % 100))" >> "$GITHUB_ENV"     # ECO-1: likewise
           echo "GV=0.$((N / 100 % 100)).$((N % 100))" >> "$GITHUB_ENV"     # GRAV-1: likewise
+          echo "CV=0.$((N / 100 % 100)).$((N % 100))" >> "$GITHUB_ENV"     # CTY-1: likewise
       - name: Build the firmware
         run: |
           set -o pipefail
@@ -172,7 +173,30 @@ jobs:
           python3 tools/gen_manual_figures.py
           EN_VERSION="$GV" sh web/emu/build_clang.sh
           REPO_URL="https://github.com/$GITHUB_REPOSITORY/tree/main/grav1" python3 tools/make_pages.py "build/amb-$GV.fwsc" "$GV" ../build/pages/grav
-      - name: The front page, all four firmwares (HYP-1's landing moves to hyp/)
+      # CTY-1, experimental, in cty1/: the same, its pages under cty/
+      - name: CTY-1 (experimental) — build
+        id: cty
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          cd cty1
+          sh build.sh --release "$CV" 2>&1 | tee build.log || {
+            echo "::warning title=CTY-1 build failed::$(tail -60 build.log | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
+            exit 1
+          }
+          grep -E "^\s+ok\s" build.log | sed 's/^\s*ok\s*/::notice title=CTY-1 check::/' || true
+          sh tests/run_tests.sh 2>&1 | tee tests.log || {
+            echo "::warning title=CTY-1 tests failed::$(grep -A12 FAIL tests.log | head -60 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
+            exit 1
+          }
+          mkdir -p build/site_shots
+          build/host/amb_host tools/site/shots.amb build/site_shots > build/site_shots/log.txt
+          python3 tools/site/mockups.py
+          python3 tools/site/panda.py
+          python3 tools/gen_manual_figures.py
+          EN_VERSION="$CV" sh web/emu/build_clang.sh
+          REPO_URL="https://github.com/$GITHUB_REPOSITORY/tree/main/cty1" python3 tools/make_pages.py "build/amb-$CV.fwsc" "$CV" ../build/pages/cty
+      - name: The front page, all the firmwares (HYP-1's landing moves to hyp/)
         run: REPO_URL="https://github.com/$GITHUB_REPOSITORY" python3 tools/site/hub.py build/pages
       - name: OPEN-1's page (open1/ in the repository; open1/README.md says how to post an update)
         run: python3 tools/site/open1.py build/pages
@@ -199,6 +223,11 @@ jobs:
         with:
           name: grav1-firmware-${{ env.GV }}
           path: grav1/build/amb-${{ env.GV }}.fwsc
+      - uses: actions/upload-artifact@v4
+        if: steps.cty.outcome == 'success'
+        with:
+          name: cty1-firmware-${{ env.CV }}
+          path: cty1/build/amb-${{ env.CV }}.fwsc
       - uses: actions/upload-pages-artifact@v3
         with:
           path: build/pages

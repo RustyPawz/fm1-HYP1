@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
 """The firmware dropdown on every page of the site (the workflow runs this last, over build/pages):
-HYP-1's pages at the root, LOF-1's under lof/, ECO-1's under eco/, GRAV-1's under grav/. Choosing another firmware goes to its
+HYP-1's pages at the root, LOF-1's under lof/, ECO-1's under eco/, GRAV-1's under grav/, CTY-1's under cty/. Choosing another firmware goes to its
 matching page (landing, emulator, installer, manual; HYP-1's board has no twin, so the landing), in its own
 colours, text and images. A firmware that didn't build this time isn't offered. The bar is the same neutral strip on both, so it reads as the site's own.
 The front page (tools/site/hub.py, at the root, HYP-1's landing under hyp/) has its own picker, so it gets no bar;
@@ -12,8 +12,9 @@ import sys
 from pathlib import Path
 
 PRODUCTS = [("hyp", "HYP-1", "hypnotic techno and acid", ""), ("lof", "LOF-1", "a lofi groovebox", "lof/"),
-            ("eco", "ECO-1", "a plant plays it", "eco/"), ("grav", "GRAV-1", "a star and its planets", "grav/")]
-EXPERIMENTAL = {"lof", "eco", "grav"}
+            ("eco", "ECO-1", "a plant plays it", "eco/"), ("grav", "GRAV-1", "a star and its planets", "grav/"),
+            ("cty", "CTY-1", "a city grows and plays", "cty/")]
+EXPERIMENTAL = {"lof", "eco", "grav", "cty"}
 SECTIONS = ("emu", "install", "manual", "board")
 
 BAR = """<style>

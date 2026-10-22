@@ -1,0 +1,393 @@
+# CTY-1: MIDI clock in (24 a beat at 120) drives the sixteenths; MIDI out sends notes
+wait 1000
+midi FA 00 00
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 21
+midi F8 00 00
+wait 20
+expect ext 1
+expect notes >5
+expect midi_out >5
+midi FC 00 00
+wait 50
+expect playing 0

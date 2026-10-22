@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-"""Stream view, for livestreams, put into every emulator of the pack (web/emu, lof1, eco1, grav1):
+"""Stream view, for livestreams, put into every emulator of the pack (web/emu, lof1, eco1, grav1, cty1):
 
   the page's emulator on a 16:9 stage (1920 x 1080, scaled to the window): the FM-1 on the left, its screen
   large and sharp on the right, the firmware's name above. Behind it all, a background of each firmware's own,
@@ -10,6 +10,8 @@
     ECO-1   the emulator's sky, its time of day; after a minute untouched, pixel grass fades in, waving in its wind,
             and at night fireflies
     GRAV-1  the star's colour glowing from the centre, vignetting to black; pixel stars drift across
+    CTY-1   the sky over the city, its hour and its weather; a pixel skyline along the bottom, taller as the city
+            grows, its windows lit at night; a siren's colours pulse on it, and the lightning flashes
   Subtle, and still (no drift, no scrolling) for those who ask their system for reduced motion. Whatever is pressed glows, whether clicked here
   or played on the real FM-1 through its remote (SEL + GLO); a knob turning gets a ring; a strip under the
   screen names the last few moves. 'FM-1 LINKED' shows while the remote is on.
@@ -22,7 +24,7 @@ from pathlib import Path
 
 SRC = Path(__file__).resolve().parents[2]
 PAGES = [SRC / "web/emu/index.html", SRC / "lof1/web/emu/index.html", SRC / "eco1/web/emu/index.html",
-         SRC / "grav1/web/emu/index.html"]
+         SRC / "grav1/web/emu/index.html", SRC / "cty1/web/emu/index.html"]
 A, B = "/* stream view: begin */", "/* stream view: end */"          # the old single marker (cleared)
 CA, CB = "/* stream view css: begin */", "/* stream view css: end */"
 JA, JB = "/* stream view js: begin */", "/* stream view js: end */"
@@ -77,7 +79,8 @@ body.stream .ctl.knob.sv-turn > circle:first-child { stroke: #ff9a3c; stroke-wid
 JS = JA + r"""
 (function streamView() {
   const PACK = { "HYP-1": ["#b06cff", "hypnotic techno + acid"], "LOF-1": ["#e8873a", "a lofi groovebox: you play, the band follows"],
-                 "ECO-1": ["#76c35e", "a plant plays the FM-1"], "GRAV-1": ["#f2b84b", "a star and its planets play the FM-1"] };
+                 "ECO-1": ["#76c35e", "a plant plays the FM-1"], "GRAV-1": ["#f2b84b", "a star and its planets play the FM-1"],
+                 "CTY-1": ["#e8b931", "a city grows and plays the FM-1"] };
   const NOTE = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
   const name = (document.querySelector("h1").textContent.match(/[A-Z]+-1/) || ["FM-1"])[0];
   const [acc, tag] = PACK[name] || ["#e8873a", ""];
@@ -315,6 +318,39 @@ JS = JA + r"""
     }
   }
 
+  // CTY-1: the sky over the city; a pixel skyline, taller as it grows, lit at night; sirens; lightning
+  const TOWERS = (() => { const a = []; let x = 0, r = 7; const rnd = () => ((r = (r * 1103515245 + 12345) >>> 0) >>> 8) / 16777216;
+    while (x < 320) { const w = 6 + (rnd() * 12 | 0); a.push({ x, w, h: rnd(), k: rnd() }); x += w + (rnd() * 3 | 0); } return a; })();
+  let cityH = 0;
+  function paintCty(look, s, dt) {
+    const sky = look ? rgb255(look, 0) : [110, 170, 230], day = look ? look[3] : 1, flash = look ? look[4] : 0;
+    const siren = look ? look[5] : 0, stage = look ? look[7] : 0;
+    const g = gctx.createLinearGradient(0, 0, 0, 108);
+    g.addColorStop(0, `rgba(${sky.join(",")},0.40)`);
+    g.addColorStop(1, `rgba(${mixc(sky, [255, 200, 140], 0.25 * (1 - Math.abs(day - 0.5) * 2)).join(",")},0.30)`);
+    gctx.fillStyle = g;
+    gctx.fillRect(0, 0, 192, 108);
+    cityH += ((0.25 + stage * 0.25) - cityH) * Math.min(dt * 0.5, 1);
+    const night = Math.min(Math.max((0.5 - day) / 0.35, 0), 1), base = mixc([40, 44, 56], [14, 16, 26], night);
+    for (const t of TOWERS) {                     // the skyline: the tall ones only as the city gets big
+      const h = Math.round(8 + t.h * t.h * 70 * cityH + loud * 3);
+      pctx.fillStyle = `rgba(${base.join(",")},0.85)`;
+      pctx.fillRect(t.x, 180 - h, t.w, h);
+      if (night > 0.05)
+        for (let y = 180 - h + 3; y < 177; y += 4)
+          for (let x = t.x + 2; x < t.x + t.w - 2; x += 3) {
+            const lit = Math.sin(x * 12.9898 + y * 78.233 + Math.floor(s / 20) * 3.1) * 43758.5;
+            if (lit - Math.floor(lit) < 0.35 + 0.2 * t.k) { pctx.fillStyle = `rgba(255,205,105,${0.75 * night})`; pctx.fillRect(x, y, 1, 1); }
+          }
+    }
+    gctx.globalCompositeOperation = "lighter";
+    if (siren) {                                  // red and blue (police), red and white (fire, ambulance)
+      const ph = Math.sin(s * 9) > 0, c = siren === 2 ? (ph ? [255, 60, 50] : [80, 160, 255]) : (ph ? [255, 60, 50] : [255, 240, 230]);
+      glow(ph ? 40 : 152, 100, 40, c, 0.18);
+    }
+    if (flash > 0) { gctx.fillStyle = `rgba(235,240,255,${0.35 * flash})`; gctx.fillRect(0, 0, 192, 108); }
+  }
+
   function drawBg(t) {
     if (t - lastBg < 33) return;                  // 30 a second
     const dt = Math.min((t - lastBg) / 1000, 0.1), s = t / 1000;
@@ -328,6 +364,7 @@ JS = JA + r"""
     if (name === "HYP-1") paintHyp(look);
     else if (name === "ECO-1") paintEco(look, s, dt, t);
     else if (name === "GRAV-1") paintGrav(look, s, dt);
+    else if (name === "CTY-1") paintCty(look, s, dt);
     else paintLof(s);
     gctx.globalCompositeOperation = "source-over";
   }
