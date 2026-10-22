@@ -57,6 +57,16 @@ static const uint8_t GREENS[4][10] = {{2, 3, 2, 2, 0, 0, 0, 0, 0, 0},
                                       {3, 3, 1, 0, 3, 1, 1, 0, 0, 1}};
 static const char *const NAME_A[24] = {"Ash", "Bel", "Cedar", "Clear", "Fair", "Glen", "Iron", "Lake", "Maple", "Mill", "North", "Oak",
                                        "Pine", "Red", "River", "Silver", "Stone", "Sun", "West", "Wil", "Elm", "Harbor", "Copper", "Bright"};
+const char *const BIOME_NAME[NBIOME] = {"Forest", "Desert", "Alpine", "Volcano isles", "Plains", "Beach", "River lands"};
+const char *const BIOME_SHORT[NBIOME] = {"FOREST", "DESERT", "ALPINE", "ISLES", "PLAINS", "BEACH", "RIVER"};
+static const char *const NAME_BIO[NBIOME][8] = {
+    {"Pine", "Oak", "Fern", "Elm", "Moss", "Cedar", "Birch", "Maple"},
+    {"Mesa", "Dune", "Sun", "Sage", "Red", "Copper", "Dust", "Amber"},
+    {"Snow", "Peak", "Frost", "Alder", "Stone", "High", "Crag", "Cold"},
+    {"Ember", "Coral", "Ash", "Palm", "Lava", "Reef", "Cinder", "Blue"},
+    {"Wheat", "Fair", "Clear", "Hay", "Bright", "Wide", "Gold", "Meadow"},
+    {"Sand", "Shell", "Gull", "Harbor", "Bay", "Surf", "Sea", "Salt"},
+    {"River", "Willow", "Reed", "Mill", "Ferry", "Brook", "Otter", "Heron"}};
 static const char *const NAME_B[14] = {"ford", "port", "ton", "field", "brook", "ridge", "view", "ville", "dale", "haven", "wood",
                                        "gate", "crest", "bury"};
 /* firsts (C.firsts) */
@@ -127,9 +137,12 @@ static float atan2_t(float y, float x)           /* radians, -pi..pi (a few thou
     return y < 0.0f ? -r : r;
 }
 
-void city_name(uint32_t seed, char *out)
+int city_biome_of(uint32_t seed) { return (int)mulhi32(city_hash(seed, 7, 9), NBIOME); }
+void city_name(uint32_t seed, int biome, char *out)
 {
-    const char *a = NAME_A[(city_hash(seed, 1, 2) * 24ull) >> 32], *b = NAME_B[(city_hash(seed, 3, 4) * 14ull) >> 32];
+    const char *a = (unsigned)biome < NBIOME && city_hash(seed, 5, 6) < 0xA0000000u ? NAME_BIO[biome][mulhi32(city_hash(seed, 1, 2), 8)]
+                                                                                    : NAME_A[mulhi32(city_hash(seed, 1, 2), 24)];
+    const char *b = NAME_B[mulhi32(city_hash(seed, 3, 4), 14)];
     int n = 0, k = 0;
     while (a[n] && n < 10) {
         out[n] = a[n];
@@ -210,50 +223,135 @@ static int st_alloc(void)
 }
 
 /* ------------------------------------------------------------ terrain --- */
+/* each biome's land: how likely a coast and a river, how wide the river, how much woodland and how many lone
+ * trees (cacti in the desert, palms on the isles and the beach, pines up high), and what is rock */
+typedef struct { float coast, river; uint8_t river_w; float wood, trees; } land_t;
+static const land_t LAND[NBIOME] = {
+    {0.25f, 0.85f, 2, 0.47f, 0.09f},     /* forest */
+    {0.12f, 0.45f, 2, 9.0f, 0.025f},     /* desert: no woods; mesas */
+    {0.0f, 0.8f, 2, 0.6f, 0.06f},        /* alpine: mountains round a valley */
+    {1.0f, 0.0f, 0, 0.6f, 0.07f},        /* volcano isles: all sea but the islands */
+    {0.12f, 0.6f, 2, 0.7f, 0.022f},      /* plains */
+    {1.0f, 0.3f, 2, 0.64f, 0.04f},       /* beach */
+    {0.2f, 1.0f, 3, 0.53f, 0.08f},       /* river lands: a wide river, a tributary, ponds */
+};
+static void river(uint32_t seed, int vertical, float base, int w0)
+{
+    int len = vertical ? MH : MW, span = vertical ? MW : MH, a, w, x, y;
+    float amp = 3.0f + rnd() * 6.0f, f = 0.06f + rnd() * 0.06f, ph = rnd() * 6.28f;
+    for (a = 0; a < len; a++) {
+        float cf = base + fm_sinf((float)a * f + ph) * amp + (fbm(seed + 500u, (float)a / 9.0f, 0.5f, 2) - 0.5f) * 10.0f;
+        int c = (int)fm_floorf(cf + 0.5f);
+        for (w = 0; w < w0; w++) {
+            int b = c + w;
+            if (b < 0 || b >= span)
+                continue;
+            x = vertical ? b : a;
+            y = vertical ? a : b;
+            c_terr[y * MW + x] = (uint8_t)((c_terr[y * MW + x] & F_OCEAN) | T_WATER);
+        }
+    }
+}
 static void gen_terrain(void)
 {
     const uint32_t seed = C.seed;
+    const land_t *L = &LAND[C.biome];
     int x, y;
     for (y = 0; y < MH; y++)
         for (x = 0; x < MW; x++)
             c_hgt[y * MW + x] = (uint8_t)fm_clampf(fbm(seed, (float)x / 20.0f, (float)y / 20.0f, 4) * 255.0f, 0.0f, 255.0f);
-    C.has_coast = rnd() < 0.6f;
-    C.coast_side = (uint8_t)irnd(4);
-    if (C.has_coast)
+    if (C.biome == B_VOLCANO) {                  /* the isles: a big one round the middle, a few small ones */
+        float ox = (rnd() - 0.5f) * 10.0f, oy = (rnd() - 0.5f) * 8.0f;
+        C.has_coast = 1;
+        C.coast_side = 0;
         for (y = 0; y < MH; y++)
             for (x = 0; x < MW; x++) {
-                int d = C.coast_side == 0 ? x : C.coast_side == 1 ? MW - 1 - x : C.coast_side == 2 ? y : MH - 1 - y;
-                float thr = 6.0f + (fbm(seed + 77u, (float)x / 13.0f, (float)y / 13.0f, 3) - 0.5f) * 16.0f;
-                if ((float)d < thr)
+                float dx = ((float)x - MW / 2.0f - ox) / 40.0f, dy = ((float)y - MH / 2.0f - oy) / 32.0f;
+                float v = 0.95f - hyp(dx, dy) * 0.95f + (fbm(seed + 77u, (float)x / 11.0f, (float)y / 11.0f, 3) - 0.5f) * 0.7f;
+                if (v < 0.3f && fbm(seed + 88u, (float)x / 7.0f, (float)y / 7.0f, 2) < 0.68f)
                     c_terr[y * MW + x] = T_WATER | F_OCEAN;
             }
-    C.has_river = rnd() < 0.85f;
+    } else {
+        C.has_coast = rnd() < L->coast;
+        C.coast_side = (uint8_t)irnd(4);
+        if (C.has_coast)
+            for (y = 0; y < MH; y++)
+                for (x = 0; x < MW; x++) {
+                    int d = C.coast_side == 0 ? x : C.coast_side == 1 ? MW - 1 - x : C.coast_side == 2 ? y : MH - 1 - y;
+                    float thr = (C.biome == B_BEACH ? 11.0f : 6.0f) + (fbm(seed + 77u, (float)x / 13.0f, (float)y / 13.0f, 3) - 0.5f) * 16.0f;
+                    if ((float)d < thr)
+                        c_terr[y * MW + x] = T_WATER | F_OCEAN;
+                }
+    }
+    C.has_river = rnd() < L->river;
     if (C.has_river) {
-        int vertical = C.has_coast ? C.coast_side >= 2 : rnd() < 0.5f, len = vertical ? MH : MW, span = vertical ? MW : MH, a, w;
-        float base = (float)span * (0.3f + rnd() * 0.4f), amp = 3.0f + rnd() * 6.0f, f = 0.06f + rnd() * 0.06f, ph = rnd() * 6.28f;
-        for (a = 0; a < len; a++) {
-            float cf = base + fm_sinf((float)a * f + ph) * amp + (fbm(seed + 500u, (float)a / 9.0f, 0.5f, 2) - 0.5f) * 10.0f;
-            int c = (int)fm_floorf(cf + 0.5f);
-            for (w = 0; w < 2; w++) {
-                int b = c + w;
-                if (b < 0 || b >= span)
-                    continue;
-                x = vertical ? b : a;
-                y = vertical ? a : b;
-                c_terr[y * MW + x] = (uint8_t)((c_terr[y * MW + x] & F_OCEAN) | T_WATER);
+        int vertical = C.has_coast ? C.coast_side >= 2 : rnd() < 0.5f;
+        float base = (float)(vertical ? MW : MH) * (0.3f + rnd() * 0.4f);
+        river(seed, vertical, base, L->river_w);
+        if (C.biome == B_RIVER) {                /* a tributary the other way, and ponds */
+            river(seed + 31u, !vertical, (float)(vertical ? MH : MW) * (0.25f + rnd() * 0.5f), 2);
+            for (y = 2; y < MH - 2; y++)
+                for (x = 2; x < MW - 2; x++)
+                    if (fbm(seed + 60u, (float)x / 6.0f, (float)y / 6.0f, 2) > 0.73f)
+                        c_terr[y * MW + x] = (uint8_t)((c_terr[y * MW + x] & F_OCEAN) | T_WATER);
+        }
+    }
+    for (y = 0; y < MH; y++)                     /* rock: mesas, mountains */
+        for (x = 0; x < MW; x++) {
+            int i = y * MW + x;
+            if (TERR(i) == T_WATER)
+                continue;
+            if (C.biome == B_DESERT && fbm(seed + 40u, (float)x / 8.0f, (float)y / 8.0f, 3) > 0.69f)
+                c_terr[i] = T_ROCK;
+            if (C.biome == B_ALPINE) {           /* higher toward the edges: a valley in the middle */
+                float e = fm_maxf(fm_fabsf((float)x - MW / 2.0f) / (MW / 2.0f), fm_fabsf((float)y - MH / 2.0f) / (MH / 2.0f));
+                float h = (float)c_hgt[i] / 255.0f * 0.78f + e * e * 1.1f;
+                c_hgt[i] = (uint8_t)fm_clampf(h * 255.0f, 0.0f, 255.0f);
+                if (h > 0.6f)
+                    c_terr[i] = T_ROCK;
             }
+        }
+    if (C.biome == B_VOLCANO) {                  /* the volcano: a cone on the big island, off the middle */
+        int best = -1, tries;
+        for (tries = 0; tries < 60 && best < 0; tries++) {
+            float a = rnd() * 6.2832f, r = 15.0f + rnd() * 9.0f;
+            int vx = MW / 2 + (int)(fm_cosf(a) * r), vy = MH / 2 + (int)(fm_sinf(a) * r * 0.8f), dx, dy, ok = 1;
+            for (dy = -5; dy <= 5 && ok; dy++)
+                for (dx = -5; dx <= 5; dx++)
+                    if (!in_map(vx + dx, vy + dy) || TERR((vy + dy) * MW + vx + dx) == T_WATER) {
+                        ok = 0;
+                        break;
+                    }
+            if (ok)
+                best = vy * MW + vx;
+        }
+        if (best >= 0) {
+            int dx, dy;
+            C.vx = (uint8_t)(best % MW);
+            C.vy = (uint8_t)(best / MW);
+            for (dy = -5; dy <= 5; dy++)
+                for (dx = -5; dx <= 5; dx++) {
+                    float d = hyp((float)dx, (float)dy) + (city_hashf(seed + 3u, dx, dy) - 0.5f) * 1.2f;
+                    int i = (C.vy + dy) * MW + C.vx + dx;
+                    if (d < 4.6f) {
+                        c_terr[i] = T_ROCK;
+                        c_hgt[i] = (uint8_t)fm_clampf(255.0f - d * 22.0f, 0.0f, 255.0f);
+                    }
+                }
         }
     }
     for (y = 0; y < MH; y++)                     /* woods, groves and scattered trees */
         for (x = 0; x < MW; x++) {
             int i = y * MW + x;
             float wood;
-            if (TERR(i) == T_WATER)
+            if (BLOCKED(i))
                 continue;
             wood = fbm(seed + 300u, (float)x / 9.0f, (float)y / 9.0f, 3);
-            if (wood > 0.57f)
+            if (C.biome == B_ALPINE && c_hgt[i] > 150)   /* the treeline */
+                wood += 0.12f;
+            if (wood > L->wood)
                 c_terr[i] = T_FOREST;
-            else if (city_hashf(seed + 11u, x, y) < 0.05f + fm_maxf(0.0f, wood - 0.42f) * 1.1f)
+            else if (city_hashf(seed + 11u, x, y) < L->trees + fm_maxf(0.0f, wood - 0.42f) * (C.biome == B_DESERT ? 0.1f : 1.1f))
                 c_terr[i] |= F_TREE;
         }
     for (y = 0; y < MH; y++)
@@ -270,8 +368,9 @@ static void gen_terrain(void)
                     c_terr[j] |= F_NWATER;
                     if (c_terr[i] & F_OCEAN)
                         c_terr[j] |= F_NOCEAN;
-                    if ((dx < 0 ? -dx : dx) + (dy < 0 ? -dy : dy) == 1 && TERR(j) != T_WATER && city_hashf(seed + 21u, xx, yy) < 0.35f)
-                        c_terr[j] |= F_TREE;
+                    if ((dx < 0 ? -dx : dx) + (dy < 0 ? -dy : dy) == 1 && !BLOCKED(j) && TERR(j) != T_FOREST &&
+                        city_hashf(seed + 21u, xx, yy) < (C.biome == B_DESERT ? 0.5f : 0.35f))
+                        c_terr[j] |= F_TREE;     /* by the water: willows, reeds, the desert's palms */
                 }
         }
 }
@@ -284,11 +383,11 @@ static void pick_center(void)
         for (x = 14; x < MW - 14; x++) {
             int i = y * MW + x, dx, dy, clear = 1, near = 0;
             float s;
-            if (TERR(i) == T_WATER)
+            if (BLOCKED(i))
                 continue;
             for (dy = -3; dy <= 3 && clear; dy++)
                 for (dx = -3; dx <= 3; dx++)
-                    if (TERR((y + dy) * MW + x + dx) == T_WATER) {
+                    if (BLOCKED((y + dy) * MW + x + dx)) {
                         clear = 0;
                         break;
                     }
@@ -303,6 +402,16 @@ static void pick_center(void)
                     }
             if (near)
                 s += 4.0f;
+            if (C.biome == B_BEACH || C.biome == B_VOLCANO) {   /* the beach town on its beach */
+                int sea = 0;
+                for (dy = -10; dy <= 10 && !sea; dy += 2)
+                    for (dx = -10; dx <= 10; dx += 2)
+                        if (in_map(x + dx, y + dy) && (c_terr[(y + dy) * MW + x + dx] & F_OCEAN)) {
+                            sea = 1;
+                            break;
+                        }
+                s += sea ? (C.biome == B_BEACH ? 22.0f : 8.0f) : 0.0f;
+            }
             if (TERR(i) == T_FOREST)
                 s -= 3.0f;
             if (s > bs) {
@@ -511,7 +620,7 @@ static void gen_plan(void)
                     x = xs[a];
                     y = ys[b];
                     for (d = 0; d < 4; d++)
-                        if (!pok(x + (d & 1), y + (d >> 1)) || TERR((y + (d >> 1)) * MW + x + (d & 1)) == T_WATER)
+                        if (!pok(x + (d & 1), y + (d >> 1)) || BLOCKED((y + (d >> 1)) * MW + x + (d & 1)))
                             good = 0;
                     if (good && C.nrounds < 64) {
                         c_round[C.nrounds++] = (uint16_t)(y * MW + x);
@@ -562,7 +671,7 @@ static void scan(void)
                     c_bl[bt][C.nbl[bt]++] = (uint16_t)i;
                 continue;
             }
-            if (c_road[i] || TERR(i) == T_WATER || !(c_terr[i] & F_NROAD) || RUBBLE(i) || is_line(i))
+            if (c_road[i] || BLOCKED(i) || !(c_terr[i] & F_NROAD) || RUBBLE(i) || is_line(i))
                 continue;
             c_empty[C.nempty++] = (uint16_t)i;
             c_terr[i] |= F_EMPTY;
@@ -684,7 +793,7 @@ static int extend_roads(int n)
                 static const int8_t D[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
                 uint16_t path[16];
                 float s;
-                if (c_road[i] || c_bt[i] || !is_line(i))
+                if (c_road[i] || c_bt[i] || !is_line(i) || TERR(i) == T_ROCK)
                     continue;
                 if (c_plan[i] == PL_BELTWAY && C.stage < 2)
                     continue;
@@ -720,7 +829,7 @@ static int extend_roads(int n)
                             break;
                         ii = yy * MW + xx;
                         if (TERR(ii) != T_WATER) {
-                            ok = 1;
+                            ok = TERR(ii) != T_ROCK;
                             break;
                         }
                         path[np++] = (uint16_t)ii;
@@ -939,7 +1048,7 @@ static void compute_zones(void)
         for (x = x0; x <= x1; x++) {
             int i = y * MW + x, z = Z_RES;
             float d, n, da;
-            if (TERR(i) == T_WATER || c_plan[i]) {
+            if (BLOCKED(i) || c_plan[i]) {
                 c_zr[i] &= 0xF0u;
                 continue;
             }
@@ -1300,7 +1409,7 @@ static void check_stage(void)
     }
 }
 
-void city_new(uint32_t seed)
+void city_new(uint32_t seed, int biome)
 {
     int o, d, e, x, y;
     static const int8_t D[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
@@ -1317,8 +1426,9 @@ void city_new(uint32_t seed)
     memset(c_st, 0, sizeof c_st);
     C.seed = seed;
     C.rs = seed;
+    C.biome = (uint8_t)(biome >= 0 && biome < NBIOME ? biome : city_biome_of(seed));
     C.next_green = 10;
-    city_name(seed, C.name);
+    city_name(seed, C.biome, C.name);
     gen_terrain();
     pick_center();
     gen_plan();
@@ -1333,7 +1443,7 @@ void city_new(uint32_t seed)
                 if (x < 1 || y < 1 || x >= MW - 1 || y >= MH - 1)
                     break;
                 i = y * MW + x;
-                if (TERR(i) == T_WATER || !c_plan[i])
+                if (BLOCKED(i) || !c_plan[i])
                     break;
                 if (!c_road[i])
                     add_road(i, 0);
@@ -1392,7 +1502,8 @@ void city_step(void)
     type = r < w1 ? BT_RES : r < w1 + w2 ? BT_COM : BT_IND;
     if ((float)C.nempty < 12.0f + (float)C.pop / 450.0f)
         extend_roads(1 + C.stage * 2);
-    farm = type == BT_IND && (float)C.farm_jobs < (float)C.pop * FARM[C.stage] + (C.stage == 0 ? 20.0f : 0.0f);
+    farm = type == BT_IND && (float)C.farm_jobs < (float)C.pop * FARM[C.stage] * (C.biome == B_PLAINS ? 2.2f : C.biome == B_DESERT || C.biome == B_ALPINE ? 0.5f : 1.0f) +
+                                     (C.stage == 0 ? 20.0f : 0.0f);
     if (!farm && rnd() < STAGE_UPG[C.stage])
         did = upgrade(type);
     if (!did)

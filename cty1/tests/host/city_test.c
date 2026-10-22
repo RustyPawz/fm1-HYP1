@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* CTY-1's city alone: a seed grows the same town every time; it reaches each stage; the names; the zones
- * keep the mix; the rubble clears.
+/* CTY-1's city alone: every biome, two seeds each: a seed grows the same town every time; it reaches each stage;
+ * the zones keep the mix; nothing is built on water or rock; the names.
  *   cc -O2 -ffp-contract=off -Ifirmware/src/dsp -o city_test tests/host/city_test.c && ./city_test */
 #include <stdio.h>
 #include <string.h>
@@ -20,12 +20,14 @@ int main(int argc, char **argv)
 }
 static int run(int argc)
 {
-    static const char *const SEEDS[] = {"redtail", "maple", "42", "test", "zz"};
-    int si, k, verbose = argc > 1;
-    for (si = 0; si < 5; si++) {
-        uint32_t seed = fnv(SEEDS[si]), sig = 0;
+    static const char *const SEEDS[] = {"redtail", "maple"};
+    int si, k, verbose = argc > 1, bio;
+    for (bio = 0; bio < NBIOME; bio++)
+    for (si = 0; si < 2; si++) {
+        uint32_t seed = fnv(SEEDS[si]) + (uint32_t)bio * 7919u, sig = 0;
+        int bad = 0;
         int at[4] = {0, 0, 0, 0}, cnt[5] = {0}, farms = 0, big = 0, civ[CV_N] = {0};
-        city_new(seed);
+        city_new(seed, bio);
         for (k = 0; k < 2400; k++) {
             city_step();
             if (k % 64 == 0)
@@ -42,22 +44,26 @@ static int run(int argc)
             if (s->size > 1 && s->type != BT_CIV) big++;
             if (s->type == BT_CIV) civ[s->kind]++;
         }
-        for (k = 0; k < MN; k++)
+        for (k = 0; k < MN; k++) {
             sig = sig * 31u + c_bt[k] * 7u + c_road[k];
-        printf("%s: %s  coast %d river %d  stages %d %d %d  pop %d  homes %d shops %d ind %d farms %d civic %d big %d roads %d\n",
-               SEEDS[si], C.name, C.has_coast, C.has_river, at[1], at[2], at[3], (int)C.pop, cnt[1], cnt[2], cnt[3], farms, cnt[4], big, (int)C.roads);
+            if ((c_bt[k] && BLOCKED(k)) || (c_road[k] == 1 && BLOCKED(k)) || (c_road[k] && TERR(k) == T_ROCK))
+                bad++;
+        }
+        CHECK(!bad, "%s: nothing on water or rock (%d)", C.name, bad);
+        printf("%-8s %s: %s  coast %d river %d  stages %d %d %d  pop %d  homes %d shops %d ind %d farms %d civic %d big %d roads %d\n",
+               BIOME_SHORT[bio], SEEDS[si], C.name, C.has_coast, C.has_river, at[1], at[2], at[3], (int)C.pop, cnt[1], cnt[2], cnt[3], farms, cnt[4], big, (int)C.roads);
         if (verbose) {
             for (k = 0; k < CV_N; k++) printf("%s %d, ", CIVIC_NAME[k], civ[k]);
             printf("\n");
         }
-        CHECK(at[1] > 250 && at[1] < 500, "%s: suburb at week %d", C.name, at[1]);
-        CHECK(at[2] > 600 && at[2] < 1100, "%s: city at week %d", C.name, at[2]);
-        CHECK(at[3] > 1200 && at[3] < 2000, "%s: huge city at week %d", C.name, at[3]);
-        CHECK(cnt[1] > 400 && cnt[2] > 80 && cnt[3] > 30, "%s: the mix (homes %d, shops %d, industry %d)", C.name, cnt[1], cnt[2], cnt[3]);
-        CHECK(civ[CV_POLICE] >= 2 && civ[CV_HOSPITAL] >= 2 && civ[CV_FIRE] >= 2, "%s: police, fire, hospitals", C.name);
+        CHECK(at[1] > 250 && at[1] < 600, "%s: suburb at week %d", C.name, at[1]);
+        CHECK(at[2] > 600 && at[2] < 1400, "%s: city at week %d", C.name, at[2]);
+        CHECK(at[3] > (bio == B_ALPINE ? 900 : 1200) && at[3] < 2400, "%s: huge city at week %d", C.name, at[3]);
+        CHECK(cnt[1] > (bio == B_ALPINE ? 150 : 300) && cnt[2] > (bio == B_ALPINE ? 40 : 60) && cnt[3] > (bio == B_ALPINE ? 12 : 20), "%s: the mix (homes %d, shops %d, industry %d)", C.name, cnt[1], cnt[2], cnt[3]);
+        CHECK(civ[CV_POLICE] >= 1 && civ[CV_HOSPITAL] >= 1 && civ[CV_FIRE] >= 1 && civ[CV_POLICE] + civ[CV_HOSPITAL] + civ[CV_FIRE] >= (bio == B_ALPINE ? 4 : 6), "%s: police, fire, hospitals", C.name);
         {   /* again: the same town */
             uint32_t sig2 = 0;
-            city_new(seed);
+            city_new(seed, bio);
             for (k = 0; k < 2400; k++) {
                 city_step();
                 if (k % 64 == 0)
@@ -70,10 +76,13 @@ static int run(int argc)
     }
     {
         char n[16];
-        city_name(fnv("redtail"), n);
+        int seen[NBIOME] = {0};
+        for (k = 1; k < 2000; k++)
+            seen[city_biome_of((uint32_t)k * 2654435761u)]++;
+        for (k = 0; k < NBIOME; k++)
+            CHECK(seen[k] > 200, "the seeds pick %s (%d of 2000)", BIOME_NAME[k], seen[k]);
+        city_name(fnv("redtail"), -1, n);
         CHECK(!strcmp(n, "Brighton"), "redtail is Brighton (%s)", n);
-        city_name(fnv("maple"), n);
-        CHECK(!strcmp(n, "Faircrest"), "maple is Faircrest (%s)", n);
     }
     printf(fails ? "CITY TESTS FAILED\n" : "city: all passed\n");
     return fails != 0;

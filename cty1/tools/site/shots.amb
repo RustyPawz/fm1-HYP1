@@ -7,8 +7,15 @@ shot splash.png
 wait 1500
 shot splash_cty.png
 wait 1200
-# Stonedale (a city already), a while in
-spin PRESET 4
+# a city on the plains, already grown: Start as City, Biome Plains, saved, switched on again
+spin K2 2
+spin K3 5
+tap GLO
+tap SAVE
+splash 0
+entropy 4242
+reboot
+tap HOME
 wait 14000
 tap HOME
 wait 400
@@ -54,6 +61,11 @@ tap FX
 wait 400
 shot events2.png
 echo @events2
+leds
+tap FX
+wait 400
+shot events3.png
+echo @events3
 leds
 tap GLO
 wait 400
@@ -108,6 +120,12 @@ shot ufo.png
 echo @ufo
 leds
 wait 12000
+tapkey b7
+wait 3000
+shot festival.png
+echo @festival
+leds
+wait 30000
 tap LFO
 tapkey b3
 wait 3000
@@ -188,57 +206,171 @@ wait 3000
 shot ride.png
 echo @ride
 leds
-spin PRESET -4
+tap LFO
+spin K1 4
+tap LFO
+spin K1 -6
+spin K1 1
+tap GLO
+tap GLO
+spin K4 -1
+tap HOME
+spin PRESET 3
 wait 9000
-shot c_brighton.png
-echo @c_brighton
+shot b_forest.png
+echo @b_forest
 leds
+tap FX
+tap FX
+tapkey b6
+wait 5000
+shot d_forest.png
+echo @d_forest
+leds
+wait 40000
+tap LFO
+tap LFO
+tapkey b4
+wait 7000
+shot w_forest.png
+tapkey b2
+tap HOME
+wait 500
 spin PRESET 1
 wait 9000
-shot c_cedarport.png
-echo @c_cedarport
+shot b_desert.png
+echo @b_desert
 leds
+tap FX
+tap FX
+tapkey b6
+wait 5000
+shot d_desert.png
+echo @d_desert
+leds
+wait 40000
+tap LFO
+tap LFO
+tapkey b4
+wait 7000
+shot w_desert.png
+tapkey b2
+tap HOME
+wait 500
 spin PRESET 1
 wait 9000
-shot c_faircrest.png
-echo @c_faircrest
+shot b_alpine.png
+echo @b_alpine
 leds
+tap FX
+tap FX
+tapkey b6
+wait 5000
+shot d_alpine.png
+echo @d_alpine
+leds
+wait 40000
+tap LFO
+tap LFO
+tapkey b4
+wait 7000
+shot w_alpine.png
+tapkey b2
+tap HOME
+wait 500
 spin PRESET 1
 wait 9000
-shot c_westhaven.png
-echo @c_westhaven
+shot b_isles.png
+echo @b_isles
 leds
+tap FX
+tap FX
+tapkey b6
+wait 5000
+shot d_isles.png
+echo @d_isles
+leds
+wait 40000
+tap LFO
+tap LFO
+tapkey b4
+wait 7000
+shot w_isles.png
+tapkey b2
+tap HOME
+wait 500
 spin PRESET 1
 wait 9000
-shot c_stonedale.png
-echo @c_stonedale
+shot b_plains.png
+echo @b_plains
 leds
+tap FX
+tap FX
+tapkey b6
+wait 8000
+shot d_plains.png
+echo @d_plains
+leds
+wait 40000
+tap LFO
+tap LFO
+tapkey b4
+wait 7000
+shot w_plains.png
+tapkey b2
+tap HOME
+wait 500
 spin PRESET 1
 wait 9000
-shot c_stonegate.png
-echo @c_stonegate
+shot b_beach.png
+echo @b_beach
 leds
+tap FX
+tap FX
+tapkey b6
+wait 8000
+shot d_beach.png
+echo @d_beach
+leds
+wait 40000
+tap LFO
+tap LFO
+tapkey b4
+wait 7000
+shot w_beach.png
+tapkey b2
+tap HOME
+wait 500
 spin PRESET 1
 wait 9000
-shot c_ashcrest.png
-echo @c_ashcrest
+shot b_river.png
+echo @b_river
 leds
-spin PRESET 1
-wait 9000
-shot c_lakecrest.png
-echo @c_lakecrest
+tap FX
+tap FX
+tapkey b6
+wait 5000
+shot d_river.png
+echo @d_river
 leds
-spin PRESET 1
-wait 9000
-shot c_belhaven.png
-echo @c_belhaven
-leds
-spin PRESET 1
-wait 9000
-shot c_sunview.png
-echo @c_sunview
-leds
-spin PRESET -9
+wait 40000
+tap LFO
+tap LFO
+tapkey b4
+wait 7000
+shot w_river.png
+tapkey b2
+tap HOME
+wait 500
+tap LFO
+spin K1 -3
+tap LFO
+spin K1 -1
+tap GLO
+tap GLO
+spin K4 1
+tap HOME
+spin PRESET -2
 wait 3000
 press SEL
 tap EDIT

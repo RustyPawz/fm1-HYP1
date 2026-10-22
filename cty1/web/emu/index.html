@@ -130,7 +130,7 @@ body.stream .ctl.knob.sv-turn > circle:first-child { stroke: #ff9a3c; stroke-wid
 <main>
 <header>
   <h1>CTY-1 <span style="font:700 .8rem 'Barlow Semi Condensed',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#1a0f05;background:#e8873a;border-radius:999px;padding:.15em .7em;vertical-align:middle">Experimental</span></h1>
-  <p>a city grows and plays the FM-1: a town founds itself, grows to a huge city, and every car, building and storm is a note. The same code the FM-1 would run.</p>
+  <p>a city grows and plays the FM-1: each switch-on a new town on new land (forest, desert, alpine, volcano isles, plains, beach or river lands) grows to a huge city, and every car, building and storm is a note. The same code the FM-1 would run.</p>
   <nav><a href="../">CTY-1 home</a><a href="../install/">Install</a><a href="../manual/">Manual</a></nav>
 </header>
 
@@ -169,12 +169,12 @@ body.stream .ctl.knob.sv-turn > circle:first-child { stroke: #ff9a3c; stroke-wid
 <section class="help">
   <div class="knobs">
     <h2>Pages and knobs</h2>
-    <p>One page a button (pressed again, the next on it); <b>SELECT</b> walks them all, and the dots at the right of the knob strip show where you are. Each city (PRESETS) remembers its own settings and seed; Setup, Display and MIDI out are for them all.</p>
+    <p>One page a button (pressed again, the next on it); <b>SELECT</b> walks them all, and the dots at the right of the knob strip show where you are. Every switch-on founds a new city; SAVE (on Setup) keeps your settings for the next.</p>
     <div class="pages">
       <div>
         <h3>City <span>HOME</span></h3>
         <dl>
-          <dt>Speed</dt><dd>How fast it grows: ×¼ to ×64 (about a week a second at ×1).</dd><dt>Start as</dt><dd>A new city grows at once to a Town, Suburb, City or Huge city.</dd><dt>Traffic, People</dt><dd>How many cars and people, 0–200%.</dd>
+          <dt>Speed</dt><dd>How fast it grows: ×¼ to ×64 (about a week a second at ×1).</dd><dt>Start as</dt><dd>A new city grows at once to a Town, Suburb, City or Huge city.</dd><dt>Biome</dt><dd>The land each switch-on founds a city on: Random, or Forest, Desert, Alpine, Isles, Plains, Beach, River. PRESETS changes it now.</dd><dt>Traffic</dt><dd>How many cars, 0–200%.</dd>
         </dl>
       </div>
       <div>
@@ -198,7 +198,7 @@ body.stream .ctl.knob.sv-turn > circle:first-child { stroke: #ff9a3c; stroke-wid
       <div>
         <h3>Weather <span>LFO again</span></h3>
         <dl>
-          <dt>Weather</dt><dd>Auto (by the season), or clear, cloudy, rain, storm, fog, snow. Black keys 1–7 set it.</dd><dt>Change</dt><dd>How often Auto changes it.</dd><dt>Birds, Chats</dt><dd>How often flocks fly over (the echo shortens as they pass); people stopping to talk in speech bubbles, each a chirp.</dd>
+          <dt>Weather</dt><dd>Auto (by the season and the land), or one of six, each the biome's own: a thunderstorm, a dust storm in the desert, a blizzard in the mountains, a typhoon on the isles; mist, heat haze, ash haze; snow, frost, ash fall, sleet. Black keys 1–7 set it.</dd><dt>Change</dt><dd>How often Auto changes it.</dd><dt>Birds, People</dt><dd>How often flocks fly over (the echo shortens as they pass); how many people, who stop to talk in speech bubbles, each a chirp.</dd>
         </dl>
       </div>
       <div>
@@ -216,14 +216,21 @@ body.stream .ctl.knob.sv-turn > circle:first-child { stroke: #ff9a3c; stroke-wid
       <div>
         <h3>Events <span>FX</span></h3>
         <dl>
-          <dt>Lightning, Quakes, Robbery, Crashes</dt><dd>How often each happens. Lightning only in storms, and may start a fire: the fire station sends a truck. A quake shakes the screen and gates the music; what falls is cleared at the next phrase. A robber brings the police, a crash an ambulance. Black keys 1–6 call each now (and a UFO, and birds).</dd>
+          <dt>Lightning, Quakes, Robbery, Crashes</dt><dd>How often each happens. Lightning strikes only out of rain, a storm or snow, and may start a fire: the fire station sends a truck. A quake shakes the screen and gates the music; what falls is cleared at the next phrase. A robber brings the police, a crash an ambulance.</dd>
         </dl>
       </div>
       <div>
         <h3>Events 2 <span>FX again</span></h3>
         <dl>
-          <dt>UFOs</dt><dd>Very rare: one comes for someone.</dd><dt>Follow</dt><dd>The camera goes to what happens and stays until it's over.</dd><dt>Disasters</dt><dd>Fires and quakes on or off.</dd><dt>Idle</dt><dd>After a while untouched the city takes the whole screen and rides with the cars, each route singing the lead, and the lights play along.</dd>
+          <dt>UFOs</dt><dd>Very rare: one comes for someone.</dd><dt>The biome's own</dt><dd>Wildfires in the forest, dust devils in the desert, avalanches in the mountains, eruptions on the isles, tornadoes on the plains (the siren first), tsunamis at the beach, floods in the river lands. Each its own look and sound, more in its weather.</dd><dt>Festivals, Blackouts</dt><dd>A crowd and fireworks round a plaza; a district's lights going out at night.</dd>
         </dl>
+      </div>
+      <div>
+        <h3>Events 3 <span>FX three times</span></h3>
+        <dl>
+          <dt>Meteors</dt><dd>Showers on clear nights, each a falling chime.</dd><dt>Follow</dt><dd>The camera goes to what happens and stays until it's over.</dd><dt>Disasters</dt><dd>Fires, quakes and the biome's disasters destroy, or not.</dd><dt>Idle</dt><dd>After a while untouched the city takes the whole screen and rides with the cars, each route singing the lead, and the lights play along.</dd>
+        </dl>
+        <p>On any Events page the black keys call each now: 1 lightning, 2 a quake, 3 a robbery, 4 a crash, 5 a UFO, 6 birds, 7 the biome's disaster, 8 a festival, 9 a blackout, 10 meteors.</p>
       </div>
       <div>
         <h3>Setup <span>GLO</span></h3>
@@ -249,10 +256,10 @@ body.stream .ctl.knob.sv-turn > circle:first-child { stroke: #ff9a3c; stroke-wid
     <h2>Buttons</h2>
     <ul>
       <li><b>Keys</b> play the lead, in the city's scale (lit). On Time, Weather and Events the black keys do the page's work.</li>
-      <li><b>PLAY</b> the music plays / rests (the city lives on). <b>REC</b> holds the growth. <b>EDIT</b> a new city: a new seed in this slot.</li>
-      <li><b>SEL</b> rides along with a car (again: another). <b>ALGORITHM</b> looks around: the landmarks in turn. <b>PRESETS</b> the city.</li>
+      <li><b>PLAY</b> the music plays / rests (the city lives on). <b>REC</b> holds the growth. <b>EDIT</b> a new city on the same land.</li>
+      <li><b>SEL</b> rides along with a car (again: another). <b>ALGORITHM</b> looks around: the landmarks in turn. <b>PRESETS</b> the next biome: a new city there, with its music.</li>
       <li><b>SELECT</b> every page in turn; with <b>HOME</b> held, the tempo. <b>OCT−</b> / <b>OCT+</b> the lead's octave.</li>
-      <li><b>SAVE</b> on the Setup pages saves; elsewhere it grows the city again from its founding; hold it to put the city back to its recipe.</li>
+      <li><b>SAVE</b> on the Setup pages saves your settings; elsewhere it grows the city again from its founding; hold it to put back the biome's music.</li>
       <li>Hold a button for a second and a card says what it does (with a mouse: <kbd>Shift</kbd>-click to hold it). And there's a secret behind SEL + EDIT.</li>
     </ul>
   </div>
@@ -265,8 +272,8 @@ body.stream .ctl.knob.sv-turn > circle:first-child { stroke: #ff9a3c; stroke-wid
     </ul>
   </div>
   <div>
-    <h2>The cities</h2>
-    <p>Ten seeds, each with its own music and weather: <b>Brighton</b> (the NES, the seasons going round), <b>Cedarport</b> (the Game Boy, a port), <b>Faircrest</b> (spring, quick), <b>Westhaven</b> (summer, slow and bright), <b>Stonedale</b> (the SID, a city already), <b>Stonegate</b> (autumn fog, long nights), <b>Ashcrest</b> (summer storms), <b>Lakecrest</b> (spring rain), <b>Belhaven</b> (fast, growing fast) and <b>Sunview</b> (winter, snow). The same seed always grows the same city.</p>
+    <h2>The biomes</h2>
+    <p>Every switch-on founds a new city on new land. Each biome looks, sounds and storms its own way; underneath they all play the same. <b>Forest</b>: deep woods, the Game Boy's wave and woodblocks, wildfires. <b>Desert</b>: sand and red mesas, cacti, the SID over a drone and a hand drum in Hijaz, dust storms and dust devils. <b>Alpine</b>: a valley under snowy peaks and pines, bells and long echoes in Lydian, blizzards and avalanches. <b>Volcano isles</b>: palms, turquoise shallows and a smoking volcano, a clave and a steel-drum wave, typhoons, ash and eruptions. <b>Plains</b>: golden grass and farms, boom-chick and pentatonic tunes, tornadoes. <b>Beach</b>: a sandy shore, a surf backbeat and a walking bass, sea fog and tsunamis. <b>River lands</b>: a wide river, ponds and reeds, shakers and long bass, floods.</p>
     <p>What you hear is the firmware running at the FM-1's 44.1 kHz, not a recording. Running FM-1 firmware in the browser comes from <a href="https://www.groove-os.com/">Groove OS</a>'s emulator, by way of AMB-1.</p>
   </div>
 </section>
@@ -368,9 +375,9 @@ function hit(c, cls) {
   c.hit = d;
 }
 // what each control does, on hover (the Buttons list below says the same)
-const TIP = { SEL: "Ride along with a car (again: another)", FX: "Events page (again: Events 2); black keys call one", ENV: "Music page", ARP: "Sound page", LFO: "Time page (again: Weather)", EDIT: "A new city: a new seed here", GLO: "Setup page (again: Display, MIDI out); on the FM-1, SEL + GLO plays this emulator",
-  HOME: "City page", SAVE: "On Setup: save; elsewhere: from its founding; hold: back to the recipe", SEQ: "Voices page (again: Voices 2)", PLAY: "Music plays / rests", REC: "Hold: the city stops growing",
-  "OCT-": "The lead an octave down", "OCT+": "The lead an octave up", SELECT: "Every page in turn (HOME held: the tempo)", ALGORITHM: "Look around: the landmarks", PRESETS: "The city",
+const TIP = { SEL: "Ride along with a car (again: another)", FX: "Events page (again: Events 2, 3); black keys 1-10 call one", ENV: "Music page", ARP: "Sound page", LFO: "Time page (again: Weather)", EDIT: "A new city on the same land", GLO: "Setup page (again: Display, MIDI out); on the FM-1, SEL + GLO plays this emulator",
+  HOME: "City page: speed, start as, biome, traffic", SAVE: "On Setup: save; elsewhere: from its founding; hold: the biome's music back", SEQ: "Voices page (again: Voices 2)", PLAY: "Music plays / rests", REC: "Hold: the city stops growing",
+  "OCT-": "The lead an octave down", "OCT+": "The lead an octave up", SELECT: "Every page in turn (HOME held: the tempo)", ALGORITHM: "Look around: the landmarks", PRESETS: "The next biome: a new city there",
   MASTER: "Volume" };
 for (const [n, c] of [...Object.entries(buttons), ...Object.entries(knobs)]) if (TIP[n]) c.g.setAttribute("aria-description", TIP[n]);
 for (const k of Object.values(knobs)) hit(k, "knob");
@@ -1003,7 +1010,7 @@ document.getElementById("reset").addEventListener("click", () => {
   let cityH = 0;
   function paintCty(look, s, dt) {
     const sky = look ? rgb255(look, 0) : [110, 170, 230], day = look ? look[3] : 1, flash = look ? look[4] : 0;
-    const siren = look ? look[5] : 0, stage = look ? look[7] : 0;
+    const siren = look ? look[5] : 0, stage = look ? look[7] : 0, biome = look ? look[8] : 0, dis = look ? look[9] : 0;
     const g = gctx.createLinearGradient(0, 0, 0, 108);
     g.addColorStop(0, `rgba(${sky.join(",")},0.40)`);
     g.addColorStop(1, `rgba(${mixc(sky, [255, 200, 140], 0.25 * (1 - Math.abs(day - 0.5) * 2)).join(",")},0.30)`);
@@ -1011,6 +1018,27 @@ document.getElementById("reset").addEventListener("click", () => {
     gctx.fillRect(0, 0, 192, 108);
     cityH += ((0.25 + stage * 0.25) - cityH) * Math.min(dt * 0.5, 1);
     const night = Math.min(Math.max((0.5 - day) / 0.35, 0), 1), base = mixc([40, 44, 56], [14, 16, 26], night);
+    const land = mixc([[52, 70, 54], [150, 92, 60], [96, 104, 116], [60, 56, 56], [120, 112, 70], [70, 120, 150], [56, 90, 80]][biome | 0] || [52, 70, 54],
+                      [14, 16, 24], night * 0.8);
+    for (let x = 0; x < 320; x += 2) {          // the land behind the city, the biome's
+      let h = 0;
+      if (biome === 2) h = 70 + 45 * Math.abs(Math.sin(x * 0.021)) + 18 * Math.sin(x * 0.07);      // mountains
+      else if (biome === 1) h = (Math.sin(x * 0.03) > 0.3 ? 52 : 18) + 4 * Math.sin(x * 0.2);      // mesas
+      else if (biome === 3) h = Math.max(0, 95 - Math.abs(x - 230) * 1.1) + 10;                    // the volcano
+      else if (biome === 5 || biome === 6) h = 8;                                                 // the sea, the river
+      else h = 22 + 10 * Math.sin(x * 0.04) + 6 * Math.sin(x * 0.11);                               // hills
+      pctx.fillStyle = `rgba(${land.join(",")},0.55)`;
+      pctx.fillRect(x, 180 - h, 2, h);
+      if (biome === 2 && h > 98) { pctx.fillStyle = `rgba(${mixc([240, 244, 248], [90, 96, 110], night).join(",")},0.6)`; pctx.fillRect(x, 180 - h, 2, h - 98); }
+    }
+    if (biome === 3) {                            // the volcano: smoke, and its glow (an eruption: red)
+      const e = dis === 4, g = gctx;
+      g.globalCompositeOperation = "lighter";
+      glow(138, 46, e ? 26 : 10, e ? [255, 90, 30] : [255, 140, 60], e ? 0.35 : 0.12);
+      g.globalCompositeOperation = "source-over";
+      for (let k = 0; k < 5; k++) { const ph = ((s * 0.12 + k / 5) % 1); pctx.fillStyle = `rgba(${e ? "70,60,56" : "200,196,190"},${0.35 * (1 - ph)})`;
+        pctx.fillRect(228 + ph * 30, 80 - ph * 70, 6 + ph * 14, 5 + ph * 10); }
+    }
     for (const t of TOWERS) {                     // the skyline: the tall ones only as the city gets big
       const h = Math.round(8 + t.h * t.h * 70 * cityH + loud * 3);
       pctx.fillStyle = `rgba(${base.join(",")},0.85)`;

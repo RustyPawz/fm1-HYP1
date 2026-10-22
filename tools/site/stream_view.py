@@ -10,8 +10,9 @@
     ECO-1   the emulator's sky, its time of day; after a minute untouched, pixel grass fades in, waving in its wind,
             and at night fireflies
     GRAV-1  the star's colour glowing from the centre, vignetting to black; pixel stars drift across
-    CTY-1   the sky over the city, its hour and its weather; a pixel skyline along the bottom, taller as the city
-            grows, its windows lit at night; a siren's colours pulse on it, and the lightning flashes
+    CTY-1   the sky over the city, its hour and its weather; behind a pixel skyline (taller as the city grows, lit at
+            night) the biome's land: mountains, mesas, the volcano smoking, the sea; a siren's colours pulse on it, and
+            the lightning flashes
   Subtle, and still (no drift, no scrolling) for those who ask their system for reduced motion. Whatever is pressed glows, whether clicked here
   or played on the real FM-1 through its remote (SEL + GLO); a knob turning gets a ring; a strip under the
   screen names the last few moves. 'FM-1 LINKED' shows while the remote is on.
@@ -324,7 +325,7 @@ JS = JA + r"""
   let cityH = 0;
   function paintCty(look, s, dt) {
     const sky = look ? rgb255(look, 0) : [110, 170, 230], day = look ? look[3] : 1, flash = look ? look[4] : 0;
-    const siren = look ? look[5] : 0, stage = look ? look[7] : 0;
+    const siren = look ? look[5] : 0, stage = look ? look[7] : 0, biome = look ? look[8] : 0, dis = look ? look[9] : 0;
     const g = gctx.createLinearGradient(0, 0, 0, 108);
     g.addColorStop(0, `rgba(${sky.join(",")},0.40)`);
     g.addColorStop(1, `rgba(${mixc(sky, [255, 200, 140], 0.25 * (1 - Math.abs(day - 0.5) * 2)).join(",")},0.30)`);
@@ -332,6 +333,27 @@ JS = JA + r"""
     gctx.fillRect(0, 0, 192, 108);
     cityH += ((0.25 + stage * 0.25) - cityH) * Math.min(dt * 0.5, 1);
     const night = Math.min(Math.max((0.5 - day) / 0.35, 0), 1), base = mixc([40, 44, 56], [14, 16, 26], night);
+    const land = mixc([[52, 70, 54], [150, 92, 60], [96, 104, 116], [60, 56, 56], [120, 112, 70], [70, 120, 150], [56, 90, 80]][biome | 0] || [52, 70, 54],
+                      [14, 16, 24], night * 0.8);
+    for (let x = 0; x < 320; x += 2) {          // the land behind the city, the biome's
+      let h = 0;
+      if (biome === 2) h = 70 + 45 * Math.abs(Math.sin(x * 0.021)) + 18 * Math.sin(x * 0.07);      // mountains
+      else if (biome === 1) h = (Math.sin(x * 0.03) > 0.3 ? 52 : 18) + 4 * Math.sin(x * 0.2);      // mesas
+      else if (biome === 3) h = Math.max(0, 95 - Math.abs(x - 230) * 1.1) + 10;                    // the volcano
+      else if (biome === 5 || biome === 6) h = 8;                                                 // the sea, the river
+      else h = 22 + 10 * Math.sin(x * 0.04) + 6 * Math.sin(x * 0.11);                               // hills
+      pctx.fillStyle = `rgba(${land.join(",")},0.55)`;
+      pctx.fillRect(x, 180 - h, 2, h);
+      if (biome === 2 && h > 98) { pctx.fillStyle = `rgba(${mixc([240, 244, 248], [90, 96, 110], night).join(",")},0.6)`; pctx.fillRect(x, 180 - h, 2, h - 98); }
+    }
+    if (biome === 3) {                            // the volcano: smoke, and its glow (an eruption: red)
+      const e = dis === 4, g = gctx;
+      g.globalCompositeOperation = "lighter";
+      glow(138, 46, e ? 26 : 10, e ? [255, 90, 30] : [255, 140, 60], e ? 0.35 : 0.12);
+      g.globalCompositeOperation = "source-over";
+      for (let k = 0; k < 5; k++) { const ph = ((s * 0.12 + k / 5) % 1); pctx.fillStyle = `rgba(${e ? "70,60,56" : "200,196,190"},${0.35 * (1 - ph)})`;
+        pctx.fillRect(228 + ph * 30, 80 - ph * 70, 6 + ph * 14, 5 + ph * 10); }
+    }
     for (const t of TOWERS) {                     // the skyline: the tall ones only as the city gets big
       const h = Math.round(8 + t.h * t.h * 70 * cityH + loud * 3);
       pctx.fillStyle = `rgba(${base.join(",")},0.85)`;

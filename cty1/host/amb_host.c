@@ -135,6 +135,13 @@ int plat_store_save(uint32_t obj, const void *src, uint32_t len)
 }
 
 static uint32_t cpu_pct;
+/* the host's: a fixed sequence, so the tests are the same each run (script: entropy N; the browser: its own) */
+static uint32_t host_entropy = 0x5EEDC171u;
+uint32_t plat_entropy(void)
+{
+    host_entropy = host_entropy * 1664525u + 1013904223u;
+    return host_entropy;
+}
 uint32_t plat_cpu_pct(void) { return cpu_pct; }
 uint32_t plat_xruns(void) { return 0; }
 
@@ -356,8 +363,16 @@ static int expect(const char *what, const char *val)
         got = en_playing;
     else if (!strcmp(what, "view"))
         got = ui.view;
-    else if (!strcmp(what, "piece"))
-        got = proj.piece;
+    else if (!strcmp(what, "biome"))              /* city.h B_*: 0 forest .. 6 river */
+        got = C.biome;
+    else if (!strcmp(what, "region"))             /* the biome's disaster going on */
+        got = rg.on;
+    else if (!strcmp(what, "festival"))
+        got = fest.on;
+    else if (!strcmp(what, "blackout"))
+        got = blackout.on;
+    else if (!strcmp(what, "meteors"))
+        got = meteors.on;
     else if (!strcmp(what, "dirty"))
         got = ui.dirty;
     else if (!strcmp(what, "store_writes"))
@@ -581,6 +596,8 @@ int main(int argc, char **argv)
             printf("\n");
         } else if (!strcmp(cmd, "expect"))
             fails += expect(a, b);
+        else if (!strcmp(cmd, "entropy"))          /* entropy N: the next power-on's (and new city's) randomness */
+            host_entropy = (uint32_t)strtoul(a, 0, 0);
         else if (!strcmp(cmd, "splash"))           /* the boot cards for MS (then reboot) */
             ui_splash_ms = (uint32_t)strtoul(a, 0, 10);
         else if (!strcmp(cmd, "reboot")) {

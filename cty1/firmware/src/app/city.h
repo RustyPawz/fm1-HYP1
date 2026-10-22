@@ -25,7 +25,8 @@
 #define NBL 1280                        /* a type's buildings, listed each week */
 
 /* terrain (terr, low two bits) and the tile's flags (terr, high bits) */
-enum { T_LAND, T_WATER, T_FOREST };
+enum { T_LAND, T_WATER, T_FOREST, T_ROCK };   /* odd: no building, no road (rock: a mesa, a mountain, the volcano) */
+#define BLOCKED(i) (c_terr[i] & 1u)
 #define F_OCEAN 0x04u
 #define F_TREE 0x08u
 #define F_NWATER 0x10u
@@ -58,8 +59,15 @@ typedef struct {
     uint32_t motif;                     /* (ms) its motif may play again after */
 } st_t;
 
+/* the land a city is founded on: each power-on picks one (or Biome on the City page) */
+enum { B_FOREST, B_DESERT, B_ALPINE, B_VOLCANO, B_PLAINS, B_BEACH, B_RIVER, NBIOME };
+extern const char *const BIOME_NAME[NBIOME];   /* "Forest", "Desert", "Alpine", "Volcano isles", ... */
+extern const char *const BIOME_SHORT[NBIOME];  /* "FOREST", "DESERT", "ALPINE", "ISLES", ... */
+
 typedef struct {
     uint32_t seed;
+    uint8_t biome;
+    uint8_t vx, vy;                     /* the volcano's crater (Volcano isles) */
     char name[16];
     uint8_t cx, cy, has_coast, coast_side, has_river;
     float ind_angle;
@@ -101,6 +109,7 @@ enum {
     N_FARMS, N_FARMGONE, N_REDEV, N_BUILTOUT, N_BUILD, N_TOWER,
     /* life's */
     N_FIRE, N_BURNT, N_SAVED, N_QUAKE, N_ROBBERY, N_CAUGHT, N_ESCAPED, N_CRASH, N_TREATED, N_TOWED, N_UFO,
+    N_REGION, N_REGION_END, N_FEST, N_BLACKOUT, N_LIGHTS, N_METEOR,   /* a = the region's kind (B_*), b = how many fell */
 };
 typedef struct { uint8_t code, a, b; } news_t;
 #define NNEWS 32
@@ -109,7 +118,8 @@ extern uint32_t c_news_w;
 void news(int code, int a, int b);
 
 /* the growth */
-void city_new(uint32_t seed);
+void city_new(uint32_t seed, int biome);  /* biome < 0: the seed picks */
+int city_biome_of(uint32_t seed);
 void city_step(void);
 int city_sweep(void);                    /* rubble: settled goes, fresh settles; returns how many cleared */
 void city_demolish(int si, int cause);   /* cause: 0 redevelop, 1 burn, 2 quake */
@@ -120,7 +130,7 @@ extern const char *const STAGE_NAME[4];
 extern const int32_t STAGE_MIN[4];
 uint32_t city_hash(uint32_t seed, int32_t x, int32_t y);
 float city_hashf(uint32_t seed, int32_t x, int32_t y);
-void city_name(uint32_t seed, char *out);  /* the name a seed gives its city */
+void city_name(uint32_t seed, int biome, char *out);  /* the name a seed gives its city */
 int civ_green(int kind);
 /* demolition events, for life's dust */
 typedef struct { uint8_t x, y, size, cause; } demo_t;

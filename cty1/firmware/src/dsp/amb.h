@@ -26,8 +26,11 @@
 enum { CH_PA, CH_PB, CH_TRI, CH_NOI, CH_WAV, CH_LEAD };
 extern const char *const EN_CH_NAME[EN_NCH];
 extern const char *const EN_NOTE_NAME[12];
-#define EN_NMODES 5
-extern const char *const EN_MODE_NAME[EN_NMODES];   /* Lydian, Ionian, Mixolydian, Dorian, Aeolian */
+#define EN_NMODES 8
+extern const char *const EN_MODE_NAME[EN_NMODES];   /* Lydian, Ionian, Mixolydian, Dorian, Aeolian, Phrygian, Hijaz, Harmonic minor */
+/* the biomes (city.h B_*): each its own scales, rhythm, bass and weather's sound; the same events */
+#define EN_NBIOME 7
+extern const char *const EN_BIOME_NAME[EN_NBIOME];   /* Forest, Desert, Alpine, Isles, Plains, Beach, River */
 #define EN_NFLAVOR 3
 extern const char *const EN_FLAVOR_NAME[EN_NFLAVOR];
 
@@ -46,7 +49,10 @@ enum {
     P_KEY, P_TUNE, P_SYNC, P_MOOD,                   /* setup: the key (Seed, or C..B), tune, MIDI clock, mood */
     P_THEME, P_ZOOM, P_MAP, P_LABELS,                /* the screen */
     P_MIDI, P_MCH,                                   /* MIDI out: what it sends, its first channel */
-    P_SEED_HI, P_SEED_LO,                            /* the city's seed (each city its own) */
+    P_BIOME, P_REGION, P_FEST, P_BLACKOUT,           /* a power-on's biome (Random or one); the biome's own disaster, festivals,
+                                                        blackouts: how often */
+    P_METEOR,                                        /* meteor showers: how often */
+    P_SEED_HI, P_SEED_LO,                            /* the city's seed (a new one each power-on) */
     P_NPARAMS
 };
 #define EN_NTHEMES 6
@@ -72,6 +78,12 @@ typedef struct {
     volatile uint8_t siren_fire, siren_police, siren_amb, alarm, ufo;
     volatile uint8_t tension;          /* the demand far off balance: a suspended note */
     volatile uint8_t season;           /* 0 spring .. 3 winter */
+    volatile uint8_t biome;            /* city.h B_*: the scales, the rhythm, the bass, the weather's sound */
+    volatile float wind;               /* 0..1: a dust storm, a blizzard, a typhoon, a tornado */
+    volatile float rumble;             /* 0..1: lava, an avalanche, a wave, a flood, a twister close */
+    volatile uint8_t alert;            /* the civil-defense siren: a tornado or a tsunami coming */
+    volatile uint8_t blackout;         /* the lights out: the pad drops, the filter closes */
+    volatile uint8_t festival;         /* a festival: the arps double, a tambourine */
 } en_city_t;
 extern en_city_t en_city;
 
@@ -91,6 +103,10 @@ enum {
     /* cues, now (not on the grid) */
     E_LIGHTNING, E_THUNDER, E_QUAKE, E_CRUMBLE, E_SWEEP, E_DUSK, E_CRASH, E_BEAM, E_UFO_ON, E_UFO_OFF,
     E_STAGE,         /* the town grows into stage a: the fill, then up a fourth */
+    E_FIREWORK,      /* a rocket: a whistle up, a crackle */
+    E_METEOR,        /* a shooting star: a falling chime */
+    E_BOOM,          /* an eruption, a wave breaking, an avalanche letting go */
+    E_FANFARE,       /* a festival opens */
     E_NEV
 };
 void en_event(int type, int a, int b);

@@ -88,5 +88,18 @@ int plat_store_load(uint32_t obj, void *dst, uint32_t max) { return flash_ok ? s
 int plat_store_save(uint32_t obj, const void *src, uint32_t len) { return flash_ok ? st_save(obj, src, len) : -9; }
 
 static volatile uint32_t audio_cpu_pct, audio_xruns;
+/* RAM left as it powered up (and as it was, with a count, across a reset), the MASTER pot, the time */
+static uint32_t entropy_ram[32] __attribute__((section(".noinit")));
+uint32_t plat_entropy(void)
+{
+    uint32_t h = 2166136261u, k;
+    entropy_ram[0] += 0x9E3779B9u;
+    for (k = 0; k < 32; k++)
+        h = (h ^ entropy_ram[k]) * 16777619u;
+    h = (h ^ master_q12) * 16777619u;
+    h = (h ^ fm1_ms) * 16777619u;
+    entropy_ram[1] ^= h;
+    return h;
+}
 uint32_t plat_cpu_pct(void) { return audio_cpu_pct; }
 uint32_t plat_xruns(void) { return audio_xruns; }

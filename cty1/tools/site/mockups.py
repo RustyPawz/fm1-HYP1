@@ -191,13 +191,15 @@ def screens(names, out, cols=None, label=None, scale=2, gap=24):
     print("wrote", out.relative_to(SRC))
 
 
-SCREENS = ["splash", "splash_cty", "city", "music", "sound", "time", "weather", "voices", "voices2", "events", "events2", "setup", "display",
-           "midiout", "help", "full", "ride", "bolt", "quake", "robbery", "crash", "ufo", "night", "storm", "snow", "zones", "value",
-           "whole", "game", "synced", "synced_setup",
-           "c_brighton", "c_cedarport", "c_faircrest", "c_westhaven", "c_stonedale", "c_stonegate", "c_ashcrest", "c_lakecrest",
-           "c_belhaven", "c_sunview",
+BIOMES = ["forest", "desert", "alpine", "isles", "plains", "beach", "river"]
+BIOME_LABEL = ["FOREST", "DESERT", "ALPINE", "VOLCANO ISLES", "PLAINS", "BEACH", "RIVER LANDS"]
+DISASTER_LABEL = ["WILDFIRE", "DUST DEVIL", "AVALANCHE", "ERUPTION", "TORNADO", "TSUNAMI", "FLOOD"]
+WEATHER_LABEL = ["THUNDERSTORM", "DUST STORM", "BLIZZARD", "TYPHOON", "THUNDERSTORM", "TROPICAL STORM", "THUNDERSTORM"]
+SCREENS = ["splash", "splash_cty", "city", "music", "sound", "time", "weather", "voices", "voices2", "events", "events2", "events3",
+           "setup", "display", "midiout", "help", "full", "ride", "bolt", "quake", "robbery", "crash", "ufo", "festival", "night",
+           "storm", "snow", "zones", "value", "whole", "game", "synced", "synced_setup",
+           *[f"b_{b}" for b in BIOMES], *[f"d_{b}" for b in BIOMES], *[f"w_{b}" for b in BIOMES],
            "t_asphalt", "t_neon", "t_blueprint", "t_sunset", "t_terminal", "t_mono"]
-CITIES = ["brighton", "cedarport", "faircrest", "westhaven", "stonedale", "stonegate", "ashcrest", "lakecrest", "belhaven", "sunview"]
 
 
 def main():
@@ -224,15 +226,21 @@ def main():
         im = Image.open(SHOTS / f"{n}.png").convert("RGB")
         im.resize((480, 480), Image.NEAREST).save(OUT / f"cty-screen-{n.replace('_', '-')}.png")
     print("wrote docs/img/cty-screen-*.png")
-    screens([f"c_{n}" for n in CITIES], OUT / "cty-cities.png", cols=5, label=[n.upper() for n in CITIES])
-    screens(["city", "music", "sound", "time", "weather", "voices", "voices2", "events", "events2", "setup", "display", "midiout", "help",
-             "full"],
+    screens([f"b_{n}" for n in BIOMES], OUT / "cty-biomes.png", cols=4, label=BIOME_LABEL)
+    screens([f"d_{n}" for n in BIOMES], OUT / "cty-disasters.png", cols=4, label=DISASTER_LABEL)
+    screens([f"w_{n}" for n in BIOMES], OUT / "cty-weather.png", cols=4, label=WEATHER_LABEL)
+    b, k = L["d_isles"]
+    scene(device("d_isles", b, k), OUT / "cty-device-eruption.png", "ERUPTION", "THE VOLCANO ISLES' OWN DISASTER", glow="#ff7a3c")
+    b, k = L["b_desert"]
+    scene(device("b_desert", b, k), OUT / "cty-device-desert.png", "THE DESERT", "MESAS, CACTI, A DRONE IN HIJAZ", glow="#e8a050")
+    screens(["city", "music", "sound", "time", "weather", "voices", "voices2", "events", "events2", "events3", "setup", "display", "midiout",
+             "help", "full", "ride"],
             OUT / "cty-pages.png", cols=4,
             label=["CITY · HOME", "MUSIC · ENV", "SOUND · ARP", "TIME · LFO", "WEATHER · LFO TWICE", "VOICES · SEQ", "VOICES 2 · SEQ TWICE",
-                   "EVENTS · FX", "EVENTS 2 · FX TWICE", "SETUP · GLO", "DISPLAY · GLO TWICE", "MIDI OUT · GLO X3", "HOLD A BUTTON: ITS CARD",
-                   "IDLE VIEW · A MINUTE UNTOUCHED"])
-    screens(["bolt", "quake", "robbery", "crash", "ufo", "night", "storm", "snow"], OUT / "cty-incidents.png", cols=4,
-            label=["LIGHTNING AND FIRE", "EARTHQUAKE", "ROBBERY", "CAR CRASH", "UFO", "NIGHT", "STORM", "SNOW"])
+                   "EVENTS · FX", "EVENTS 2 · FX TWICE", "EVENTS 3 · FX X3", "SETUP · GLO", "DISPLAY · GLO TWICE", "MIDI OUT · GLO X3",
+                   "HOLD A BUTTON: ITS CARD", "IDLE VIEW · A MINUTE UNTOUCHED", "RIDING ALONG · SEL"])
+    screens(["bolt", "quake", "robbery", "crash", "ufo", "festival", "night", "snow"], OUT / "cty-incidents.png", cols=4,
+            label=["LIGHTNING AND FIRE", "EARTHQUAKE", "ROBBERY", "CAR CRASH", "UFO", "FESTIVAL", "NIGHT", "SNOW"])
     screens(["zones", "value", "whole", "ride"], OUT / "cty-views.png", cols=4, label=["ZONES", "LAND VALUE", "THE WHOLE CITY", "RIDING ALONG"])
     screens(["t_asphalt", "t_neon", "t_blueprint", "t_sunset", "t_terminal", "t_mono"], OUT / "cty-themes.png", cols=3,
             label=["ASPHALT", "NEON", "BLUEPRINT", "SUNSET", "TERMINAL", "MONO"])

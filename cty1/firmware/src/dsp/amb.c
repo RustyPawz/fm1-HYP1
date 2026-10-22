@@ -15,10 +15,30 @@
 /* ------------------------------------------------------------ the names --- */
 const char *const EN_CH_NAME[EN_NCH] = {"Pulse A", "Pulse B", "Triangle", "Noise", "Wave", "Lead"};
 const char *const EN_NOTE_NAME[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-const char *const EN_MODE_NAME[EN_NMODES] = {"Lydian", "Ionian", "Mixolydian", "Dorian", "Aeolian"};
+const char *const EN_MODE_NAME[EN_NMODES] = {"Lydian", "Ionian", "Mixolydian", "Dorian", "Aeolian", "Phrygian", "Hijaz", "Harm. minor"};
+const char *const EN_BIOME_NAME[EN_NBIOME] = {"Forest", "Desert", "Alpine", "Isles", "Plains", "Beach", "River"};
 const char *const EN_FLAVOR_NAME[EN_NFLAVOR] = {"NES", "GB", "SID"};
 static const uint8_t MODES[EN_NMODES][7] = {{0, 2, 4, 6, 7, 9, 11}, {0, 2, 4, 5, 7, 9, 11}, {0, 2, 4, 5, 7, 9, 10},
-                                            {0, 2, 3, 5, 7, 9, 10}, {0, 2, 3, 5, 7, 8, 10}};
+                                            {0, 2, 3, 5, 7, 9, 10}, {0, 2, 3, 5, 7, 8, 10}, {0, 1, 3, 5, 7, 8, 10},
+                                            {0, 1, 4, 5, 7, 8, 10}, {0, 2, 3, 5, 7, 8, 11}};
+/* each biome's sound (city.h B_*): its modes, bright to dark (the city's mood picks), its pentatonic tunes, its
+ * rhythm and bass. Everything else (the events, the bed growing with the stage) is the same everywhere. */
+enum { PC_WOOD, PC_DOUMBEK, PC_BELL, PC_CLAVE, PC_CHICK, PC_SURF, PC_SHAKER };
+enum { BS_STD, BS_PEDAL, BS_LONG, BS_SYNC, BS_ROOTFIFTH, BS_WALK };
+static const struct {
+    uint8_t modes[5];
+    uint8_t penta, perc, bass;
+    float hats, echo, pad;
+} BIO[EN_NBIOME] = {
+    {{1, 2, 3, 3, 4}, 0, PC_WOOD, BS_STD, 0.7f, 1.15f, 1.0f},          /* forest: woodblocks, mixolydian to aeolian */
+    {{2, 6, 6, 7, 5}, 0, PC_DOUMBEK, BS_PEDAL, 0.4f, 0.9f, 0.8f},      /* desert: a hand drum, a drone, hijaz */
+    {{0, 0, 1, 1, 3}, 0, PC_BELL, BS_LONG, 0.35f, 1.4f, 1.3f},         /* alpine: bells, long echoes, lydian */
+    {{1, 2, 2, 3, 5}, 1, PC_CLAVE, BS_SYNC, 0.8f, 0.9f, 0.9f},         /* isles: a clave, a syncopated bass, pentatonic */
+    {{1, 1, 2, 3, 4}, 1, PC_CHICK, BS_ROOTFIFTH, 0.6f, 0.8f, 1.0f},    /* plains: boom-chick, root and fifth */
+    {{0, 2, 2, 3, 4}, 0, PC_SURF, BS_WALK, 1.2f, 0.7f, 0.8f},          /* beach: a surf backbeat, a walking bass */
+    {{0, 1, 3, 4, 4}, 1, PC_SHAKER, BS_LONG, 0.6f, 1.25f, 1.15f},      /* river: shakers, long bass, pentatonic */
+};
+#define BIOME ((unsigned)en_city.biome < EN_NBIOME ? en_city.biome : 0)
 static const int8_t PROGS[6][4] = {{0, 5, 3, 4}, {0, 3, 4, 3}, {0, 4, 5, 3}, {5, 3, 0, 4}, {0, 2, 3, 4}, {0, 5, 1, 4}};
 
 static const en_param_t PARAMS[P_NPARAMS] = {
@@ -34,6 +54,8 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Key", 0, 12, 0}, {"Tune", -50, 50, 0}, {"Sync", 0, 1, 1}, {"Mood", 0, 2, 0},
     {"Theme", 0, EN_NTHEMES - 1, 0}, {"Zoom", 0, 2, 0}, {"Map", 0, 2, 0}, {"Labels", 0, 1, 1},
     {"Sends", 0, 3, 1}, {"Channels", 0, 9, 0},
+    {"Biome", 0, EN_NBIOME, 0}, {"Regional", 0, 20, 2}, {"Festivals", 0, 20, 3}, {"Blackouts", 0, 20, 2},
+    {"Meteors", 0, 20, 3},
     {"Seed", -32768, 32767, 0}, {"Seed", -32768, 32767, 0},
 };
 const en_param_t *en_param_info(int i) { return &PARAMS[(unsigned)i < P_NPARAMS ? i : 0]; }
@@ -68,7 +90,14 @@ void en_param_text(int i, int v, char *b)
     static const char *const START[4] = {"Town", "Suburb", "City", "Huge"};
     static const char *const DAY[5] = {"2 min", "4 min", "8 min", "16 min", "Noon"};
     static const char *const SEASON[6] = {"Cycle", "Calendar", "Spring", "Summer", "Autumn", "Winter"};
-    static const char *const WEATHER[7] = {"Auto", "Clear", "Cloudy", "Rain", "Storm", "Fog", "Snow"};
+    static const char *const WEATHER[EN_NBIOME][7] = {   /* each biome's own weather */
+        {"Auto", "Clear", "Cloudy", "Rain", "Storm", "Mist", "Snow"},
+        {"Auto", "Clear", "Haze", "Shower", "Dust storm", "Heat haze", "Frost"},
+        {"Auto", "Clear", "Cloudy", "Rain", "Blizzard", "Low cloud", "Snow"},
+        {"Auto", "Clear", "Cloudy", "Shower", "Typhoon", "Ash haze", "Ash fall"},
+        {"Auto", "Clear", "Cloudy", "Rain", "Storm", "Fog", "Snow"},
+        {"Auto", "Clear", "Cloudy", "Rain", "Tropical", "Sea fog", "Sleet"},
+        {"Auto", "Clear", "Cloudy", "Rain", "Storm", "Mist", "Snow"}};
     static const char *const LEAD[4] = {"Square", "Thin", "Wave", "Saw"};
     static const char *const IDLE[4] = {"Off", "1 min", "2 min", "5 min"};
     static const char *const MOOD[3] = {"Auto", "Bright", "Dark"};
@@ -89,7 +118,8 @@ void en_param_text(int i, int v, char *b)
     case P_SEASONDAYS: b = itoa_s(v, b); cpy(b, v == 1 ? " day" : " days"); return;
     case P_NIGHT: case P_CHATS: case P_FOLLOW: case P_DISASTER: case P_LABELS: cpy(b, v ? "On" : "Off"); return;
     case P_SYNC: cpy(b, v ? "Clock" : "Off"); return;
-    case P_WEATHER: cpy(b, WEATHER[(unsigned)v < 7u ? v : 0]); return;
+    case P_WEATHER: cpy(b, WEATHER[BIOME][(unsigned)v < 7u ? v : 0]); return;
+    case P_BIOME: cpy(b, v ? EN_BIOME_NAME[(v - 1) % EN_NBIOME] : "Random"); return;
     case P_WPACE: {
         int q = v * 25;                          /* x0.25 .. x3 */
         b = cpy(b, "x");
@@ -101,7 +131,7 @@ void en_param_text(int i, int v, char *b)
         return;
     }
     case P_LIGHTNING: b = itoa_s(v * 5, b); cpy(b, "%"); return;
-    case P_QUAKES: case P_ROBBERY: case P_CRASH:
+    case P_QUAKES: case P_ROBBERY: case P_CRASH: case P_REGION: case P_FEST: case P_BLACKOUT: case P_METEOR:
         if (!v) { cpy(b, "Off"); return; }
         b = itoa_s(v, b);
         cpy(b, "/hr");
@@ -215,12 +245,23 @@ static int note_of(int deg, int oct)
     return 48 + root_pc() + MODES[mode][d] + 12 * (o + oct);
 }
 static int chord_tone(int k, int oct) { return note_of(PROGS[prog][chord] + k, oct); }
+/* the pentatonic biomes' tunes: a scale degree moved off the mode's 4th and 7th (major) or 2nd and 6th (minor) */
+static int minor_now(void) { return MODES[mode][2] == 3; }
+static int pent_ok(int d) { return minor_now() ? d != 1 && d != 5 : d != 3 && d != 6; }
+static int mel(int deg)
+{
+    int d = ((deg % 7) + 7) % 7;
+    if (!BIO[BIOME].penta || pent_ok(d))
+        return deg;
+    return deg + 1;
+}
 static uint16_t scale_pcs(void)
 {
     uint16_t m = 0;
     int k;
     for (k = 0; k < 7; k++)
-        m |= (uint16_t)(1u << ((MODES[mode][k] + root_pc()) % 12));
+        if (!BIO[BIOME].penta || pent_ok(k))
+            m |= (uint16_t)(1u << ((MODES[mode][k] + root_pc()) % 12));
     return m;
 }
 
@@ -444,7 +485,7 @@ static void play_event(int type, int a, int b, int at, int s)
         int deg = b & 7, big = b >> 7;
         if (s % 4 == 0)
             deg = T[deg % 3];
-        tone(CH_PA, WV_PULSE, duty_of(), at, (float)note_of(PROGS[prog][chord] + deg, big || a >= 4 ? 3 : 2), 0.07f, 0.12f * lvl(par[P_VBELLS]), 0, 0, 0);
+        tone(CH_PA, WV_PULSE, duty_of(), at, (float)note_of(mel(PROGS[prog][chord] + deg), big || a >= 4 ? 3 : 2), 0.07f, 0.12f * lvl(par[P_VBELLS]), 0, 0, 0);
         break;
     }
     case E_IND:
@@ -488,7 +529,7 @@ static void play_event(int type, int a, int b, int at, int s)
     }
     case E_SOLO: {
         int w = par[P_LEAD];
-        tone(CH_LEAD, w == 2 ? WV_WAVE : w == 3 ? WV_SAW : WV_PULSE, w == 1 ? 0.125f : 0.5f, at, (float)note_of(a - 3, 2), sx * 1.8f,
+        tone(CH_LEAD, w == 2 ? WV_WAVE : w == 3 ? WV_SAW : WV_PULSE, w == 1 ? 0.125f : 0.5f, at, (float)note_of(mel(a - 3), 2), sx * 1.8f,
              0.1f * lvl(par[P_VLEAD]), 0.006f, sx * 0.6f, 0);
         break;
     }
@@ -543,6 +584,25 @@ static void cue(int type, int a)
         break;
     case E_UFO_OFF: ufo_v.g_to = 0.0f; break;
     case E_STAGE: pending = a; break;
+    case E_FIREWORK:                             /* a whistle up, then the bang and its crackle */
+        tone(CH_PB, WV_PULSE, 0.125f, 0, 72.0f + (float)irand(8), 0.6f, 0.04f * fx, 0.05f, 0.0f, 96.0f);
+        noise(samp(0.62f), 0.25f, 0.3f * fx, 0.5f, 0, 0, 1200.0f, 0, 0);
+        noise(samp(0.7f), 0.9f, 0.08f * fx, 2.5f, 1, 5000.0f, 0, 0.1f, 0);
+        break;
+    case E_METEOR:                               /* a falling chime */
+        tone(CH_PA, WV_PULSE, 0.125f, 0, (float)(chord_tone(4, 4)), 0.5f, 0.05f * fx, 0.0f, 0.0f, (float)(chord_tone(0, 3)));
+        break;
+    case E_BOOM:
+        noise(0, 2.2f, 0.55f * fx, 0.2f, 0, 0, 260.0f, 0.02f, 49);
+        tone(CH_TRI, WV_TRI, 0.5f, 0, 33.0f, 1.2f, 0.45f * fx, 0, 0, 24.0f);
+        break;
+    case E_FANFARE: {
+        static const int8_t T[6] = {0, 2, 4, 7, 4, 7};
+        for (k = 0; k < 6; k++)
+            tone(CH_PA, WV_PULSE, 0.25f, samp((float)k * sx), (float)note_of(PROGS[prog][chord] + T[k], 2), k == 5 ? 0.4f : 0.1f,
+                 0.12f * lvl(par[P_VBELLS]), 0, 0, 0);
+        break;
+    }
     default: break;
     }
 }
@@ -562,7 +622,7 @@ static void new_bar(int at)
         noise(at, 0.9f, 0.18f * lvl(par[P_VFX]), 0.8f, 0, 2500.0f, 0, 0, 49);
     }
     if (en_bars % 2u == 0u)
-        mode = ms > 0.5f ? 0 : ms > 0.12f ? 1 : ms > -0.12f ? 2 : ms > -0.45f ? 3 : 4;
+        mode = BIO[BIOME].modes[ms > 0.5f ? 0 : ms > 0.12f ? 1 : ms > -0.12f ? 2 : ms > -0.45f ? 3 : 4];
     every = stage == 0 ? 2 : 1;
     if (en_bars % (uint32_t)every == 0u)
         chord = (chord + 1) % 4;
@@ -581,7 +641,7 @@ static void new_bar(int at)
         if (stage == 3)
             tones[n++] = 6;
         v = (0.06f + 0.025f * (float)stage) * lvl(par[P_BED]) * lvl(par[P_VPAD]) * (par[P_FLAVOR] == 2 ? 0.6f : 1.0f) *
-            (1.0f + 0.5f * (1.0f - en_city.day) + 0.4f * en_city.fog);
+            (1.0f + 0.5f * (1.0f - en_city.day) + 0.4f * en_city.fog) * BIO[BIOME].pad * (en_city.blackout ? 0.3f : 1.0f);
         for (k = 0; k < n; k++)
             tone(CH_WAV, pad_wave(), 0.25f, at, (float)chord_tone(tones[k], 0), dur, v, 0.3f, 0.5f, 0);
     }
@@ -620,6 +680,100 @@ static void env_step(int at, int s)
     }
     if (en_city.alarm)
         tone(CH_PB, WV_PULSE, 0.125f, at, (float)(chord_tone(s % 2 ? 4 : 5, 3) + 12), sx * 0.9f, 0.04f * sir, 0, 0, 0);
+    if (en_city.alert && s == 0) {               /* the civil-defense siren: a long rise and fall */
+        tone(CH_WAV, WV_SINE, 0.5f, at, 62.0f, sx * 8.0f, 0.1f * sir, sx * 3.0f, 0.0f, 74.0f);
+        tone(CH_WAV, WV_SINE, 0.5f, at + samp(sx * 8.0f), 74.0f, sx * 8.0f, 0.1f * sir, 0.0f, sx * 2.0f, 62.0f);
+    }
+    if (en_city.festival && s % 2 == 0) {        /* a festival: arpeggios an octave up */
+        static const int8_t T[4] = {0, 2, 4, 7};
+        tone(CH_PB, WV_PULSE, 0.25f, at, (float)chord_tone(T[(s / 2) % 4], 3), 0.06f, 0.05f * fx, 0, 0, 0);
+    }
+    if (en_city.wind > 0.4f && frand() < 0.03f * en_city.wind)   /* the wind whistling */
+        tone(CH_WAV, WV_SINE, 0.5f, at, (float)chord_tone(irand(2) * 4, 3), sx * 6.0f, 0.04f * fx * en_city.wind, sx * 2.0f, 0.0f,
+             (float)chord_tone(2, 3));
+}
+
+/* each biome's percussion, over the kick and hats: busier as the city grows */
+static void perc(int at, int s, int st, float bed)
+{
+    float dv = bed * lvl(par[P_VDRUMS]), sx = s16();
+    switch (BIO[BIOME].perc) {
+    case PC_WOOD:                                /* woodblocks, two pitches */
+        if (euclid(3 + st, 16, s, 1))
+            tone(CH_TRI, WV_TRI, 0.5f, at, (float)(s % 8 < 4 ? 84 : 79), 0.025f, 0.22f * dv, 0, 0, 0);
+        break;
+    case PC_DOUMBEK: {                           /* doum (low), tek (high): D . t k . t D . t . k . D t k . */
+        static const char P[17] = "D.tk.tD.t.k.Dtk.";
+        char c = P[s];
+        if (c == 'D')
+            tone(CH_TRI, WV_TRI, 0.5f, at, 45.0f, 0.12f, 0.4f * dv, 0, 0, 38.0f);
+        else if ((c == 't' || (c == 'k' && st >= 1)))
+            noise(at, 0.035f, (c == 't' ? 0.16f : 0.1f) * dv, 1.6f, 1, 3000.0f, 0, 0, 39);
+        break;
+    }
+    case PC_BELL:                                /* a cowbell high on the mountain: the downbeat, more as it grows */
+        if (s == 0 || (st >= 2 && s == 8) || (st >= 3 && s == 14))
+            tone(CH_PB, WV_PULSE, 0.5f, at, (float)chord_tone(0, 3) + 12.0f, 0.3f, 0.07f * dv, 0, 0.02f, 0);
+        break;
+    case PC_CLAVE:                               /* son clave, 3-2 */
+        if (s == 0 || s == 3 || s == 6 || s == 10 || s == 12)
+            tone(CH_TRI, WV_TRI, 0.5f, at, 91.0f, 0.02f, 0.2f * dv, 0, 0, 0);
+        if (st >= 1 && (s == 7 || s == 15))     /* a steel drum's answer */
+            tone(CH_PB, WV_PULSE, 0.25f, at, (float)note_of(mel(PROGS[prog][chord] + 4), 3), 0.1f, 0.05f * dv, 0, 0, 0);
+        break;
+    case PC_CHICK:                               /* boom-chick: the chick on two and four */
+        if (s == 4 || s == 12)
+            noise(at, 0.05f, 0.14f * dv, 1.3f, 0, 2500.0f, 0, 0, 38);
+        break;
+    case PC_SURF:                                /* a surf backbeat from the first house, a tambourine on the eighths */
+        if (st < 2 && (s == 4 || s == 12))
+            noise(at, 0.1f, 0.18f * dv, 1.0f, 0, 1500.0f, 0, 0, 38);
+        if (s % 2 == 0 && st >= 1)
+            noise(at, 0.04f, 0.06f * dv, 2.2f, 1, 8000.0f, 0, 0, 54);
+        break;
+    default:                                     /* a shaker, rolling */
+        if (euclid(6 + st, 16, s, 0))
+            noise(at, 0.05f, (s % 4 == 0 ? 0.09f : 0.05f) * dv, 2.0f, 0, 5000.0f, 0, 0.012f, 70);
+        break;
+    }
+    if (en_city.festival && s % 2 == 1)          /* a festival: a tambourine on top */
+        noise(at, 0.04f, 0.07f * dv, 2.4f, 1, 7500.0f, 0, 0, 54);
+    (void)sx;
+}
+/* each biome's bass */
+static void bass_biome(int at, int s, int st, float bed)
+{
+    float sx = s16(), v = 0.42f * bed * lvl(par[P_VBASS]);
+    int w = bass_wave();
+    switch (BIO[BIOME].bass) {
+    case BS_PEDAL:                               /* a drone on the root, the fifth now and then */
+        if (s == 0)
+            tone(CH_TRI, w, 0.5f, at, (float)note_of(0, -1), sx * 15.5f, v * 0.8f, 0.05f, 0.1f, 0);
+        if (st >= 1 && s == 10)
+            tone(CH_TRI, w, 0.5f, at, (float)note_of(4, -1), sx * 1.8f, v * 0.6f, 0, 0.03f, 0);
+        break;
+    case BS_LONG:                                /* long notes: the chord's root, the fifth on the half as it grows */
+        if (s == 0)
+            tone(CH_TRI, w, 0.5f, at, (float)chord_tone(0, -1), sx * (st >= 2 ? 7.6f : 15.5f), v, 0.04f, 0.1f, 0);
+        if (st >= 2 && s == 8)
+            tone(CH_TRI, w, 0.5f, at, (float)chord_tone(4, -1), sx * 7.6f, v * 0.8f, 0.04f, 0.1f, 0);
+        break;
+    case BS_SYNC:                                /* syncopated: one, the and of two, three-and */
+        if (s == 0 || s == 6 || (st >= 1 && s == 10) || (st >= 2 && s == 14))
+            tone(CH_TRI, w, 0.5f, at, (float)chord_tone(s == 10 ? 4 : 0, -1), sx * 1.7f, v, 0, 0.03f, 0);
+        break;
+    case BS_ROOTFIFTH:                           /* boom: root and fifth on the beats */
+        if (s % 4 == 0 && (st >= 1 || s % 8 == 0))
+            tone(CH_TRI, w, 0.5f, at, (float)chord_tone(s % 8 == 0 ? 0 : 4, -1), sx * 1.8f, v, 0, 0.03f, 0);
+        break;
+    default: {                                   /* walking: root, third, fifth, sixth on the beats (eighths when big) */
+        static const int8_t T[4] = {0, 2, 4, 5};
+        int every = st >= 3 ? 2 : 4;
+        if (s % every == 0)
+            tone(CH_TRI, w, 0.5f, at, (float)chord_tone(T[(s / every) % 4], -1), sx * (float)every * 0.85f, v, 0, 0.02f, 0);
+        break;
+    }
+    }
 }
 
 static void step(int at, int s)
@@ -634,7 +788,9 @@ static void step(int at, int s)
         new_bar(at);
     if (euclid(KICK[st], 16, s, 0))
         tone(CH_TRI, WV_TRI, 0.5f, at, 50.0f, 0.13f, 0.5f * bed * lvl(par[P_VDRUMS]), 0, 0, 30.0f);
-    hatk = st == 0 ? 0 : (int)((float)HAT[st] * (0.6f + 0.4f * inten) + 0.5f);
+    hatk = st == 0 ? 0 : (int)((float)HAT[st] * (0.6f + 0.4f * inten) * BIO[BIOME].hats + 0.5f);
+    if (en_city.festival && hatk < 8)
+        hatk = 8;
     if (euclid(hatk, 16, s, 2))
         noise(at, 0.03f, 0.12f * bed * lvl(par[P_VDRUMS]), 2.0f, 1, 6000.0f, 0, 0, 42);
     if (st >= 2 && (s == 4 || s == 12))
@@ -642,6 +798,10 @@ static void step(int at, int s)
     if (st >= 3 && s == 14 && frand() < 0.4f)
         noise(at, 0.06f, 0.12f * bed * lvl(par[P_VDRUMS]), 1.0f, 0, 1800.0f, 0, 0, 38);
     env_step(at, s);
+    perc(at, s, st, bed);
+    if (BIO[BIOME].bass != BS_STD)
+        bass_biome(at, s, st, bed);
+    else
     for (k = 0; k < BASS_N[st]; k++)
         if (BASS[st][k] == s) {
             int nx = k + 1 < BASS_N[st] ? BASS[st][k + 1] : 16;
@@ -819,6 +979,7 @@ static void render_voices(uint32_t n)
 static float svf_lp_l, svf_bp_l, svf_lp_r, svf_bp_r, lp_fc = 18000.0f, lp_q = 0.7f;
 static float crush_g, wet_g, fb_g = 0.28f, wbed_g, wbed_f = 3000.0f, hiss_g;
 static float wb_lp, wb_bp, hs_lp, hs_bp;
+static float wind_g, wind_f = 500.0f, wind_ph, wd_lp, wd_bp, rum_g, rum_lp, rum_lp2;   /* the wind; a rumble */
 static uint16_t wn_lfsr = 0x2A5Bu;
 static float wn_acc, wn_val;
 #define ECHO_N 16537                            /* 0.75 s at half the rate */
@@ -875,7 +1036,8 @@ static void control(uint32_t n)
         lp_fc += (700.0f + en_city.bright * 3200.0f - lp_fc) * fm_minf(dt * 3.0f, 1.0f);
         lp_q = 0.6f;
     } else {
-        float to = fm_minf(18000.0f, (2600.0f + 15400.0f * day * day) * (1.0f - 0.55f * fog) * (1.0f - 0.35f * wv));
+        float to = fm_minf(18000.0f, (2600.0f + 15400.0f * day * day) * (1.0f - 0.55f * fog) * (1.0f - 0.35f * wv)) *
+                   (en_city.blackout ? 0.3f : 1.0f);
         lp_fc += (to - lp_fc) * fm_minf(dt * 1.25f, 1.0f);
         lp_q = 1.2f;
     }
@@ -892,6 +1054,14 @@ static void control(uint32_t n)
     k = (0.035f * en_city.rain + 0.08f * en_city.storm + 0.012f * snow) * lvl(par[P_VFX]);
     wbed_g += (k - wbed_g) * fm_minf(dt * 1.25f, 1.0f);
     wbed_f += ((snow > 0.5f ? 6500.0f : 3000.0f) - wbed_f) * fm_minf(dt, 1.0f);
+    k = en_city.wind * 0.09f * lvl(par[P_VFX]);  /* the wind: its band wanders, it gusts */
+    wind_g += (k - wind_g) * fm_minf(dt * 0.8f, 1.0f);
+    wind_ph += dt * 0.13f;
+    if (wind_ph >= 1.0f)
+        wind_ph -= 1.0f;
+    wind_f = 380.0f + 520.0f * (0.5f + 0.5f * fm_sin_turns(wind_ph)) + 300.0f * (0.5f + 0.5f * fm_sin_turns(wind_ph * 3.7f + 0.2f));
+    k = en_city.rumble * 0.22f * lvl(par[P_VFX]);
+    rum_g += (k - rum_g) * fm_minf(dt * 1.5f, 1.0f);
     k = fm_minf(0.1f, (float)en_city.hwy * 0.018f) * lvl(par[P_VDRUMS]);
     hiss_g += (k - hiss_g) * fm_minf(dt * 3.0f, 1.0f);
     k = fm_minf(0.35f, en_city.grit * 0.9f) + lvl(par[P_CRUSH]) * 0.5f;
@@ -926,7 +1096,8 @@ static void render_chunk(int32_t *out, uint32_t n, float gain, uint32_t at)
         f = fm_sqrtf(qd * qd + 3.2f) - qd;
     open = fm_clampf((lp_fc - 9000.0f) * (1.0f / 3000.0f), 0.0f, 1.0f);
     float wbf = fm_minf(0.62f, 2.0f * fm_sinf(FM_PI * wbed_f / EN_SR)), hsf = 2.0f * fm_sinf(FM_PI * 900.0f / EN_SR);
-    float gf = en_bpm / 60.0f * 2.0f / EN_SR;
+    float gf = en_bpm / 60.0f * 2.0f / EN_SR, wdf = 2.0f * fm_sinf(FM_PI * wind_f / EN_SR);
+    float gust = wind_g * (0.65f + 0.35f * fm_sin_turns(wind_ph * 11.0f));
     for (j = 0; j < n; j++)
         mixl[j] = mixr[j] = esend[j] = 0.0f;
 #ifdef EN_HOST
@@ -982,6 +1153,20 @@ static void render_chunk(int32_t *out, uint32_t n, float gain, uint32_t at)
             cr = fm_floorf(r * 6.0f + 0.5f) * (1.0f / 6.0f);
             l += (cl - l) * crush_g;
             r += (cr - r) * crush_g;
+        }
+        if (wind_g > 0.0005f) {                  /* the wind */
+            wd_lp += wdf * wd_bp;
+            wd_bp += wdf * (wn - wd_lp - 0.35f * wd_bp);
+            l += wd_bp * gust * 0.5f;
+            r += wd_bp * gust * 0.5f;
+            BUS(5, j, wd_bp * gust * 0.5f);
+        }
+        if (rum_g > 0.0005f) {                   /* a rumble: the noise, twice low-passed */
+            rum_lp += 0.012f * (wn - rum_lp);
+            rum_lp2 += 0.012f * (rum_lp - rum_lp2);
+            l += rum_lp2 * rum_g * 6.0f;
+            r += rum_lp2 * rum_g * 6.0f;
+            BUS(3, j, rum_lp2 * rum_g * 6.0f);
         }
         if (wbed_g > 0.0005f) {                  /* the rain */
             wb_lp += wbf * wb_bp;

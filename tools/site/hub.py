@@ -49,8 +49,8 @@ FIRMWARES = [
     ("cty", "CTY-1", "#f2cf5b", "Experimental", "cty/img/cty-device.png",
      "the FM-1 running CTY-1: a pixel city of roads, houses and towers seen from above, the keys glowing gold",
      "A city grows and plays",
-     "A town founds itself and grows to a huge city: every car on its roads, every building that opens and every "
-     "storm, fire and siren is a note in a generative chiptune. Ten cities, each from its own seed."),
+     "Each power-on a new town on new land (forest, desert, alpine, volcano isles, plains, beach or river) grows to a huge "
+     "city: every car, building, storm and disaster is a note, each land its own sound."),
 ]
 
 PAGE = """<!doctype html>

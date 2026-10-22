@@ -71,6 +71,7 @@ __attribute__((used, visibility("default"))) void web_boot(void)
     ui_splash_ms = 3200u;                        /* the boot cards, as on the FM-1 */
     boot();
 }
+__attribute__((used, visibility("default"))) void web_entropy(uint32_t v) { host_entropy = v; }   /* the page's randomness */
 __attribute__((used, visibility("default"))) void web_buttons(uint32_t m) { held_btn = m; }
 __attribute__((used, visibility("default"))) void web_keys(uint32_t m) { held_keys = m; }
 __attribute__((used, visibility("default"))) void web_enc(int role, int32_t n)
@@ -119,5 +120,7 @@ __attribute__((used, visibility("default"))) float *web_bg(void)
     bg_out[5] = en_city.siren_fire ? 1.0f : en_city.siren_police ? 2.0f : en_city.siren_amb ? 3.0f : 0.0f;
     bg_out[6] = (float)season.idx;
     bg_out[7] = (float)C.stage;
+    bg_out[8] = (float)C.biome;                  /* city.h B_*: the skyline's land */
+    bg_out[9] = (float)(rg.on ? 1 + rg.kind : 0);  /* the biome's disaster going on */
     return bg_out;
 }

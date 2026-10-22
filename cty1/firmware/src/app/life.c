@@ -94,7 +94,7 @@ static const uint16_t SEASON_PAL[4][SC_N] = {
      RGB(36, 69, 44), RGB(232, 238, 240), RGB(61, 106, 72), RGB(232, 237, 240), RGB(226, 233, 236), RGB(143, 182, 207)},
 };
 static uint16_t SEAS[SC_N];
-static struct { uint8_t idx; float snow; } season = {1, 0.0f};
+static struct { uint8_t idx, vis; float snow; } season = {1, 1, 0.0f};   /* vis: the season the land shows */
 static const char *const SEASON_NAME[4] = {"spring", "summer", "autumn", "winter"};
 
 static uint16_t lerp565(uint16_t a, uint16_t b, float f)
@@ -108,6 +108,53 @@ static uint16_t lerp565(uint16_t a, uint16_t b, float f)
     g = (((a >> 5) & 63) * (16 - t) + ((b >> 5) & 63) * t) / 16;
     bl = ((a & 31) * (16 - t) + (b & 31) * t) / 16;
     return (uint16_t)(r << 11 | g << 5 | bl);
+}
+/* each biome's ground, over the season's: sand in the desert, pine dark up high, the isles' bright greens */
+static void biome_tint(void)
+{
+    int k;
+    switch (C.biome) {
+    case B_DESERT: {
+        static const uint16_t SAND[5] = {RGB(214, 186, 132), RGB(222, 196, 142), RGB(229, 205, 152), RGB(214, 178, 122), RGB(200, 160, 104)};
+        for (k = 0; k < 5; k++)
+            SEAS[SC_G0 + k] = lerp565(SEAS[SC_G0 + k], SAND[k], 0.88f);
+        SEAS[SC_YARD] = lerp565(SEAS[SC_YARD], RGB(206, 186, 138), 0.75f);
+        SEAS[SC_LEAF] = lerp565(SEAS[SC_LEAF], RGB(104, 140, 72), 0.6f);
+        SEAS[SC_LEAFMID] = lerp565(SEAS[SC_LEAFMID], RGB(120, 150, 80), 0.6f);
+        SEAS[SC_RIVER] = RGB(62, 140, 160);
+        break;
+    }
+    case B_ALPINE:
+        for (k = 0; k < 5; k++)
+            SEAS[SC_G0 + k] = lerp565(SEAS[SC_G0 + k], RGB(104, 150, 116), 0.3f);
+        SEAS[SC_FOREST] = lerp565(SEAS[SC_FOREST], RGB(40, 82, 58), 0.6f);
+        SEAS[SC_LEAF] = lerp565(SEAS[SC_LEAF], RGB(40, 96, 62), 0.6f);
+        SEAS[SC_LEAF2] = lerp565(SEAS[SC_LEAF2], RGB(30, 72, 48), 0.6f);
+        SEAS[SC_RIVER] = RGB(84, 150, 196);
+        break;
+    case B_VOLCANO:
+        for (k = 0; k < 5; k++)
+            SEAS[SC_G0 + k] = lerp565(SEAS[SC_G0 + k], RGB(84, 170, 72), 0.35f);
+        SEAS[SC_FOREST] = lerp565(SEAS[SC_FOREST], RGB(36, 112, 52), 0.5f);
+        SEAS[SC_LEAF] = lerp565(SEAS[SC_LEAF], RGB(52, 150, 62), 0.4f);
+        break;
+    case B_PLAINS:
+        for (k = 0; k < 5; k++)
+            SEAS[SC_G0 + k] = lerp565(SEAS[SC_G0 + k], RGB(196, 184, 102), season.vis == 1 || season.vis == 2 ? 0.3f : 0.12f);
+        break;
+    case B_BEACH:
+        for (k = 0; k < 5; k++)
+            SEAS[SC_G0 + k] = lerp565(SEAS[SC_G0 + k], RGB(176, 196, 132), 0.2f);
+        break;
+    case B_RIVER:
+        for (k = 0; k < 5; k++)
+            SEAS[SC_G0 + k] = lerp565(SEAS[SC_G0 + k], RGB(92, 168, 88), 0.2f);
+        SEAS[SC_FOREST] = lerp565(SEAS[SC_FOREST], RGB(52, 120, 64), 0.3f);
+        break;
+    default:                                     /* forest: deeper woods */
+        SEAS[SC_FOREST] = lerp565(SEAS[SC_FOREST], RGB(44, 96, 50), 0.35f);
+        break;
+    }
 }
 static void season_update(void)
 {
@@ -130,10 +177,18 @@ static void season_update(void)
     nb = (idx + 1) & 3;
     sk = fm_clampf((frac - 0.82f) / 0.18f, 0.0f, 1.0f);
     sk = sk * sk * (3.0f - 2.0f * sk);
+    season.idx = (uint8_t)(sk > 0.5f ? nb : idx);
+    {   /* the warm lands never whiten: the isles and the beach keep summer through winter, the desert autumn */
+        static const uint8_t WARM[NBIOME][4] = {{0, 1, 2, 3}, {0, 1, 2, 2}, {0, 1, 2, 3}, {0, 1, 1, 1}, {0, 1, 2, 3}, {0, 1, 2, 2}, {0, 1, 2, 3}};
+        int b = C.biome < NBIOME ? C.biome : 0;
+        idx = WARM[b][idx];
+        nb = WARM[b][nb];
+    }
     for (k = 0; k < SC_N; k++)
         SEAS[k] = lerp565(SEASON_PAL[idx][k], SEASON_PAL[nb][k], sk);
-    season.idx = (uint8_t)(sk > 0.5f ? nb : idx);
+    season.vis = (uint8_t)(sk > 0.5f ? nb : idx);
     season.snow = (idx == 3 ? 1.0f - sk : 0.0f) + (nb == 3 ? sk : 0.0f);
+    biome_tint();
 }
 
 /* ------------------------------------------------------------ weather --- */
@@ -161,22 +216,67 @@ static int weather_pick(void)
         {40, 40, 0, 0, 10, 0}, {35, 20, 35, 0, 10, 0}, {5, 40, 25, 30, 0, 0}, {0, 40, 60, 0, 0, 0}, {50, 50, 0, 0, 0, 0}, {20, 50, 0, 0, 0, 30}};
     static const uint8_t SW[4][W_N] = {     /* the season's leaning, tenths */
         {10, 10, 15, 8, 13, 10}, {16, 10, 7, 15, 4, 10}, {8, 15, 13, 10, 16, 10}, {8, 13, 10, 10, 12, 16}};
-    int w, tot = 0, r, from = wx.now, nx = W_CLEAR;
+    static const uint8_t BW[NBIOME][W_N] = {   /* the biome's, tenths: clear, cloud, rain, storm, fog, snow */
+        {10, 10, 13, 10, 14, 10}, {24, 10, 3, 9, 9, 3}, {9, 11, 8, 11, 12, 18}, {12, 10, 15, 10, 7, 5},
+        {14, 10, 10, 12, 8, 10}, {17, 10, 10, 9, 12, 3}, {10, 11, 15, 10, 13, 9}};
+    int w, tot = 0, r, from = wx.now, nx = W_CLEAR, b = C.biome < NBIOME ? C.biome : 0;
     for (w = 0; w < W_N; w++)
-        tot += TR[from][w] * SW[season.idx][w];
+        tot += TR[from][w] * SW[season.idx][w] * BW[b][w];
     r = lirnd(tot);
     for (w = 0; w < W_N; w++) {
-        r -= TR[from][w] * SW[season.idx][w];
+        r -= TR[from][w] * SW[season.idx][w] * BW[b][w];
         if (r < 0) {
             nx = w;
             break;
         }
     }
-    if (season.idx == 3 && (nx == W_RAIN || nx == W_STORM))
+    if (b == B_VOLCANO)                          /* the isles' "snow" is ash, any time of year */
+        return nx;
+    if (b == B_ALPINE && season.idx != 1) {      /* the mountains: snow but in summer */
+        if (season.idx == 3 && nx == W_RAIN)
+            nx = W_SNOW;
+        return nx;
+    }
+    if (season.idx == 3 && (nx == W_RAIN || nx == W_STORM) && b != B_DESERT && b != B_BEACH)
         nx = W_SNOW;
     if (season.idx != 3 && nx == W_SNOW)
         nx = W_RAIN;
     return nx;
+}
+/* each biome's look of the six weathers: the storm a thunderstorm, a dust storm, a blizzard, a typhoon; the fog
+ * mist, heat haze, ash; the snow snow, frost, ash fall, sleet */
+enum { LK_CLEAR, LK_CLOUD, LK_RAIN, LK_STORM, LK_DUST, LK_BLIZZARD, LK_TYPHOON, LK_FOG, LK_HAZE, LK_ASHHAZE, LK_SNOW, LK_FROST, LK_ASH,
+       LK_SLEET };
+static int look_of(int w)
+{
+    static const uint8_t L[NBIOME][W_N] = {
+        {LK_CLEAR, LK_CLOUD, LK_RAIN, LK_STORM, LK_FOG, LK_SNOW},      {LK_CLEAR, LK_CLOUD, LK_RAIN, LK_DUST, LK_HAZE, LK_FROST},
+        {LK_CLEAR, LK_CLOUD, LK_RAIN, LK_BLIZZARD, LK_FOG, LK_SNOW},   {LK_CLEAR, LK_CLOUD, LK_RAIN, LK_TYPHOON, LK_ASHHAZE, LK_ASH},
+        {LK_CLEAR, LK_CLOUD, LK_RAIN, LK_STORM, LK_FOG, LK_SNOW},      {LK_CLEAR, LK_CLOUD, LK_RAIN, LK_TYPHOON, LK_FOG, LK_SLEET},
+        {LK_CLEAR, LK_CLOUD, LK_RAIN, LK_STORM, LK_FOG, LK_SNOW}};
+    return L[C.biome < NBIOME ? C.biome : 0][(unsigned)w < W_N ? w : 0];
+}
+static float llvl(int look)                     /* how much of a look the sky is now */
+{
+    float v = 0.0f;
+    int w;
+    for (w = 0; w < W_N; w++)
+        if (look_of(w) == look)
+            v += wlvl(w);
+    return v;
+}
+/* lightning: only out of rain, a rainstorm, or snow (a thundersnow); not out of dust or ash */
+static float lightning_sky(void)
+{
+    float v = 0.0f;
+    int w;
+    for (w = W_RAIN; w <= W_SNOW; w++) {
+        int lk = look_of(w);
+        if (w == W_FOG || lk == LK_DUST || lk == LK_ASH || lk == LK_FROST)
+            continue;
+        v += wlvl(w) * (w == W_STORM ? 1.0f : w == W_RAIN ? 0.35f : 0.2f);
+    }
+    return v;
 }
 /* the day's rhythm: rush hours, quiet nights, fewer out in the rain */
 static float rush(void)
@@ -975,6 +1075,7 @@ static void ignite(int si)
     news(N_FIRE, s->type, s->L);
     fires[f].truck = (int8_t)dispatch(VK_FIRE, CV_FIRE, fires[f].x, fires[f].y, road_near(s, 1), &fires[f].quick);
 }
+static int region_start(void);
 static void strike(int hit)
 {
     rect_t r = view_rect(-1.0f);
@@ -1017,6 +1118,9 @@ static void strike(int hit)
     thunder_at = plat_ms() + 300u + (uint32_t)lirnd(1200);
     if (target)
         ignite(target);
+    else if (C.biome == B_FOREST && in_map((int)tx, (int)ty) && TERR((int)ty * MW + (int)tx) == T_FOREST && hit && proj.par[P_REGION] &&
+             lrnd() < 0.5f)
+        region_start();                          /* the woods catch */
 }
 static void quake_start(void)
 {
@@ -1327,6 +1431,8 @@ static void incidents_update(float dt)
     }
 }
 
+#include "region.c"
+
 /* the camera's subject: the oldest incident going on */
 static int incident_at(float *x, float *y)
 {
@@ -1351,6 +1457,12 @@ static int incident_at(float *x, float *y)
         CONSIDER(ufo.t0, ufo.phase == 2 ? ufo.tx : ufo.ux, ufo.phase == 2 ? ufo.ty : ufo.uy);
     if (quake.on)
         CONSIDER(quake.t0, quake.ex, quake.ey);
+    if (rg.on)
+        CONSIDER(rg.t0, rg.x, rg.y);
+    if (fest.on)
+        CONSIDER(fest.t0, fest.x, fest.y);
+    if (blackout.on)
+        CONSIDER(blackout.t0, blackout.x, blackout.y);
 #undef CONSIDER
     return any;
 }
@@ -1359,6 +1471,12 @@ static void shake(int *dx, int *dy)
 {
     float k, a;
     *dx = *dy = 0;
+    if (rg.on && (rg.kind == B_VOLCANO || rg.kind == B_ALPINE) && plat_ms() - rg.t0 < 2500u) {   /* the blast, the slide */
+        a = 2.0f * (1.0f - (float)(plat_ms() - rg.t0) / 2500.0f);
+        *dx = (int)((lrnd() - 0.5f) * 2.0f * a);
+        *dy = (int)((lrnd() - 0.5f) * 2.0f * a);
+        return;
+    }
     if (!quake.on)
         return;
     k = fm_maxf(0.0f, 1.0f - (float)(plat_ms() - quake.t0) / (float)quake.dur);
@@ -1409,7 +1527,8 @@ static void feed(void)
         look_t = plat_ms();
         read_view();
     }
-    mood = mood_view - 0.55f * (1.0f - day_lit()) - 0.35f * wlvl(W_STORM) - 0.15f * wlvl(W_RAIN) + 0.1f * wlvl(W_SNOW) +
+    mood = mood_view - 0.55f * (1.0f - day_lit()) - 0.35f * wlvl(W_STORM) - 0.15f * wlvl(W_RAIN) + 0.1f * wlvl(W_SNOW) -
+           (rg.on ? 0.4f : 0.0f) + (fest.on ? 0.5f : 0.0f) - (blackout.on ? 0.3f : 0.0f) +
            (season.idx == 0 ? 0.15f : season.idx == 1 ? 0.1f : season.idx == 2 ? -0.1f : -0.05f);
     if (proj.par[P_MOOD] == 1)
         mood = 0.8f;
@@ -1433,10 +1552,30 @@ static void feed(void)
     en_city.grit = grit_view;
     en_city.rush = rush();
     en_city.day = day_lit();
-    en_city.rain = wlvl(W_RAIN);
-    en_city.storm = wlvl(W_STORM);
-    en_city.fog = wlvl(W_FOG);
-    en_city.snow = wlvl(W_SNOW);
+    /* the sky, as the music hears it: water falling, a storm's dark, fog, snow, the wind */
+    en_city.rain = fm_minf(1.0f, llvl(LK_RAIN) + llvl(LK_STORM) * 0.3f + llvl(LK_TYPHOON) * 0.8f + llvl(LK_SLEET) * 0.6f);
+    en_city.storm = llvl(LK_STORM) + llvl(LK_TYPHOON) + llvl(LK_BLIZZARD) * 0.6f + llvl(LK_DUST) * 0.4f;
+    en_city.fog = llvl(LK_FOG) + llvl(LK_HAZE) * 0.4f + llvl(LK_ASHHAZE) * 0.8f + llvl(LK_ASH) * 0.5f;
+    en_city.snow = llvl(LK_SNOW) + llvl(LK_BLIZZARD) + llvl(LK_FROST) * 0.4f + llvl(LK_SLEET) * 0.3f;
+    {
+        float wind = llvl(LK_DUST) + llvl(LK_BLIZZARD) + llvl(LK_TYPHOON) * 0.7f + llvl(LK_STORM) * 0.2f;
+        float rum = 0.0f;
+        if (rg.on) {
+            float d = lhyp(rg.x - cam.x, rg.y - cam.y), near = fm_clampf(1.0f - d / 30.0f, 0.2f, 1.0f);
+            uint32_t el = plat_ms() - rg.t0;
+            float live = el < rg.dur - 4000u ? 1.0f : fm_maxf(0.0f, (float)(rg.dur - el) / 4000.0f);
+            if (rg_vortex() && !(rg.kind == B_PLAINS && el < RG_WARN))
+                wind = fm_maxf(wind, (rg.kind == B_PLAINS ? 1.0f : 0.7f) * near * live);
+            else if (!rg_vortex())
+                rum = near * live * (rg.kind == B_FOREST ? 0.4f : 1.0f);
+        }
+        en_city.wind = fm_minf(1.0f, wind);
+        en_city.rumble = fm_minf(1.0f, rum);
+    }
+    en_city.biome = C.biome;
+    en_city.alert = (uint8_t)(rg.on && (rg.kind == B_PLAINS || rg.kind == B_BEACH) && plat_ms() - rg.t0 < RG_WARN + 9000u);
+    en_city.blackout = blackout.on;
+    en_city.festival = fest.on;
     en_city.hwy = hwy_view;
     en_city.birds = (uint8_t)(b > 255 ? 255 : b);
     en_city.gulls = (uint8_t)g;
@@ -1464,6 +1603,7 @@ static void life_reset(void)
         en_event(E_UFO_OFF, 0, 0);
     memset(&ufo, 0, sizeof ufo);
     memset(&quake, 0, sizeof quake);
+    extras_reset();
     memset(flock, 0, sizeof flock);
     memset(dust, 0, sizeof dust);
     bolt.on = 0;
@@ -1550,9 +1690,12 @@ static void life_update(void)
                     flock[k].on = 0;
             }
     }
-    if (proj.par[P_LIGHTNING] && wlvl(W_STORM) > 0.6f && (int32_t)(now - strike_next) >= 0) {
-        strike_next = now + 4000u + (uint32_t)lirnd(9000);
-        strike(lrnd() < (float)proj.par[P_LIGHTNING] * 0.05f);
+    {   /* lightning: in a storm most, in rain and snow now and then */
+        float sky = lightning_sky();
+        if (proj.par[P_LIGHTNING] && sky > 0.3f && (int32_t)(now - strike_next) >= 0) {
+            strike_next = now + (uint32_t)((4000.0f + lrnd() * 9000.0f) / sky);
+            strike(lrnd() < (float)proj.par[P_LIGHTNING] * 0.05f);
+        }
     }
     if (thunder_at && (int32_t)(now - thunder_at) >= 0) {
         thunder_at = 0;
@@ -1566,9 +1709,32 @@ static void life_update(void)
         start_crash();
     if (proj.par[P_UFO] && !ufo.on && lrnd() < rate_per_ms(proj.par[P_UFO]) * 0.1f * (float)dms)
         start_ufo();
+    {   /* the biome's disaster: more in its weather (a tornado in a storm, a flood in the rain, an avalanche in snow) */
+        float k2 = 1.0f;
+        switch (C.biome) {
+        case B_PLAINS: k2 = 1.0f + 4.0f * wlvl(W_STORM); break;
+        case B_RIVER: k2 = 0.3f + 3.0f * (wlvl(W_RAIN) + wlvl(W_STORM)); break;
+        case B_ALPINE: k2 = 0.5f + 2.5f * (wlvl(W_SNOW) + wlvl(W_STORM)); break;
+        case B_DESERT: k2 = 1.0f + 2.0f * wlvl(W_STORM); break;
+        case B_FOREST: k2 = (1.0f - wet()) * (season.idx == 1 || season.idx == 2 ? 1.6f : 0.6f) * (1.0f - wlvl(W_SNOW)); break;
+        default: break;
+        }
+        if (proj.par[P_REGION] && !rg.on && C.stage >= 1 && lrnd() < rate_per_ms(proj.par[P_REGION]) * k2 * (float)dms)
+            region_start();
+    }
+    if (proj.par[P_FEST] && !fest.on && C.stage >= 1 && lrnd() < rate_per_ms(proj.par[P_FEST]) * (float)dms)
+        festival_start();
+    if (proj.par[P_BLACKOUT] && !blackout.on && day_lit() < 0.35f && C.stage >= 1 &&
+        lrnd() < rate_per_ms(proj.par[P_BLACKOUT]) * 2.0f * (float)dms)
+        blackout_start();
+    if (proj.par[P_METEOR] && !meteors.on && day_lit() < 0.2f && wlvl(W_CLEAR) > 0.6f &&
+        lrnd() < rate_per_ms(proj.par[P_METEOR]) * 3.0f * (float)dms)
+        meteors_start();
     cars_update(dt);
     peds_update(dt, dms);
     incidents_update(dt);
+    region_update(dt);
+    extras_update();
     {   /* what fell: dust, and a crunch if it's on screen */
         rect_t r1 = view_rect(1.0f);
         while (demo_r != c_demo_w) {

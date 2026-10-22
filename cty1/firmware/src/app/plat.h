@@ -45,5 +45,7 @@ enum { OBJ_PROJ, OBJ_PANEL, OBJ_NOBJ };
 /* flash: OBJ_PROJ 0xFC000, OBJ_PANEL 0xDC000 (2 sectors each, inside Felucca's data area) */
 
 /* audio load in % of the render budget, and xruns since boot (device: from the ISR) */
+/* a number that differs each power-on (and each reset): the new city's seed */
+uint32_t plat_entropy(void);
 uint32_t plat_cpu_pct(void);
 uint32_t plat_xruns(void);

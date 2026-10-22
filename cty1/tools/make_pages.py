@@ -126,7 +126,8 @@ a.kofi { display: inline-flex; align-items: center; gap: .4em; background: var(-
 <div class="expnote"><b>Experimental.</b> CTY-1 is new: built and tested in the simulator and in the emulator here, not yet on a real FM-1. Install it at your own risk; HYP-1, or M-VAVE's own firmware, goes back on the same way.</div>
 <img class="hero" src="img/cty-hero.png" width="1600" height="1161" alt="An M-VAVE FM-1 running CTY-1: a pixel city seen from above, roads, a river and houses, the City page's Speed, Start as, Traffic and People below it.">
 <p class="lede"><b>CTY-1</b> turns the M-VAVE FM-1 into a small city that builds itself and plays a generative chiptune.
-From a seed it lays out its land, coast and river and founds a town at a crossroads. Week by week it grows: homes,
+Every time you switch it on it founds a new town on new land: forest, desert, alpine valley, volcano isles, plains, beach
+or river lands, each with its own look, weather, disaster and sound. Week by week it grows: homes,
 shops, offices and factories, farms at the edge, parks and landmarks, avenues, roundabouts and a beltway, until it's a
 huge city of towers. Every car on its roads, every building that opens, every storm, fire and siren is a note, played
 on NES, Game Boy or SID voices.</p>
@@ -141,19 +142,30 @@ on NES, Game Boy or SID voices.</p>
   <div class="card"><h3>It grows</h3><p>From a <b>town</b> at a crossroads to a <b>suburb</b>, a <b>city</b> and a <b>huge city</b>: blocks grow larger outward, avenues get planted medians, roundabouts and cul-de-sacs, bridges cross the river and a causeway the bay, and a beltway opens round it.</p></div>
   <div class="card"><h3>Zones</h3><p>Homes, shops and offices, and factories try to keep to their own districts, with some mixing. Rent and jobs set the balance; old lots are redeveloped, farms give way at the edge. A school, a hospital, a fire station and the police open as it needs them.</p></div>
   <div class="card"><h3>Life</h3><p>Cars drive real routes between homes and work; people walk, stroll the parks and stop to talk in speech bubbles. Day and night, four seasons, rain, storms, fog and snow, and birds overhead.</p></div>
-  <div class="card"><h3>Incidents</h3><p>Lightning starts a fire and the fire station sends a truck. An earthquake shakes the screen and gates the music; what falls is cleared on the next phrase. A robbery brings the police, a crash an ambulance. And, very rarely, a UFO.</p></div>
+  <div class="card"><h3>Incidents</h3><p>Lightning (out of rain, storms and snow) starts a fire and the fire station sends a truck. An earthquake shakes the screen and gates the music. A robbery brings the police, a crash an ambulance. Festivals with fireworks, blackouts, meteor showers. And, very rarely, a UFO.</p></div>
   <div class="card"><h3>The music</h3><p>The cars are the playheads: each road and building they pass is a rhythm and a bell. The bed of drums, bass and pad grows busier with the city; its mood picks the mode, the night closes the filter, rain and fog lengthen the echo, sirens wail in key.</p></div>
   <div class="card"><h3>You play</h3><p>The keys play a lead in the city's scale. Call any incident or the weather from the black keys, ride along with a car, or leave it: after a minute it takes the whole screen and follows the traffic, the lights playing along.</p></div>
 </div>
-<h2>Ten cities</h2>
-<figure><img src="img/cty-cities.png" width="2544" height="1112" alt="Ten CTY-1 cities: Brighton, Cedarport, Faircrest, Westhaven, Stonedale, Stonegate, Ashcrest, Lakecrest, Belhaven and Sunview."></figure>
-<p>Ten seeds, each with its own music, season and weather. The same seed always grows the same city; EDIT gives a slot a new one.</p>
+<h2>Seven biomes</h2>
+<figure><img src="img/cty-biomes.png" width="2040" height="1112" alt="Seven CTY-1 cities, one in each biome: forest, desert, alpine, volcano isles, plains, beach and river lands."></figure>
+<p>Each switch-on founds a new city, in a biome of its own choosing (or the one you set). The same city grows in each, and the same
+events happen, but each looks, storms and sounds its own way: the desert's mesas, cacti and dust storms over a drone in Hijaz; the
+mountains' snowy peaks, blizzards and bells; the isles' palms, turquoise shallows and smoking volcano, with a clave and a steel-drum
+wave; the plains' golden grass and boom-chick; the beach's surf backbeat; the river lands' shakers and floods.</p>
+<div class="pair">
+  <figure><img src="img/cty-device-eruption.png" width="1600" height="1161" alt="The FM-1 as the volcano erupts and lava runs down into the town."><figcaption><b>The biome's own disaster:</b> a wildfire, a dust devil, an avalanche, an eruption, a tornado, a tsunami or a flood. Its own look and sound; more in its weather.</figcaption></figure>
+  <figure><img src="img/cty-device-desert.png" width="1600" height="1161" alt="The FM-1 showing a desert city among red mesas."><figcaption><b>The desert:</b> sand, mesas and cacti; the SID over a drone, a hand drum, Hijaz.</figcaption></figure>
+</div>
+<h2>Disasters</h2>
+<figure><img src="img/cty-disasters.png" width="2040" height="1112" alt="Seven CTY-1 screens: a wildfire, a dust devil, an avalanche, an eruption, a tornado, a tsunami and a flood."></figure>
+<h2>Weather</h2>
+<figure><img src="img/cty-weather.png" width="2040" height="1112" alt="Seven CTY-1 screens of each biome's storm: a thunderstorm, a dust storm, a blizzard, a typhoon, a tropical storm."></figure>
 <div class="pair">
   <figure><img src="img/cty-device-fire.png" width="1600" height="1161" alt="The FM-1 as lightning strikes a city building and it catches fire."><figcaption><b>Incidents:</b> the camera goes to them and stays until they're over. Black keys call each one.</figcaption></figure>
-  <figure><img src="img/cty-device-night.png" width="1600" height="1161" alt="The FM-1 showing the city at night, its windows and streetlights lit."><figcaption><b>Night:</b> windows, streetlights and headlights; the music darkens and slows to it.</figcaption></figure>
+  <figure><img src="img/cty-device-night.png" width="1600" height="1161" alt="The FM-1 showing the city at night, its windows and streetlights lit."><figcaption><b>Night:</b> windows, streetlights and headlights; the music darkens to it.</figcaption></figure>
 </div>
 <h2>What happens</h2>
-<figure><img src="img/cty-incidents.png" width="2040" height="1112" alt="Eight CTY-1 screens: lightning and fire, an earthquake, a robbery, a car crash, a UFO, the night, a storm, snow."></figure>
+<figure><img src="img/cty-incidents.png" width="2040" height="1112" alt="Eight CTY-1 screens: lightning and fire, an earthquake, a robbery, a car crash, a UFO, a festival, the night, snow."></figure>
 <h2>Ways to look</h2>
 <figure><img src="img/cty-views.png" width="2040" height="568" alt="Four CTY-1 screens: the zones, the land value, the whole city, riding along with a car."></figure>
 <figure><img src="img/cty-themes.png" width="1536" height="1112" alt="Six CTY-1 screens in its themes: Asphalt, Neon, Blueprint, Sunset, Terminal, Mono."></figure>
@@ -168,7 +180,7 @@ on NES, Game Boy or SID voices.</p>
   <figure><img src="img/cty-screen-splash.png" width="480" height="480" alt="The boot screen: a pixel red panda on the RedtailWorks name"><figcaption>Switching on</figcaption></figure>
   <figure><img src="img/cty-screen-splash-cty.png" width="480" height="480" alt="The second boot screen: CTY-1 in big pixel letters over a skyline lighting up"><figcaption>&hellip;then CTY-1</figcaption></figure>
   <figure><img src="img/cty-screen-city.png" width="480" height="480" alt="The City page"><figcaption>City</figcaption></figure>
-  <figure><img src="img/cty-screen-time.png" width="480" height="480" alt="The Time page"><figcaption>Time</figcaption></figure>
+  <figure><img src="img/cty-screen-b-isles.png" width="480" height="480" alt="A city on the volcano isles"><figcaption>The isles</figcaption></figure>
   <figure><img src="img/cty-screen-events.png" width="480" height="480" alt="The Events page"><figcaption>Events</figcaption></figure>
   <figure><img src="img/cty-screen-zones.png" width="480" height="480" alt="The zones map"><figcaption>Zones</figcaption></figure>
   <figure><img src="img/cty-screen-full.png" width="480" height="480" alt="The idle view: the city on the whole screen"><figcaption>Idle view</figcaption></figure>

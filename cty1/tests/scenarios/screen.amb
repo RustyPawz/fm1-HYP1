@@ -1,5 +1,5 @@
 # CTY-1: the views (zones, value, whole), riding along, the help card, the idle view, the remote, the secret
-spin PRESET 9
+spin PRESET 2
 wait 4000
 tap GLO
 tap GLO

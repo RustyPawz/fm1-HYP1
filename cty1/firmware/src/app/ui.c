@@ -4,19 +4,20 @@
  * ECO-1 and GRAV-1.
  *
  *   keys           the lead, snapped to the city's scale. On TIME black keys 1-4 jump to dawn, noon, dusk,
- *                  night; on WEATHER black keys 1-7 set the sky (auto, clear .. snow); on EVENTS black keys 1-6
- *                  call lightning, a quake, a robbery, a crash, a UFO, birds
+ *                  night; on WEATHER black keys 1-7 set the sky (auto, then the land's six); on EVENTS black keys
+ *                  1-10 call lightning, a quake, a robbery, a crash, a UFO, birds, the land's disaster, a festival,
+ *                  a blackout, meteors
  *   PLAY           the music plays / rests (the city lives on)   REC   HOLD: the city stops growing
- *   EDIT           a new city: a new seed in this slot (SAVE on Setup keeps it)
+ *   EDIT           a new city on the same land (each power-on founds a new one anyway)
  *   SEL            ride along: the camera follows a car (again: another; ALGORITHM lets go)
  *   OCT- / OCT+    the lead an octave down / up
  *   SELECT         every page in turn (with HOME held: the tempo)
- *   ALGORITHM      look around: the camera to the next landmark      PRESETS  the city (ten)
+ *   ALGORITHM      look around: the camera to the next landmark      PRESETS  the next biome: a new city there
  *   HOME ENV ARP LFO SEQ FX GLO   the pages: CITY, MUSIC, SOUND, TIME (again: WEATHER), VOICES (again: VOICES 2),
- *                  EVENTS (again: EVENTS 2), SETUP (again: DISPLAY, then MIDI OUT)
+ *                  EVENTS (again: EVENTS 2, 3), SETUP (again: DISPLAY, then MIDI OUT)
  *   KNOB 1-4       the page's four values
- *   SAVE           on the Setup pages: saves all ten cities; elsewhere: the city again from its founding;
- *                  held 1.5 s: the city back to its recipe
+ *   SAVE           on the Setup pages: saves the settings; elsewhere: the city again from its founding;
+ *                  held 1.5 s: the biome's music back
  * Untouched a while (Idle), the screen gives itself to the city: the camera rides with the cars, each car's
  * route sings the lead, and the incidents take the camera when they happen. */
 #include "../dsp/fastmath.h"
@@ -28,24 +29,26 @@ static char *s_cat(char *d, const char *s) { s_cpy(d + s_len(d), s); return d; }
 #include "life.c"
 
 /* the pages; SELECT walks them all */
-enum { V_CITY, V_MUSIC, V_SOUND, V_TIME, V_WEATHER, V_VOICES, V_VOICES2, V_EVENTS, V_EVENTS2, V_SETUP, V_DISPLAY, V_OUT, NVIEWS };
+enum { V_CITY, V_MUSIC, V_SOUND, V_TIME, V_WEATHER, V_VOICES, V_VOICES2, V_EVENTS, V_EVENTS2, V_EVENTS3, V_SETUP, V_DISPLAY, V_OUT, NVIEWS };
 #define NWALK NVIEWS
 static const char *const VIEW_NAME[NVIEWS] = {"City", "Music", "Sound", "Time", "Weather", "Voices", "Voices 2", "Events",
-                                              "Events 2", "Setup", "Display", "MIDI out"};
-static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_ENV, B_ARP, B_LFO, B_LFO, B_SEQ, B_SEQ, B_FX, B_FX, B_GLO, B_GLO, B_GLO};
+                                              "Events 2", "Events 3", "Setup", "Display", "MIDI out"};
+static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_ENV, B_ARP, B_LFO, B_LFO, B_SEQ, B_SEQ, B_FX, B_FX, B_FX, B_GLO, B_GLO, B_GLO};
 enum { K_LEDS = 200, K_CPU, K_TIME, K_NONE };
 static const char *const KNOB_LABEL[NVIEWS][4] = {
-    {"Speed", "Start as", "Traffic", "People"},   {"Tempo", "Density", "Swing", "City bed"},
+    {"Speed", "Start as", "Biome", "Traffic"},    {"Tempo", "Density", "Swing", "City bed"},
     {"Flavor", "Lead", "Echo", "Crush"},          {"Day", "Season", "Days each", "Clock"},
-    {"Weather", "Change", "Birds", "Chats"},      {"Bells", "Arps", "Bass", "Drums"},
+    {"Weather", "Change", "Birds", "People"},     {"Bells", "Arps", "Bass", "Drums"},
     {"Pad", "Lead", "Effects", "Sirens"},         {"Lightning", "Quakes", "Robbery", "Crashes"},
-    {"UFOs", "Follow", "Disasters", "Idle"},      {"Key", "Tune", "Sync", "Mood"},
+    {"UFOs", "Regional", "Festivals", "Blackouts"}, {"Meteors", "Follow", "Disasters", "Idle"},
+    {"Key", "Tune", "Sync", "Mood"},
     {"Theme", "Zoom", "Map", "Labels"},           {"Sends", "Channels", "Lights", "CPU"},
 };
 static const uint8_t VIEW_PAR[NVIEWS][4] = {
-    {P_SPEED, P_START, P_TRAFFIC, P_PEOPLE}, {P_TEMPO, P_DENSITY, P_SWING, P_BED}, {P_FLAVOR, P_LEAD, P_ECHO, P_CRUSH},
-    {P_DAYLEN, P_SEASON, P_SEASONDAYS, 0}, {P_WEATHER, P_WPACE, P_BIRDS, P_CHATS}, {P_VBELLS, P_VARPS, P_VBASS, P_VDRUMS},
-    {P_VPAD, P_VLEAD, P_VFX, P_VSIREN}, {P_LIGHTNING, P_QUAKES, P_ROBBERY, P_CRASH}, {P_UFO, P_FOLLOW, P_DISASTER, P_IDLE},
+    {P_SPEED, P_START, P_BIOME, P_TRAFFIC}, {P_TEMPO, P_DENSITY, P_SWING, P_BED}, {P_FLAVOR, P_LEAD, P_ECHO, P_CRUSH},
+    {P_DAYLEN, P_SEASON, P_SEASONDAYS, 0}, {P_WEATHER, P_WPACE, P_BIRDS, P_PEOPLE}, {P_VBELLS, P_VARPS, P_VBASS, P_VDRUMS},
+    {P_VPAD, P_VLEAD, P_VFX, P_VSIREN}, {P_LIGHTNING, P_QUAKES, P_ROBBERY, P_CRASH}, {P_UFO, P_REGION, P_FEST, P_BLACKOUT},
+    {P_METEOR, P_FOLLOW, P_DISASTER, P_IDLE},
     {P_KEY, P_TUNE, P_SYNC, P_MOOD}, {P_THEME, P_ZOOM, P_MAP, P_LABELS}, {P_MIDI, P_MCH, 0, 0}};
 
 static struct {
@@ -272,13 +275,16 @@ static void turn(int role, int k, int32_t e)
 }
 
 /* ------------------------------------------------------------ the city --- */
-static uint32_t seed_now(void) { return (uint32_t)(uint16_t)proj.par[P_SEED_HI] << 16 | (uint16_t)proj.par[P_SEED_LO]; }
+static uint32_t seed_now(void) { return project_seed(); }
 /* the city from its founding: the map, the music's key and progression, life cleared, the camera home; Start as
- * grows it back to a stage first (a little a frame) */
+ * grows it back to a stage first (a little a frame). biome < 0: the one it has (or, new, the seed's) */
+static int cur_biome = -1;
 static void new_city(int keep_view)
 {
     uint32_t seed = seed_now();
-    city_new(seed);
+    city_new(seed, cur_biome);
+    cur_biome = C.biome;
+    en_city.biome = C.biome;
     ui.news_r = c_news_w;
     en_city.key = (uint8_t)(seed % 12u);
     en_city.prog = (uint8_t)((seed >> 4) % 6u);
@@ -296,21 +302,31 @@ static void new_city(int keep_view)
     if (!keep_view)
         ui.touched = -1;
 }
-static void set_piece(int i)
+/* a new city: a new seed; in a biome (b >= 0), or as Biome says (Random: the seed's) */
+static uint32_t fresh_seed(void)
 {
-    char t[16];
-    project_piece(i);
-    project_apply();
-    new_city(1);
-    t[0] = (char)('0' + (proj.piece + 1) / 10);
-    t[1] = (char)('0' + (proj.piece + 1) % 10);
-    t[2] = 0;
-    {
-        char n[16];
-        caps(n, C.name, sizeof n);
-        say(t, n);
+    uint32_t s = plat_entropy() ^ (plat_ms() * 2654435761u) ^ (lrnd_u() * 40503u) ^ (proj.boots * 0x9E3779B9u);
+    return s ? s : 1u;
+}
+static void found(int b, int music)
+{
+    project_set_seed(fresh_seed());
+    cur_biome = b >= 0 ? b : proj.par[P_BIOME] ? (proj.par[P_BIOME] - 1) % NBIOME : city_biome_of(seed_now());
+    if (music) {                                 /* the biome's music */
+        int p;
+        static const uint8_t PS[7] = {P_TEMPO, P_FLAVOR, P_LEAD, P_SWING, P_DENSITY, P_BED, P_ECHO};
+        project_biome_music(cur_biome);
+        for (p = 0; p < 7; p++)
+            en_set(PS[p], proj.par[PS[p]]);
     }
-    mark_dirty();
+    new_city(1);
+}
+static void say_city(const char *what)
+{
+    char n[16], t[24];
+    caps(n, C.name, sizeof n);
+    s_cpy(t, what ? what : BIOME_SHORT[C.biome]);
+    say(t, n);
 }
 static void grow(uint32_t dms)
 {
@@ -420,6 +436,25 @@ static void city_news(void)
         case N_TREATED: s_cpy(a, "PARAMEDICS"); s_cpy(b, "ALL WELL"); break;
         case N_TOWED: s_cpy(a, "THE WRECK"); s_cpy(b, "TOWED"); break;
         case N_UFO: s_cpy(a, "UFO!"); s_cpy(b, "BEAMED UP"); break;
+        case N_REGION: {
+            static const char *const W[NBIOME] = {"IN THE WOODS", "COMING", "OFF THE PEAKS", "THE VOLCANO", "WARNING", "WARNING", "THE RIVER RISES"};
+            s_cpy(a, REGION_NAME[e.a % NBIOME]);
+            s_cpy(b, W[e.a % NBIOME]);
+            break;
+        }
+        case N_REGION_END:
+            s_cpy(a, REGION_NAME[e.a % NBIOME]);
+            if (e.b) {
+                itoa_u(e.b, b);
+                s_cat(b, " LOST");
+            } else {
+                s_cpy(b, "PASSES");
+            }
+            break;
+        case N_FEST: s_cpy(a, "FESTIVAL"); s_cpy(b, "TONIGHT"); if (day_lit() > 0.4f) s_cpy(b, "TODAY"); break;
+        case N_BLACKOUT: s_cpy(a, "BLACKOUT"); break;
+        case N_LIGHTS: s_cpy(a, "LIGHTS"); s_cpy(b, "BACK ON"); break;
+        case N_METEOR: s_cpy(a, "METEOR"); s_cpy(b, "SHOWER"); break;
         default: continue;
         }
         if (ui.ff || ui.full)
@@ -457,8 +492,8 @@ static void button(int b)
         set_view(V_VOICES2);
         return;
     }
-    if (b == B_FX && ui.view == V_EVENTS) {
-        set_view(V_EVENTS2);
+    if (b == B_FX && (ui.view == V_EVENTS || ui.view == V_EVENTS2)) {
+        set_view(ui.view + 1);
         return;
     }
     for (v = 0; v < NVIEWS; v++)
@@ -470,19 +505,10 @@ static void button(int b)
     case B_SEL:
         ride_next();
         break;
-    case B_EDIT: {                               /* a new seed here */
-        uint32_t s = (plat_ms() * 2654435761u) ^ (lrnd_u() * 40503u) ^ seed_now();
-        char n[16];
-        if (!s)
-            s = 1u;
-        knob_set(P_SEED_HI, (int16_t)(uint16_t)(s >> 16));
-        knob_set(P_SEED_LO, (int16_t)(uint16_t)s);
-        new_city(1);
-        caps(n, C.name, sizeof n);
-        say("A NEW CITY", n);
-        mark_dirty();
+    case B_EDIT:                                 /* a new city, in the same biome */
+        found(C.biome, 0);
+        say_city("A NEW CITY");
         break;
-    }
     case B_PLAY:
         if (en_playing) {
             en_play(0);
@@ -542,23 +568,29 @@ static void key_down(int k)
         return;
     }
     if (ui.view == V_WEATHER && bk >= 0 && bk < 7) {
-        static const char *const N[7] = {"AUTO", "CLEAR", "CLOUDY", "RAIN", "STORM", "FOG", "SNOW"};
+        char t[16];
         knob_set(P_WEATHER, bk);
         wx.next = 0;
-        say("WEATHER", N[bk]);
+        en_param_text(P_WEATHER, bk, t);
+        caps(t, t, sizeof t);
+        say("WEATHER", t);
         return;
     }
-    if ((ui.view == V_EVENTS || ui.view == V_EVENTS2) && bk >= 0 && bk < 6) {
-        static const char *const N[6] = {"LIGHTNING", "EARTHQUAKE", "ROBBERY", "CRASH", "UFO", "BIRDS"};
+    if (ui.view >= V_EVENTS && ui.view <= V_EVENTS3 && bk >= 0 && bk < 10) {
+        static const char *const N[10] = {"LIGHTNING", "EARTHQUAKE", "ROBBERY", "CRASH", "UFO", "BIRDS", 0, "FESTIVAL", "BLACKOUT", "METEORS"};
         switch (bk) {
         case 0: strike(1); break;
         case 1: quake_start(); break;
         case 2: start_robbery(); break;
         case 3: start_crash(); break;
         case 4: start_ufo(); break;
-        default: spawn_flock(); break;
+        case 5: spawn_flock(); break;
+        case 6: region_start(); break;
+        case 7: festival_start(); break;
+        case 8: blackout_start(); break;
+        default: meteors_start(); break;
         }
-        say(N[bk], "CALLED");
+        say(N[bk] ? N[bk] : REGION_NAME[C.biome], "CALLED");
         return;
     }
     en_lead(k, k);
@@ -1034,7 +1066,8 @@ static void input(void)
         ui.act_t = ui.turn_t = plat_ms();
     }
     if ((e = plat_enc(EN_PRESET)) != 0) {
-        set_piece(proj.piece + (int)e);
+        found(((int)C.biome + (int)e % NBIOME + NBIOME) % NBIOME, 1);   /* PRESETS: the biomes in turn */
+        say_city(0);
         ui.act_t = ui.turn_t = plat_ms();
     }
     if ((btn >> B_SAVE & 1u) && !ui.reset_done && plat_ms() - ui.down_t[B_SAVE] > RESET_HOLD) {
@@ -1042,11 +1075,10 @@ static void input(void)
         ui.reset_done = 1;
         ui.btn_used |= 1u << B_SAVE;
         ui.help = 0;
-        project_piece_reset();
+        project_biome_music(C.biome);            /* the biome's music back */
         project_apply();
-        new_city(1);
-        caps(n, C.name, sizeof n);
-        say("RECIPE", n);
+        caps(n, BIOME_SHORT[C.biome], sizeof n);
+        say("MUSIC", n);
         mark_dirty();
     }
     for (i = 0; i < 4; i++)
@@ -1295,25 +1327,83 @@ static void bevel(float x, float y, float w, float h, uint16_t c)
     P(x, y + h - 0.8f, w, 0.8f, shade(c, -0.28f));
     P(x + w - 0.8f, y, 0.8f, h, shade(c, -0.2f));
 }
+/* the biome's trees: pines up high (and some in the forest), cacti in the desert, palms on the isles and the beach */
+static void pine(float x, float y, float r, float sv)
+{
+    uint16_t c = SEAS[SC_LEAF2], hi = SEAS[SC_LEAF];
+    PA(x - r + 1.0f, y - r + 1.4f, r * 2.0f, r * 2.0f, RGB(20, 30, 15), 72);
+    P(x - r * 0.35f, y - r, r * 0.7f, r * 0.6f, hi);
+    P(x - r * 0.7f, y - r * 0.4f, r * 1.4f, r * 0.6f, c);
+    P(x - r, y + r * 0.2f, r * 2.0f, r * 0.7f, shade(c, -0.1f));
+    P(x - 0.3f, y + r * 0.9f, 0.6f, r * 0.4f, H(0x5a4430));
+    if (season.vis == 3 || (C.biome == B_ALPINE && sv > 0.7f)) {   /* snow on the boughs */
+        P(x - r * 0.3f, y - r, r * 0.6f, 0.4f, H(0xf2f6f8));
+        P(x - r * 0.6f, y - r * 0.4f, r * 0.5f, 0.4f, H(0xf2f6f8));
+    }
+}
+static void cactus(float x, float y, float r, float sv)
+{
+    uint16_t c = H(0x5f8f4a), hi = H(0x86b066);
+    float h = r * 2.0f;
+    PA(x + 0.4f, y - r + 1.2f, 1.2f, h, RGB(60, 40, 20), 70);
+    P(x - 0.5f, y - r, 1.0f, h, c);
+    P(x - 0.5f, y - r, 0.4f, h, hi);
+    if (sv > 0.3f) {
+        P(x - r * 0.8f, y - r * 0.1f, r * 0.8f - 0.5f, 0.6f, c);
+        P(x - r * 0.8f, y - r * 0.6f, 0.6f, r * 0.5f + 0.1f, c);
+    }
+    if (sv < 0.7f) {
+        P(x + 0.5f, y + r * 0.1f, r * 0.6f, 0.6f, c);
+        P(x + r * 0.5f + 0.5f, y - r * 0.4f, 0.6f, r * 0.55f, c);
+    }
+    if (sv > 0.85f)
+        dot(x - 0.2f, y - r - 0.4f, H(0xf06a8a));   /* in flower */
+}
+static void palm(float x, float y, float r, float sv)
+{
+    uint16_t c = SEAS[SC_LEAF], d2 = shade(c, -0.25f);
+    PA(x - r * 0.4f + 1.2f, y + 0.8f, r * 1.6f, r * 0.9f, RGB(20, 30, 15), 64);
+    P(x - 0.3f + sv * 0.6f, y - r * 0.2f, 0.6f, r * 1.2f, H(0x8a6a44));
+    P(x - r, y - r * 0.4f, r * 2.0f, 0.7f, c);
+    P(x - 0.4f, y - r, 0.8f, r * 1.3f, d2);
+    P(x - r * 0.7f, y - r * 0.8f, r * 0.6f, 0.6f, c);
+    P(x + r * 0.15f, y - r * 0.8f, r * 0.6f, 0.6f, c);
+    P(x - r * 0.75f, y + r * 0.05f, r * 0.5f, 0.6f, d2);
+    P(x + r * 0.3f, y + r * 0.05f, r * 0.5f, 0.6f, d2);
+    if (sv > 0.6f)
+        dot(x - 0.2f, y - r * 0.2f, H(0x6b4a2a));   /* coconuts */
+}
+static void round_tree(float x, float y, float r, float sv);
 static void tree(float x, float y, float r, float sv)
+{
+    switch (C.biome) {
+    case B_ALPINE: pine(x, y, r, sv); return;
+    case B_DESERT: if (sv < 0.75f) { cactus(x, y, r, sv); return; } palm(x, y, r, sv); return;
+    case B_VOLCANO: case B_BEACH: if (sv < 0.6f) { palm(x, y, r, sv); return; } break;
+    case B_FOREST: if (sv > 0.62f) { pine(x, y, r, sv); return; } break;
+    default: break;
+    }
+    round_tree(x, y, r, sv);
+}
+static void round_tree(float x, float y, float r, float sv)
 {
     float d = r * 2.0f;
     uint16_t c = SEAS[SC_LEAF], hi = sv > 0.5f ? SEAS[SC_LEAFHI] : SEAS[SC_LEAFMID];
     PA(x - r + 1.0f, y - r + 1.2f, d, d, RGB(20, 30, 15), 72);
-    if (season.idx == 3 && sv > 0.38f) {         /* bare branches, a dusting of snow */
+    if (season.vis == 3 && sv > 0.38f) {         /* bare branches, a dusting of snow */
         P(x - 0.3f, y - r + 0.4f, 0.6f, d - 0.8f, H(0x6b5640));
         P(x - r + 0.4f, y - 0.3f, d - 0.8f, 0.6f, H(0x6b5640));
         dot(x - r * 0.5f, y - r * 0.5f, H(0x7d6650));
         dot(x + r * 0.4f, y + r * 0.3f, H(0xeef3f5));
         return;
     }
-    if (season.idx == 2) {
+    if (season.vis == 2) {
         static const uint16_t AUT[4] = {H(0xc46a2a), H(0xd99a2e), H(0xb8432a), H(0x8a8a34)};
         c = AUT[(int)(sv * 4.0f) & 3];
         hi = shade(c, 0.25f);
-    } else if (season.idx == 0 && sv > 0.72f) {
+    } else if (season.vis == 0 && sv > 0.72f) {
         hi = sv > 0.86f ? H(0xf6d6e0) : H(0xf2b8c8);
-    } else if (season.idx == 3) {
+    } else if (season.vis == 3) {
         hi = H(0xeef3f5);
     }
     blob(x - r, y - r, d, d, c);
@@ -1323,6 +1413,47 @@ static uint16_t grass(int i)
 {
     int h = c_hgt[i];
     return SEAS[h < 97 ? SC_G0 : h < 128 ? SC_G1 : h < 153 ? SC_G2 : h < 174 ? SC_G3 : SC_G4];
+}
+
+/* rock: a desert mesa's layers, a mountain's grey and its snow, the volcano's basalt and its crater */
+static void draw_rock(int x, int y, int px, int py, int s)
+{
+    int i = y * MW + x, h = c_hgt[i], k;
+    float n = city_hashf(C.seed + 17u, x, y);
+    uint32_t now = plat_ms();
+    if (C.biome == B_VOLCANO) {
+        float d = hyp((float)(x - C.vx), (float)(y - C.vy));
+        cv_rect(px, py, s, s, d < 2.6f ? H(0x2c2626) : n < 0.5f ? H(0x423c3a) : H(0x4c4442));
+        if (d < 1.6f) {                          /* the crater: lava, glowing, moving */
+            float g = 0.5f + 0.5f * fm_sinf((float)now / 300.0f + (float)(x * 3 + y));
+            cv_rect(px, py, s, s, mix(H(0xc8321e), H(0xffa030), q16(g)));
+        } else if (s >= 6 && n > 0.7f) {
+            rect_mix(px + (int)(n * (float)(s - 2)), py + s / 3, s / 4 + 1, 1, H(0x1e1a1a), 200);
+        }
+        return;
+    }
+    if (C.biome == B_DESERT) {                   /* a mesa: red bands, a pale top, a dark edge */
+        int band = (h / 12 + y) % 3;
+        cv_rect(px, py, s, s, band == 0 ? H(0xb5653a) : band == 1 ? H(0xc97a48) : H(0xa65a34));
+        if (s >= 4) {
+            if (y > 0 && TERR(i - MW) != T_ROCK)
+                cv_rect(px, py, s, (s >> 2) + 1, H(0xd99a62));
+            if (y < MH - 1 && TERR(i + MW) != T_ROCK)
+                cv_rect(px, py + s - (s >> 2) - 1, s, (s >> 2) + 1, H(0x7a3e24));
+        }
+        return;
+    }
+    /* the mountains: grey, cracked, snow on the heights (and all of it in winter) */
+    cv_rect(px, py, s, s, n < 0.5f ? H(0x8a8f96) : H(0x7d828a));
+    if (s >= 6)
+        for (k = 0; k < 2; k++)
+            rect_mix(px + (int)(city_hashf((uint32_t)k, x, y) * (float)(s - 2)), py + (int)(city_hashf((uint32_t)k + 7u, x, y) * (float)(s - 2)),
+                     s / 3, 1, H(0x5c6068), 200);
+    if (h > 196 || season.vis == 3 || (h > 172 && n > 0.4f)) {
+        cv_rect(px, py, s, s, H(0xeef3f6));
+        if (s >= 4 && y < MH - 1 && TERR(i + MW) != T_ROCK)
+            cv_rect(px, py + s - (s >> 2), s, s >> 2, H(0xb8c8d6));
+    }
 }
 
 /* the view: screen rows r0 .. r0+bh of a cam.vw x cam.vh view, onto the canvas */
@@ -1469,7 +1600,18 @@ static void draw_ground(int x, int y, int px, int py, int s, uint32_t sh)
 {
     int i = y * MW + x;
     if (TERR(i) == T_WATER) {
-        cv_rect(px, py, s, s, (c_terr[i] & F_OCEAN) ? H(0x2b5b86) : SEAS[SC_RIVER]);
+        uint16_t sea = H(0x2b5b86);
+        if (c_terr[i] & F_OCEAN) {               /* the shallows: turquoise on the isles and the beach */
+            int shore = (x > 0 && !(c_terr[i - 1] & 1u)) || (x < MW - 1 && !(c_terr[i + 1] & 1u)) || (y > 0 && !(c_terr[i - MW] & 1u)) ||
+                        (y < MH - 1 && !(c_terr[i + MW] & 1u));
+            if (C.biome == B_VOLCANO || C.biome == B_BEACH)
+                sea = shore ? H(0x3fb6c0) : H(0x2a7fae);
+            else if (shore)
+                sea = H(0x3a6f98);
+            if (shore && s >= 4 && ((sh + (uint32_t)x * 3u + (uint32_t)y) % 4u) == 0u)   /* the surf */
+                sea = mix(sea, H(0xf4f8f8), 7);
+        }
+        cv_rect(px, py, s, s, (c_terr[i] & F_OCEAN) ? sea : SEAS[SC_RIVER]);
         if (!(c_terr[i] & F_OCEAN) && season.snow > 0.5f && s >= 4 && city_hashf(C.seed, x, y) < 0.5f) {
             rect_mix(px + 1, py + (s >> 2), s - 2, 1, H(0xecf4fa), 140);
             rect_mix(px + (s >> 1), py + (s >> 1) + 1, s >> 2, 1, H(0xecf4fa), 140);
@@ -1478,7 +1620,14 @@ static void draw_ground(int x, int y, int px, int py, int s, uint32_t sh)
             cv_rect(px + (int)(city_hashf(sh, x, y) * (float)(s >> 1)), py + (s >> 1), (s >> 1) < 1 ? 1 : s >> 1, 1, H(0x86b6da));
         return;
     }
-    cv_rect(px, py, s, s, grass(i));
+    if (TERR(i) == T_ROCK) {
+        draw_rock(x, y, px, py, s);
+        return;
+    }
+    if ((c_terr[i] & F_NOCEAN) && (C.biome == B_BEACH || C.biome == B_VOLCANO || C.biome == B_DESERT) && !c_bt[i])
+        cv_rect(px, py, s, s, C.biome == B_VOLCANO && hyp((float)(x - C.vx), (float)(y - C.vy)) < 14.0f ? H(0x55504e) : H(0xe8d7a6));   /* sand */
+    else
+        cv_rect(px, py, s, s, grass(i));
     if (RUBBLE(i)) {
         draw_rubble(x, y, px, py, s);
         return;
@@ -1507,10 +1656,55 @@ static void draw_ground(int x, int y, int px, int py, int s, uint32_t sh)
         } else {
             cv_rect(px, py, 1, 1, SEAS[SC_LEAFMID]);
         }
-    } else if (s >= 8 && city_hashf(C.seed + 9u, x, y) < 0.18f) {   /* wildflowers */
+    } else if (s >= 6) {                         /* the ground's own detail: each biome's */
+        float h1 = city_hashf(C.seed + 9u, x, y), h2 = city_hashf(C.seed, x, y + 9), h3 = city_hashf(C.seed, x + 9, y);
         at(px, py, s);
-        dot(1.0f + city_hashf(C.seed, x, y + 9) * 6.0f, 1.0f + city_hashf(C.seed, x + 9, y) * 6.0f,
-            city_hashf(C.seed, x, y) < 0.5f ? H(0xf2e27a) : H(0xf0f0ea));
+        switch (C.biome) {
+        case B_DESERT:                           /* ripples and pebbles */
+            if (h1 < 0.5f)
+                P(1.0f + h2 * 3.0f, 2.0f + h3 * 4.0f, 3.0f, 0.5f, H(0xc8a873));
+            if (h1 > 0.85f)
+                dot(1.0f + h2 * 6.0f, 1.0f + h3 * 6.0f, H(0x9a8060));
+            break;
+        case B_ALPINE:                           /* snow patches high up, stones */
+            if (c_hgt[i] > 140 && h1 < 0.55f)
+                blob(h2 * 4.0f, h3 * 4.0f, 3.0f + h1 * 2.0f, 2.0f, H(0xeef3f6));
+            else if (h1 > 0.8f)
+                dot(1.0f + h2 * 6.0f, 1.0f + h3 * 6.0f, H(0x8a8f96));
+            break;
+        case B_PLAINS:                           /* tall grass, gold in the sun */
+            if (h1 < 0.6f) {
+                P(1.0f + h2 * 5.0f, 2.0f + h3 * 3.0f, 0.5f, 2.0f, H(0xd8c070));
+                P(2.0f + h2 * 5.0f, 3.0f + h3 * 3.0f, 0.5f, 2.0f, H(0xc8b060));
+            }
+            break;
+        case B_BEACH:                            /* dune grass by the sand */
+            if ((c_terr[i] & F_NOCEAN) && h1 < 0.4f) {
+                P(2.0f + h2 * 4.0f, 2.0f + h3 * 4.0f, 0.5f, 2.0f, H(0x8aa860));
+                P(3.0f + h2 * 4.0f, 3.0f + h3 * 4.0f, 0.5f, 1.5f, H(0x7a9850));
+            } else if (h1 < 0.15f)
+                dot(1.0f + h2 * 6.0f, 1.0f + h3 * 6.0f, H(0xf0f0ea));
+            break;
+        case B_RIVER:                            /* reeds by the water, wildflowers */
+            if ((c_terr[i] & F_NWATER) && h1 < 0.6f) {
+                P(1.0f + h2 * 5.0f, 1.0f + h3 * 4.0f, 0.5f, 3.0f, H(0x5f7a3a));
+                dot(1.0f + h2 * 5.0f, 0.6f + h3 * 4.0f, H(0x7a5a30));
+            } else if (h1 < 0.15f)
+                dot(1.0f + h2 * 6.0f, 1.0f + h3 * 6.0f, H(0xb8a0e8));
+            break;
+        case B_VOLCANO:                          /* ferns and hibiscus */
+            if (h1 < 0.25f)
+                dot(1.0f + h2 * 6.0f, 1.0f + h3 * 6.0f, h1 < 0.1f ? H(0xff4a6a) : H(0xffb030));
+            else if (h1 < 0.5f)
+                P(1.0f + h2 * 5.0f, 2.0f + h3 * 4.0f, 2.0f, 0.6f, H(0x3e8a3a));
+            break;
+        default:                                 /* forest floor: mushrooms, ferns, flowers */
+            if (h1 < 0.12f)
+                dot(1.0f + h2 * 6.0f, 1.0f + h3 * 6.0f, H(0xd9473f));
+            else if (h1 < 0.3f)
+                P(1.0f + h2 * 5.0f, 2.0f + h3 * 4.0f, 2.0f, 0.6f, H(0x4a7a3a));
+            break;
+        }
     }
 }
 
@@ -1710,11 +1904,11 @@ static void sprite_farm(const st_t *st, int n)
     float w = (float)(n * 8), v = city_hashf(C.seed, st->x, st->y), y;
     uint16_t c0, c1;
     static const uint16_t CROPS[4][2] = {{H(0xd9c06a), H(0xc4a94e)}, {H(0x7fae4f), H(0x5f9a40)}, {H(0x9cc76f), H(0x86b85a)}, {H(0xc98e4a), H(0xb07a3c)}};
-    if (season.idx == 3) { c0 = H(0xe6ecef); c1 = H(0xd6dde0); }
-    else if (season.idx == 0) { c0 = H(0x7fae4f); c1 = H(0x8a6a48); }
-    else if (season.idx == 2) { c0 = H(0xd9b24a); c1 = H(0xa8823a); }
+    if (season.vis == 3) { c0 = H(0xe6ecef); c1 = H(0xd6dde0); }
+    else if (season.vis == 0) { c0 = H(0x7fae4f); c1 = H(0x8a6a48); }
+    else if (season.vis == 2) { c0 = H(0xd9b24a); c1 = H(0xa8823a); }
     else { c0 = CROPS[(int)(v * 4.0f) & 3][0]; c1 = CROPS[(int)(v * 4.0f) & 3][1]; }
-    P(0, 0, w, w, season.idx == 3 ? H(0xd3d9dc) : H(0x8a6a48));
+    P(0, 0, w, w, season.vis == 3 ? H(0xd3d9dc) : H(0x8a6a48));
     for (y = 0.5f; y < w - 0.5f; y += 1.4f)
         P(0.5f, y, w - 1.0f, 0.8f, ((int)(y * 10.0f)) % 2 ? c0 : c1);
     if (n > 1) {
@@ -2276,7 +2470,7 @@ static void draw_night(int s, const uint16_t *vis, int nvis)
     for (y = (int)fm_maxf(0.0f, r.y0); y <= (int)fm_minf((float)(MH - 1), r.y1); y++)   /* the streetlights */
         for (x = (int)fm_maxf(0.0f, r.x0); x <= (int)fm_minf((float)(MW - 1), r.x1); x++) {
             int i = y * MW + x, cx, cy, g;
-            if (!c_road[i] || !(LANE(i) == 0 || (c_plan[i] == PL_BELTWAY && (x + y) % 3 == 0)))
+            if (!c_road[i] || !(LANE(i) == 0 || (c_plan[i] == PL_BELTWAY && (x + y) % 3 == 0)) || blackout_at((float)x + 0.5f, (float)y + 0.5f))
                 continue;
             cx = VOX + x * s + s / 2;
             cy = VOY + y * s + s / 2;
@@ -2289,7 +2483,7 @@ static void draw_night(int s, const uint16_t *vis, int nvis)
         const st_t *st = &c_st[vis[k]];
         float lit;
         int n, j;
-        if ((st->flags & SF_FARM) || (st->type == BT_CIV && civ_green(st->kind)))
+        if ((st->flags & SF_FARM) || (st->type == BT_CIV && civ_green(st->kind)) || blackout_at((float)st->x + 0.5f, (float)st->y + 0.5f))
             continue;
         lit = st->type == BT_RES ? res_lit : st->type == BT_COM ? 0.4f : st->type == BT_IND ? 0.3f : 0.6f;
         n = (int)((float)((st->L + 1) * st->size * st->size) * (s >= 6 ? 1.6f : 0.5f) + 0.5f);
@@ -2480,49 +2674,258 @@ static void draw_birds(int s)
         }
     }
 }
+/* falling things, in screen space: n of them, down vy and across vx pixels a millisecond, a streak `len` long */
+static void fall(uint32_t seed, int n, float vy, float vx, uint16_t c, uint32_t a, int len, float wob)
+{
+    uint32_t now = plat_ms();
+    int k, j;
+    float W = (float)cam.vw, Hh = (float)(cam.vh + 12);
+    for (k = 0; k < n; k++) {
+        float y = city_hashf(seed, k, 1) * Hh + (float)now * vy, x;
+        y -= fm_floorf(y / Hh) * Hh;
+        y -= 6.0f;
+        x = city_hashf(seed, k, 2) * W + (float)now * vx +
+            (wob > 0.0f ? fm_sinf((float)now / 900.0f + (float)k) * wob : 0.0f) + 4.0f * W;
+        x -= fm_floorf(x / W) * W;
+        for (j = 0; j < len; j++) {
+            float f = len > 1 ? (float)j / (float)(len - 1) : 0.0f, sx = vx / (fm_fabsf(vy) + fm_fabsf(vx) + 1e-6f);
+            float sy = vy / (fm_fabsf(vy) + fm_fabsf(vx) + 1e-6f);
+            px_mix((int)(x - sx * f * (float)len), (int)(y - sy * f * (float)len), c, a);
+        }
+    }
+}
+/* the sky over the view: each biome's own weather (life.c look_of), the dusk, the clouds' dark */
 static void draw_weather(void)
 {
     uint32_t now = plat_ms();
-    float rain = wlvl(W_RAIN) + wlvl(W_STORM) * 1.6f, snow = wlvl(W_SNOW), fog = wlvl(W_FOG), dk = dusk();
-    float dark = 0.08f * wlvl(W_CLOUDY) + 0.14f * wlvl(W_RAIN) + 0.28f * wlvl(W_STORM) + 0.05f * snow;
-    float area = (float)(cam.vw * cam.vh) / 20480.0f;
+    float dk = dusk(), area = (float)(cam.vw * cam.vh) / 20480.0f;
+    float rain = llvl(LK_RAIN), storm = llvl(LK_STORM), typh = llvl(LK_TYPHOON), dust = llvl(LK_DUST), bliz = llvl(LK_BLIZZARD);
+    float fog = llvl(LK_FOG), haze = llvl(LK_HAZE), ash_h = llvl(LK_ASHHAZE), snow = llvl(LK_SNOW), frost = llvl(LK_FROST);
+    float ash = llvl(LK_ASH), sleet = llvl(LK_SLEET);
+    float dark = 0.08f * llvl(LK_CLOUD) + 0.14f * rain + 0.28f * storm + 0.32f * typh + 0.05f * snow + 0.1f * bliz + 0.12f * ash;
     int k;
     if (dk > 0.02f)
         tint(H(0xff7832), 0.13f * dk);
     tint(H(0x1c2434), dark);
-    tint(H(0xf0f4f8), 0.12f * snow);
-    if (rain > 0.01f) {
-        int n = (int)(rain * 90.0f * area);
-        for (k = 0; k < n; k++) {
-            float y = fm_floorf(city_hashf(7u, k, 1) * (float)(cam.vh + 12)) + (float)now * 0.22f, x;
-            y -= fm_floorf(y / (float)(cam.vh + 12)) * (float)(cam.vh + 12);
-            y -= 6.0f;
-            x = city_hashf(7u, k, 2) * (float)cam.vw + y * 0.4f + (float)cam.vw;
-            x -= fm_floorf(x / (float)cam.vw) * (float)cam.vw;
-            px_mix((int)x, (int)y, H(0xbed2f0), 140);
-            px_mix((int)(x - 0.4f), (int)(y - 1.0f), H(0xbed2f0), 140);
-            px_mix((int)(x - 0.8f), (int)(y - 2.0f), H(0xbed2f0), 140);
+    if (snow + bliz > 0.01f)
+        tint(H(0xf0f4f8), 0.12f * snow + 0.3f * bliz);
+    if (rain + storm + typh + sleet > 0.01f)     /* rain: straight, harder in a storm, slanting in a typhoon */
+        fall(7u, (int)((rain + storm * 1.6f + typh * 2.0f + sleet * 0.6f) * 90.0f * area), 0.22f, 0.09f + typh * 0.2f, H(0xbed2f0), 140, 3, 0.0f);
+    if (snow + sleet * 0.4f + frost * 0.25f > 0.01f)
+        fall(9u, (int)((snow + sleet * 0.4f + frost * 0.25f) * 70.0f * area), 0.018f, 0.0f, H(0xfafcff), 230, 1, 3.0f);
+    if (bliz > 0.01f)                            /* a blizzard: snow driven sideways */
+        fall(13u, (int)(bliz * 150.0f * area), 0.05f, 0.16f, H(0xffffff), 220, 2, 0.0f);
+    if (ash > 0.01f) {                           /* ash fall: grey flakes, slow */
+        tint(H(0x5a5048), 0.22f * ash);
+        fall(17u, (int)(ash * 140.0f * area), 0.012f, 0.004f, H(0x5e5854), 240, 1, 2.0f);
+        fall(23u, (int)(ash * 60.0f * area), 0.016f, 0.006f, H(0xa8a29c), 230, 2, 2.0f);
+    }
+    if (dust > 0.01f) {                          /* a dust storm: the light goes ochre, sand streams across */
+        tint(H(0xc08a4a), 0.42f * dust);
+        fall(19u, (int)(dust * 160.0f * area), 0.01f, 0.2f, H(0xe0b070), 170, 3, 0.0f);
+        for (k = 0; k < 3; k++) {
+            float y = (float)(k * 53) + (float)now * 0.01f;
+            y -= fm_floorf(y / (float)(cam.vh + 30)) * (float)(cam.vh + 30);
+            rect_mix(0, (int)y - 15, cam.vw, 14, H(0xd8a868), (uint32_t)(50.0f * dust));
         }
     }
-    if (snow > 0.01f) {
-        int n = (int)(snow * 70.0f * area);
-        for (k = 0; k < n; k++) {
-            float y = city_hashf(9u, k, 1) * (float)(cam.vh + 4) + (float)now * 0.018f, x;
-            y -= fm_floorf(y / (float)(cam.vh + 4)) * (float)(cam.vh + 4);
-            y -= 2.0f;
-            x = city_hashf(9u, k, 2) * (float)cam.vw + fm_sinf((float)now / 900.0f + (float)k) * 3.0f + (float)cam.vw;
-            x -= fm_floorf(x / (float)cam.vw) * (float)cam.vw;
-            px_mix((int)x, (int)y, H(0xfafcff), 230);
+    if (haze > 0.01f) {                          /* heat haze: warm, the air rippling */
+        tint(H(0xffe0a8), 0.12f * haze);
+        for (k = 0; k < cam.vh; k += 7) {
+            float o = fm_sinf((float)now / 260.0f + (float)k * 0.4f);
+            if (o > 0.6f)
+                rect_mix(0, k, cam.vw, 1, H(0xfff2d0), (uint32_t)(40.0f * haze));
         }
     }
-    if (fog > 0.01f) {
-        tint(H(0xd6dce2), 0.38f * fog);
+    if (fog + ash_h > 0.01f) {                   /* mist, fog, sea fog; or the volcano's ash haze */
+        uint16_t fc = ash_h > fog ? H(0x8a8078) : H(0xd6dce2), bc = ash_h > fog ? H(0x9a9088) : H(0xe8ecf0);
+        float f = fog + ash_h;
+        tint(fc, 0.38f * f);
         for (k = 0; k < 4; k++) {
             float y = (float)(k * 37) + (float)now * 0.004f;
             y -= fm_floorf(y / (float)(cam.vh + 30)) * (float)(cam.vh + 30);
-            rect_mix(0, (int)y - 15, cam.vw, 10, H(0xe8ecf0), (uint32_t)(36.0f * fog));
+            rect_mix(0, (int)y - 15, cam.vw, 10, bc, (uint32_t)(36.0f * f));
         }
     }
+}
+
+/* the biome's disaster on the map: a flow (fire, snow, lava, water) from its reach map, or a vortex */
+static void draw_region(int s, int x0, int x1, int y0, int y1, int glowing)
+{
+    uint32_t now = plat_ms(), el, e;
+    int x, y, k;
+    if (!rg.on || glowing != (rg.kind == B_FOREST || rg.kind == B_VOLCANO || rg_vortex()))   /* fire, lava, a twister: after the night */
+        return;
+    el = now - rg.t0;
+    e = el / 50u + 1u;
+    if (rg_vortex()) {
+        float cx = (float)VOX + rg.x * (float)s, cy = (float)VOY + rg.y * (float)s, sc = (float)s / 8.0f;
+        int plains = rg.kind == B_PLAINS;
+        uint16_t c0 = plains ? H(0x4a4c52) : H(0xc89a60), c1 = plains ? H(0x6e7078) : H(0xe0b878);
+        if (plains && el < RG_WARN) {            /* the warning: a wall cloud darkening */
+            tint(H(0x20242c), 0.25f * (float)el / (float)RG_WARN);
+            return;
+        }
+        if (plains)
+            tint(H(0x2a3038), 0.18f);
+        ellipse_mix(cx + 3.0f * sc, cy + 2.0f * sc, 11.0f * sc, 5.0f * sc, H(0x101418), 90);
+        ellipse_mix(cx, cy, 7.0f * sc, 3.0f * sc, plains ? H(0x6a5a48) : H(0xd8b080), 160);   /* the dust at its foot */
+        for (k = 0; k < 14; k++) {               /* the funnel: wider as it rises, turning */
+            float f = (float)k / 13.0f, w = (2.0f + f * f * 15.0f) * sc, yy = cy - f * 34.0f * sc;
+            float sway = fm_sinf((float)now / 220.0f + f * 3.0f) * 3.5f * sc * f;
+            ellipse_mix(cx + sway, yy, w + 1.0f, w * 0.38f + 1.0f, plains ? H(0x26282c) : H(0x8a6438), 200);
+            ellipse_mix(cx + sway, yy, w, w * 0.35f, k & 1 ? c0 : c1, 230);
+        }
+        for (k = 0; k < 14; k++) {               /* debris round it */
+            float a = (float)now / (150.0f + (float)k * 9.0f) + (float)k, r = (3.0f + (float)(k % 5) * 2.0f) * sc;
+            cv_rect((int)(cx + fm_cosf(a) * r), (int)(cy - (float)(k % 7) * 3.0f * sc + fm_sinf(a) * r * 0.35f), 1, 1, plains ? H(0x8a6a48) : H(0xa07848));
+        }
+        return;
+    }
+    if (rg.kind == B_BEACH && el < RG_WARN + 600u) {   /* the wave: a white line coming in from the sea */
+        float pos = 26.0f * (float)el / (float)RG_WARN;
+        for (y = y0; y <= y1; y++)
+            for (x = x0; x <= x1; x++) {
+                int i = y * MW + x, d;
+                if (!(c_terr[i] & F_OCEAN))
+                    continue;
+                d = C.coast_side == 0 ? x : C.coast_side == 1 ? MW - 1 - x : C.coast_side == 2 ? y : MH - 1 - y;
+                if (fm_fabsf((float)d - pos) < 1.2f)
+                    rect_mix(VOX + x * s, VOY + y * s, s, s, H(0xf4fafa), 220);
+                else if ((float)d < pos)
+                    rect_mix(VOX + x * s, VOY + y * s, s, s, H(0x1e4a6e), 90);
+            }
+    }
+    for (y = y0 < rg.y0 ? rg.y0 : y0; y <= (y1 > rg.y1 ? rg.y1 : y1); y++)
+        for (x = x0 < rg.x0 ? rg.x0 : x0; x <= (x1 > rg.x1 ? rg.x1 : x1); x++) {
+            int i = y * MW + x, px = VOX + x * s, py = VOY + y * s;
+            uint32_t t = rg_t[i], age;
+            float out = fm_clampf((float)(rg.dur - el) / 6000.0f, 0.0f, 1.0f);   /* it ends: fading */
+            if (!t || e < t)
+                continue;
+            age = (e - t) * 50u;
+            switch (rg.kind) {
+            case B_FOREST:                       /* flames for a while, then char */
+                if (age < 7000u) {
+                    int fl = (int)((now / 90u + (uint32_t)(x * 7 + y * 3)) % 3u);
+                    rect_mix(px, py, s, s, H(0x3a1c10), 160);
+                    if (s >= 4) {
+                        cv_rect(px + s / 4, py + s / 3 - fl, s / 2, s / 2 + fl, H(0xff5a1f));
+                        cv_rect(px + s / 3, py + s / 2 - fl, s / 3 + 1, s / 4 + 1, H(0xffd04a));
+                    } else {
+                        cv_rect(px, py, s, s, fl ? H(0xff5a1f) : H(0xffb030));
+                    }
+                } else {
+                    rect_mix(px, py, s, s, H(0x2a2420), (uint32_t)(150.0f * out));
+                }
+                break;
+            case B_VOLCANO: {                    /* lava: glowing, crusting over */
+                float g = 0.5f + 0.5f * fm_sinf((float)now / 250.0f + (float)(x * 5 + y * 3));
+                float crust = fm_clampf((float)age / 30000.0f, 0.0f, 0.8f);
+                uint16_t c = mix(mix(H(0xd2381e), H(0xffa83a), q16(g)), H(0x3a2a26), q16(crust));
+                rect_mix(px, py, s, s, c, (uint32_t)(240.0f * out));
+                break;
+            }
+            case B_ALPINE:                       /* the snow, settling */
+                rect_mix(px, py, s, s, age < 600u ? H(0xffffff) : H(0xeef3f6), (uint32_t)(230.0f * out));
+                if (age < 900u && s >= 4)
+                    ellipse_mix((float)px + (float)s * 0.5f, (float)py, (float)s, (float)s * 0.6f, H(0xffffff), 120);
+                break;
+            default: {                           /* water over the land: foam at the front, then still, then draining */
+                uint32_t hold = rg.kind == B_BEACH ? 9000u : 14000u;
+                float a = age < hold ? 1.0f : fm_maxf(0.0f, 1.0f - (float)(age - hold) / 8000.0f);
+                a *= out;
+                rect_mix(px, py, s, s, rg.kind == B_BEACH ? H(0x2f78a4) : H(0x6a7a6a), (uint32_t)(190.0f * a));
+                if (age < 500u)
+                    rect_mix(px, py, s, s, H(0xf4fafa), 200);
+                break;
+            }
+            }
+        }
+    if (rg.kind == B_VOLCANO && el < 22000u) {   /* the eruption: lava bombs arcing, the ash column */
+        float cx = (float)VOX + ((float)C.vx + 0.5f) * (float)s, cy = (float)VOY + ((float)C.vy + 0.5f) * (float)s;
+        for (k = 0; k < 16; k++) {
+            float ph = (float)now / 1400.0f + (float)k / 16.0f, a = city_hashf(rg.t0, k, 3) * 6.2832f, sp = 4.0f + city_hashf(rg.t0, k, 4) * 6.0f;
+            ph -= fm_floorf(ph);
+            cv_rect((int)(cx + fm_cosf(a) * sp * ph * (float)s * 0.6f), (int)(cy + fm_sinf(a) * sp * ph * (float)s * 0.3f - (1.0f - (2.0f * ph - 1.0f) * (2.0f * ph - 1.0f)) * 5.0f * (float)s * 0.5f),
+                    2, 2, ph < 0.7f ? H(0xffa030) : H(0x6a2a1a));
+        }
+        for (k = 0; k < 6; k++) {
+            float ph = (float)now / 3000.0f + (float)k / 6.0f, r;
+            ph -= fm_floorf(ph);
+            r = (float)s * (1.0f + ph * 3.0f);
+            ellipse_mix(cx + ph * (float)s * 2.0f, cy - ph * (float)s * 7.0f, r, r * 0.8f, H(0x4a4440), (uint32_t)(180.0f * (1.0f - ph)));
+        }
+    }
+}
+/* the volcano smoking (every day), a festival, meteors */
+static void draw_extras(int s)
+{
+    uint32_t now = plat_ms();
+    int k;
+    if (C.biome == B_VOLCANO && C.vx) {
+        float cx = (float)VOX + ((float)C.vx + 0.5f) * (float)s, cy = (float)VOY + ((float)C.vy + 0.5f) * (float)s;
+        for (k = 0; k < 4; k++) {
+            float ph = (float)now / 4000.0f + (float)k / 4.0f, r;
+            ph -= fm_floorf(ph);
+            r = (float)s * (0.6f + ph * 1.8f);
+            ellipse_mix(cx + ph * (float)s * 3.0f, cy - ph * (float)s * 5.0f, r, r * 0.8f, H(0xd8d4d0), (uint32_t)(140.0f * (1.0f - ph)));
+        }
+    }
+    if (fest.on) {
+        float fx = (float)VOX + fest.x * (float)s, fy = (float)VOY + fest.y * (float)s;
+        uint32_t el = now - fest.t0;
+        static const uint16_t FC[6] = {H(0xff5a5a), H(0xffd04a), H(0x5ad2ff), H(0x8cff9a), H(0xff8af0), H(0xffffff)};
+        if (s >= 6)
+            for (k = 0; k < 24; k++) {           /* the crowd */
+                float a = city_hashf(fest.t0, k, 1) * 6.2832f, r = (0.4f + city_hashf(fest.t0, k, 2) * 1.4f) * (float)s;
+                int jx = (int)((now / 300u + (uint32_t)k) % 3u) - 1;
+                cv_rect((int)(fx + fm_cosf(a) * r) + (jx & 1), (int)(fy + fm_sinf(a) * r * 0.7f), 1, 2, SHIRT[k % 10]);
+            }
+        if (day_lit() > 0.4f) {                  /* confetti by day */
+            for (k = 0; k < 30; k++) {
+                float y = city_hashf(fest.t0, k, 5) * 40.0f + (float)el * 0.02f, x;
+                y -= fm_floorf(y / 40.0f) * 40.0f;
+                x = fx + (city_hashf(fest.t0, k, 6) - 0.5f) * (float)s * 4.0f + fm_sinf((float)now / 300.0f + (float)k) * 2.0f;
+                cv_rect((int)x, (int)(fy - 20.0f + y), 1, 1, FC[k % 6]);
+            }
+        }
+        for (k = 0; k < 4; k++) {                /* the rockets: a trail up, a burst */
+            uint32_t ft = fest.fw_t[k], a;
+            float bx, by, r;
+            int j;
+            if (!ft || now - ft > 1900u)
+                continue;
+            a = now - ft;
+            bx = fx + fest.fw_x[k] * (float)s;
+            by = fy - 30.0f - fest.fw_y[k] * 20.0f;
+            if (a < 600u) {
+                float f = (float)a / 600.0f;
+                cv_rect((int)bx, (int)(fy + (by - fy) * f), 1, 2, H(0xffe8a0));
+                continue;
+            }
+            r = (float)(a - 600u) * 0.02f;
+            for (j = 0; j < 14; j++) {
+                float an = (float)j / 14.0f * 6.2832f;
+                px_add((int)(bx + fm_cosf(an) * r), (int)(by + fm_sinf(an) * r + r * r * 0.02f), FC[(k + j / 7) % 6],
+                       (uint32_t)(255.0f * (1.0f - (float)(a - 600u) / 1300.0f)));
+            }
+        }
+    }
+    if (meteors.on)
+        for (k = 0; k < NMETEOR; k++) {
+            uint32_t a = now - meteors.m[k].t0;
+            float t, x, y;
+            int j;
+            if (!meteors.m[k].t0 || a > 900u)
+                continue;
+            t = (float)a / 1000.0f;
+            x = (float)VOX + (meteors.m[k].x + meteors.m[k].vx * t) * (float)s;
+            y = (float)VOY + (meteors.m[k].y + meteors.m[k].vy * t) * (float)s;
+            for (j = 0; j < 8; j++)
+                px_add((int)(x - meteors.m[k].vx * (float)j * 0.35f), (int)(y - meteors.m[k].vy * (float)j * 0.35f), H(0xe8f0ff),
+                       (uint32_t)(240.0f * (1.0f - (float)j / 8.0f) * (1.0f - (float)a / 900.0f)));
+        }
 }
 
 /* the info on the city: the hour and the sky, the people, what the camera follows */
@@ -2583,7 +2986,10 @@ static void draw_info(void)
         if (ui.ff) {
             s_cpy(u, "GROWING");
         } else if (incident_at(&fx, &fy)) {
-            if (ufo.on) s_cpy(u, "UFO");
+            if (rg.on && !fires[0].on && !fires[1].on && !fires[2].on && !fires[3].on) s_cpy(u, REGION_NAME[rg.kind]);
+            else if (fest.on) s_cpy(u, "FESTIVAL");
+            else if (blackout.on) s_cpy(u, "BLACKOUT");
+            else if (ufo.on) s_cpy(u, "UFO");
             else if (quake.on) s_cpy(u, "QUAKE");
             else if (rob.on) s_cpy(u, "ROBBERY");
             else if (crash.on) s_cpy(u, "CRASH");
@@ -2701,7 +3107,9 @@ static void draw_view(int r0, int bh)
             ellipse_mix(cx, cy, r, r * 0.6f, H(0x141c28), (uint32_t)(41.0f * cloud_amt));
             ellipse_mix(cx + cloud[k].r * 0.8f * (float)s, cy + cloud[k].r * 0.2f * (float)s, r * 0.7f, r * 0.45f, H(0x141c28), (uint32_t)(41.0f * cloud_amt));
         }
+    draw_region(s, x0, x1, y0, y1, 0);
     draw_night(s, vis_list, nvis);
+    draw_region(s, x0, x1, y0, y1, 1);
     draw_fires(s);
     {
         uint32_t now = plat_ms();
@@ -2719,6 +3127,7 @@ static void draw_view(int r0, int bh)
         }
     }
     draw_incidents(s);
+    draw_extras(s);
     draw_birds(s);
     draw_weather();
     if (bolt.on && plat_ms() - bolt.t0 < 230u && ((plat_ms() - bolt.t0) / 60u) % 2u == 0u) {   /* the bolt */
@@ -2744,7 +3153,7 @@ static const char *const STAGE_SHORT[4] = {"TOWN", "SUBURB", "CITY", "HUGE CITY"
 static void draw_header(void)
 {
     int msg = msg_busy(), l;
-    uint32_t h = hash(hash(2166136261u, proj.piece | (uint32_t)C.stage << 8 | (uint32_t)ui.hold << 12 | (uint32_t)ui.ff << 13),
+    uint32_t h = hash(hash(2166136261u, C.biome | (uint32_t)C.stage << 8 | (uint32_t)ui.hold << 12 | (uint32_t)ui.ff << 13),
                       en_playing | ui.dirty << 4 | (uint32_t)msg << 5 | (uint32_t)en_ext << 6 | (uint32_t)proj.par[P_THEME] << 12 |
                           (uint32_t)proj.par[P_TEMPO] << 20);
     if (en_ext)
@@ -2798,8 +3207,16 @@ static void draw_header(void)
         w = text_w(&FONT_B, n) + 12;
         cv_round(4, 4, w, 20, 6, K_ACC);
         cv_text(10, 6, &FONT_B, n, K_BG);
-        if (w + 10 + text_w(&FONT_S, STAGE_SHORT[C.stage]) < x - 4)
-            cv_text(w + 10, 6, &FONT_S, STAGE_SHORT[C.stage], K_DIM);
+        {   /* the biome and what the city is: "DESERT CITY", or as much as fits */
+            char bs[24];
+            s_cpy(bs, BIOME_SHORT[C.biome]);
+            s_cat(bs, " ");
+            s_cat(bs, STAGE_SHORT[C.stage]);
+            if (w + 10 + text_w(&FONT_S, bs) >= x - 4)
+                s_cpy(bs, BIOME_SHORT[C.biome]);
+            if (w + 10 + text_w(&FONT_S, bs) < x - 4)
+                cv_text(w + 10, 6, &FONT_S, bs, K_DIM);
+        }
     }
     cv_blit(0, 0);
 }
@@ -2812,19 +3229,19 @@ static int help_lines(int b, const char *l[HELP_LINES])
     int n = 0;
 #define L(t) (l[n++] = (t))
     switch (b) {
-    case B_HOME: L("THE CITY: SPEED, START AS,"); L("TRAFFIC, PEOPLE"); L("+ SELECT: THE TEMPO"); break;
+    case B_HOME: L("THE CITY: SPEED, START AS,"); L("BIOME, TRAFFIC"); L("+ SELECT: THE TEMPO"); break;
     case B_ENV: L("THE MUSIC: TEMPO,"); L("DENSITY, SWING, CITY BED"); break;
     case B_ARP: L("THE SOUND: FLAVOR (NES,"); L("GB, SID), LEAD, ECHO,"); L("CRUSH"); break;
     case B_LFO: L("TIME: THE DAY, SEASONS"); L("AGAIN: THE WEATHER"); L("BLACK KEYS: THE HOUR,"); L("THE SKY"); break;
     case B_SEQ: L("THE VOICES' LEVELS"); L("AGAIN: PAD, LEAD,"); L("EFFECTS, SIRENS"); break;
     case B_SEL: L("RIDE ALONG: THE"); L("CAMERA FOLLOWS A CAR"); L("AGAIN: ANOTHER"); break;
-    case B_FX: L("EVENTS: HOW OFTEN"); L("AGAIN: UFOS, FOLLOW,"); L("DISASTERS, IDLE"); L("BLACK KEYS: CALL ONE"); break;
+    case B_FX: L("EVENTS: HOW OFTEN"); L("AGAIN: EVENTS 2, 3"); L("BLACK KEYS 1-10:"); L("CALL ONE NOW"); break;
     case B_GLO: L("SETUP: KEY, TUNE,"); L("SYNC, MOOD"); L("AGAIN: DISPLAY, MIDI OUT"); L("SEL + GLO: REMOTE"); break;
-    case B_EDIT: L("A NEW CITY:"); L("A NEW SEED HERE"); L("(SAVE ON SETUP KEEPS IT)"); break;
+    case B_EDIT: L("A NEW CITY,"); L("THE SAME BIOME"); L("(PRESETS: ANOTHER BIOME)"); break;
     case B_REC: L("HOLD: THE CITY STOPS"); L("GROWING; LIFE AND"); L("THE MUSIC GO ON"); break;
     case B_OCTDN: L("THE LEAD AN"); L("OCTAVE DOWN"); L("WITH OCT+, 5 S: UPDATE MODE"); break;
     case B_OCTUP: L("THE LEAD AN"); L("OCTAVE UP"); L("WITH OCT-, 5 S: UPDATE MODE"); break;
-    case B_SAVE: L("ON SETUP: SAVES ALL TEN"); L("ELSEWHERE: FROM ITS"); L("FOUNDING; HOLD: THE RECIPE"); break;
+    case B_SAVE: L("ON SETUP: SAVES"); L("ELSEWHERE: FROM ITS"); L("FOUNDING; HOLD: THE"); L("BIOME'S MUSIC BACK"); break;
     default: break;
     }
 #undef L
@@ -2891,7 +3308,7 @@ static void draw_main(void)
 /* the knob strip: a rule with the page's name and the walk's dots at its right end; a cell a knob */
 static void draw_knobs(void)
 {
-    uint32_t h = hash(2166136261u, ui.view | (uint32_t)ui.touched << 8 | (uint32_t)proj.par[P_THEME] << 20), i;
+    uint32_t h = hash(2166136261u, ui.view | (uint32_t)ui.touched << 8 | (uint32_t)proj.par[P_THEME] << 20 | (uint32_t)C.biome << 26), i;
     int now_touch = plat_ms() < ui.touch_until;
     for (i = 0; i < 4; i++)
         h = hash(h, (uint32_t)knob_get(view_knob(ui.view, (int)i)));
@@ -2926,7 +3343,7 @@ static void draw_knobs(void)
             cv_round(x + 3, 12, 54, 56, 6, K_PANEL);
         knob_range(k, &lo, &hi);
         v = knob_get(k);
-        caps(t, KNOB_LABEL[ui.view][i], sizeof t);
+        caps(t, k == P_REGION ? REGION_KNOB[C.biome] : KNOB_LABEL[ui.view][i], sizeof t);
         {
             const felucca_font_t *f = text_w(&FONT_S, t) <= 57 ? &FONT_S : &FONT_XS;
             text_c(cx, f == &FONT_S ? 12 : 13, f, t, hot ? K_TEXT : K_DIM);
@@ -3013,14 +3430,18 @@ static void leds(void)
             for (i = 0; i < 4; i++)
                 k &= ~(1u << BLACK_KEY[i]);
             k |= 1u << BLACK_KEY[part];
-        } else if (ui.view == V_EVENTS || ui.view == V_EVENTS2) {   /* what's going on */
+        } else if (ui.view >= V_EVENTS && ui.view <= V_EVENTS3) {   /* what's going on */
             int f, anyfire = 0, birds = 0;
             for (f = 0; f < NFIRE; f++)
                 anyfire |= fires[f].on;
             for (f = 0; f < NFLOCK; f++)
                 birds |= flock[f].on;
-            for (i = 0; i < 6; i++)
+            for (i = 0; i < 10; i++)
                 k &= ~(1u << BLACK_KEY[i]);
+            if (rg.on) k |= 1u << BLACK_KEY[6];
+            if (fest.on) k |= 1u << BLACK_KEY[7];
+            if (blackout.on) k |= 1u << BLACK_KEY[8];
+            if (meteors.on) k |= 1u << BLACK_KEY[9];
             if (anyfire || (bolt.on && plat_ms() - bolt.t0 < 600u)) k |= 1u << BLACK_KEY[0];
             if (quake.on) k |= 1u << BLACK_KEY[1];
             if (rob.on) k |= 1u << BLACK_KEY[2];
@@ -3145,7 +3566,13 @@ void ui_init(void)
     ui.boot_t = ui.last_ms = plat_ms();
     life_init();
     life_t = plat_ms();
-    new_city(0);
+#ifndef EN_HOST
+    proj.boots++;                                /* a power-on counted (so each is a new city, whatever RAM holds) */
+    (void)project_save();
+#endif
+    cur_biome = -1;
+    found(-1, 1);                                /* a new city each power-on */
+    ui.touched = -1;
     en_lead_oct(0);
     ui.splash = ui_splash_ms > 0u;
     if (ui.splash) {

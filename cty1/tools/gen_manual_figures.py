@@ -90,7 +90,7 @@ def panel(screen_png):
          f'aria-label="The FM-1 front panel running CTY-1, each control labelled with what it does">', STYLE,
          f'<rect x="4" y="4" width="{W - 8}" height="{H - 8}" rx="44" fill="{BODY}"/>',
          knob(105, 92, 24, "MASTER", "Volume"), knob(215, 92, 24, "SELECT", "Every page|HOME + it: tempo"),
-         knob(105, 210, 24, "PRESETS", "City"), knob(215, 210, 24, "ALGORITHM", "Look around|(landmarks)"),
+         knob(105, 210, 24, "PRESETS", "Next biome:|a new city"), knob(215, 210, 24, "ALGORITHM", "Look around|(landmarks)"),
          f'<rect x="58" y="284" width="210" height="58" rx="14" fill="{TRAY}"/>',
          button(72, 294, 82, 38, "OCT-"), button(170, 294, 82, 38, "OCT+"),
          what(113, 362, "Lead|octave down"), what(211, 362, "Lead|octave up"),
@@ -100,7 +100,7 @@ def panel(screen_png):
         s.append(knob(610 + i * 104, 92, 22, f"KNOB{i + 1}"))
     s.append(what(766, 136, "The page's four values"))
     s.append(f'<rect x="568" y="146" width="400" height="236" rx="18" fill="{TRAY}"/>')
-    top = [("FX", "Events,|Events 2"), ("SEL", "Ride|along"), ("ENV", "Music"), ("LFO", "Time,|Weather"), ("EDIT", "A new|city"), ("GLO", "Setup,|Display…")]
+    top = [("FX", "Events|1, 2, 3"), ("SEL", "Ride|along"), ("ENV", "Music"), ("LFO", "Time,|Weather"), ("EDIT", "New city,|same land"), ("GLO", "Setup,|Display…")]
     bot = [("HOME", "City"), ("SAVE", "On Setup:|save"), ("ARP", "Sound"), ("SEQ", "Voices,|Voices 2"),
            (("PLAY", "STOP"), "Music /|rest"), ("REC", "Hold|growth")]
     for i in range(6):
@@ -114,7 +114,7 @@ def panel(screen_png):
             s.append(what(x + 27, 330, bot[i][1]))
     s.append(keybed(36, 400, W - 72, 270))
     s.append(what(W / 2, 698, "Keys: the lead (lit: the scale)   ·   Time: black 1-4 the hour   ·   Weather: black 1-7 the sky   ·   "
-                              "Events: black 1-6 call one   ·   Hold a button: what it does"))
+                              "Events: black 1-10 call one   ·   Hold a button: what it does"))
     s.append("</svg>")
     return "".join(s)
 

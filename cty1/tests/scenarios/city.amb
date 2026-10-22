@@ -1,8 +1,8 @@
-# CTY-1: the city founds and grows, the music plays, the pages walk, the cities change and save
+# CTY-1: a new city each power-on, in a biome; it grows, the music plays, the pages walk; PRESETS the biomes,
+# EDIT a new city, SAVE keeps the settings, held the biome's music back
 wait 2000
 expect playing 1
 expect stage 0
-expect piece 0
 expect week >0
 shot city_town.png
 spin K1 3
@@ -17,20 +17,26 @@ expect notes >200
 expect hits >10
 spin SELECT 1
 expect view 1
-spin SELECT 10
-expect view 11
-spin SELECT -11
+spin SELECT 12
+expect view 12
+spin SELECT -12
 expect view 0
 tap LFO
 expect view 3
 tap LFO
 expect view 4
-tap GLO
+tap FX
+expect view 7
+tap FX
+expect view 8
+tap FX
 expect view 9
 tap GLO
 expect view 10
 tap GLO
 expect view 11
+tap GLO
+expect view 12
 tap HOME
 tap PLAY
 expect playing 0
@@ -40,10 +46,26 @@ tap REC
 expect hold 1
 tap REC
 expect hold 0
-spin PRESET 2
-expect piece 2
+# the biomes in turn, each a new city with its music (it starts in River lands: 6)
+expect biome 6
+spin PRESET 1
+expect biome 0
 expect stage 0
+expect par4 96
+spin PRESET 3
+expect biome 3
+expect par4 112
+spin PRESET -2
+expect biome 1
+expect par4 88
+tap EDIT
+wait 200
+expect biome 1
+expect par4 88
+tap HOME
 spin K2 2
+spin K3 2
+expect par46 2
 tap SAVE
 wait 3000
 expect stage 2
@@ -51,17 +73,15 @@ tap GLO
 tap SAVE
 expect store_writes 1
 expect dirty 0
+# a power-on: a new city, in the biome asked for (Desert), grown to a city
+entropy 777
 reboot
-wait 500
-expect piece 2
-expect par1 2
 wait 3000
+expect biome 1
 expect stage 2
 shot city_startas.png
-tap EDIT
-wait 3000
-expect stage 2
+spin K4 3
 press SAVE
 wait 1700
 release SAVE
-expect par1 0
+expect par4 88

@@ -66,6 +66,22 @@ int main(void)
         CHECK(pk < 0.999f && db > -80.0f, "event %d: %.1f dB, peak %.2f", e, db, pk);
         (void)n0;
     }
+    {   /* every biome: its scales, rhythm and bass, a few bars each, at every stage */
+        int b, st;
+        for (b = 0; b < EN_NBIOME; b++)
+            for (st = 0; st < 4; st++) {
+                en_city.biome = (uint8_t)b;
+                en_city.stage = (uint8_t)st;
+                en_reset();
+                db = run(2.5f, &pk);
+                CHECK(db > -45.0f && db < -6.0f && pk < 0.99f, "%s at stage %d: %.1f dB, peak %.2f", EN_BIOME_NAME[b], st, (double)db, (double)pk);
+            }
+        en_city.biome = 0;
+        en_city.wind = 1.0f; en_city.rumble = 1.0f; en_city.alert = 1; en_city.festival = 1; en_city.blackout = 1;
+        db = run(4.0f, &pk);
+        printf("  wind, rumble, siren, festival, blackout: %.1f dB, peak %.2f\n", (double)db, (double)pk);
+        CHECK(pk < 0.999f, "the regional sounds stay under full scale (%.2f)", (double)pk);
+    }
     en_city.storm = 1.0f; en_city.rain = 1.0f; en_city.fog = 1.0f; en_city.siren_fire = 1; en_city.siren_police = 1;
     en_city.alarm = 1; en_city.birds = 6; en_city.hwy = 8; en_city.stage = 3; en_city.ufo = 1; en_city.grit = 0.5f;
     en_set(P_FLAVOR, 2);

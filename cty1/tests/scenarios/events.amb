@@ -1,5 +1,6 @@
-# CTY-1: every incident called from the black keys, the weather and the hour, the camera follows
-spin PRESET 4
+# CTY-1: every incident called from the black keys, the biomes' own disasters, the weather and the hour, the camera follows
+spin K2 2
+tap SAVE
 wait 6000
 expect stage >1
 tap FX
@@ -27,6 +28,40 @@ expect ufo 1
 wait 5000
 shot ev_ufo.png
 tapkey b5
+wait 3000
+tapkey b6
+wait 300
+expect region 1
+wait 3000
+shot ev_region.png
+tapkey b7
+wait 200
+expect festival 1
+tapkey b8
+expect blackout 1
+tapkey b9
+expect meteors 1
+wait 4000
+shot ev_festival.png
+wait 40000
+expect region 0
+expect festival 0
+expect blackout 0
+spin PRESET 1
+spin K2 2
+tap SAVE
+wait 5000
+tapkey b6
+wait 6000
+expect region 1
+shot ev_region2.png
+spin PRESET 1
+tap SAVE
+wait 5000
+tapkey b6
+wait 6000
+expect region 1
+shot ev_region3.png
 tap LFO
 tapkey b3
 wait 500

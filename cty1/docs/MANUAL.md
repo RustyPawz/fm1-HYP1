@@ -1,11 +1,13 @@
 # CTY-1
 
-CTY-1 turns the M-VAVE FM-1 into a small city that builds itself and plays a generative chiptune. From a
-seed it lays out its land, a coast or a river, and founds a town at a crossroads. Week by week it grows: homes,
+CTY-1 turns the M-VAVE FM-1 into a small city that builds itself and plays a generative chiptune. Each time
+you switch it on it founds a new town on new land: a forest, a desert, an alpine valley, volcano isles, plains,
+a beach or river lands, each with its own look, weather, disaster and sound. Week by week it grows: homes,
 shops, offices and factories, farms at the edge, parks and landmarks, avenues, roundabouts, bridges and a
 beltway, until it's a huge city of towers. Its cars drive real routes, its people walk and stop to talk, the
 days, seasons and weather go round, and now and then something happens: a fire, an earthquake, a robbery, a
-crash, a UFO. Every one of those is music, played on NES, Game Boy or SID voices.
+crash, a festival, a blackout, a meteor shower, the land's own disaster, a UFO. Every one of those is music,
+played on NES, Game Boy or SID voices.
 
 This manual covers CTY-1 version 0.1.0.
 
@@ -13,7 +15,7 @@ This manual covers CTY-1 version 0.1.0.
 > not yet on a real FM-1. Install it at your own risk; HYP-1, or M-VAVE's own firmware, goes back on the
 > same way.
 
-![CTY-1 on the FM-1: Stonedale, a city by a river](img/cty-hero.png)
+![CTY-1 on the FM-1: a city on the plains](img/cty-hero.png)
 
 ---
 
@@ -25,7 +27,7 @@ This manual covers CTY-1 version 0.1.0.
 4. The screen
 5. How the city grows
 6. How the city plays
-7. The cities
+7. The biomes
 8. The pages
 9. MIDI clock and your DAW
 10. Saving
@@ -58,16 +60,18 @@ M-VAVE's own updater, M-UPGRADE, works too.
 CTY-1 starts by itself: the RedtailWorks card, then CTY-1 over a skyline lighting up, then the city. A few
 minutes with it:
 
-1. **Listen.** The first city, Brighton, has just been founded: a crossroads, a few houses. Turn MASTER for
-   volume. Each car is a playhead; each building it passes rings.
+1. **Listen.** A new city has just been founded, its name and its land in the header: a crossroads, a few
+   houses. Turn MASTER for volume. Each car is a playhead; each building it passes rings.
 2. **Speed it up.** KNOB 1 on the City page is the speed: turn it to ×8 and watch the town spread. A message
    in the header names each first: the first shop, the town square, the fire station, a bridge.
 3. **Play along.** The keys play a lead in the city's scale (the lit keys). OCT− / OCT+ move it.
 4. **Make something happen.** Press FX for Events. Black key 1 calls lightning, 2 an earthquake, 3 a
-   robbery, 4 a crash, 5 a UFO, 6 birds. The camera goes there and stays until it's over.
+   robbery, 4 a crash, 5 a UFO, 6 birds, 7 the land's own disaster, 8 a festival, 9 a blackout, 10 meteors.
+   The camera goes there and stays until it's over.
 5. **Change the sky.** Press LFO: black keys 1–4 jump to dawn, noon, dusk and night. Press it again for
    Weather: black keys 1–7 set it, from Auto to snow.
-6. **Try another city.** Turn PRESETS. There are ten, and EDIT gives the slot a brand-new seed.
+6. **Try another land.** Turn PRESETS: a new city in the next biome, with its music. EDIT founds another
+   on the same land. Switch off and on: a new one again.
 7. **Leave it.** After a minute untouched the city takes the whole screen and rides along with its cars.
 
 ---
@@ -78,18 +82,18 @@ minutes with it:
 
 | Control | What it does |
 |---|---|
-| **Keys** | The lead, kept to the city's scale (lit). On Time, black keys 1–4: dawn, noon, dusk, night. On Weather, black keys 1–7: Auto, clear, cloudy, rain, storm, fog, snow. On the Events pages, black keys 1–6: lightning, an earthquake, a robbery, a crash, a UFO, birds. |
+| **Keys** | The lead, kept to the city's scale (lit). On Time, black keys 1–4: dawn, noon, dusk, night. On Weather, black keys 1–7: Auto, then the land's six weathers. On the Events pages, black keys 1–10: lightning, an earthquake, a robbery, a crash, a UFO, birds, the land's disaster, a festival, a blackout, meteors. |
 | **PLAY** | The music plays / rests. The city lives on either way. |
 | **REC** | Hold: the city stops growing (HOLD in the header); life and the music go on. Again to let it grow. |
-| **EDIT** | A new city: a new random seed in this slot, founded at once. SAVE on a Setup page keeps it. |
-| **HOME ENV ARP LFO SEQ FX GLO** | The pages: City, Music, Sound, Time (again: Weather), Voices (again: Voices 2), Events (again: Events 2), Setup (again: Display, then MIDI out). |
+| **EDIT** | A new city on the same land. |
+| **HOME ENV ARP LFO SEQ FX GLO** | The pages: City, Music, Sound, Time (again: Weather), Voices (again: Voices 2), Events (again: Events 2, Events 3), Setup (again: Display, then MIDI out). |
 | **SEL** | Ride along: the camera follows a car on screen (again: another). Held, with GLO: remote (the panel plays the browser emulator). |
 | **SELECT** | Every page in turn. With HOME held: the tempo. |
 | **ALGORITHM** | Look around: the camera to each landmark in turn (the town hall, the school, the stadium…), staying a few seconds. |
-| **PRESETS** | The city: ten of them, each keeping its own settings and seed. |
+| **PRESETS** | The next biome (or the one before): a new city there, with the biome's music. |
 | **KNOB 1–4** | The page's four values. |
 | **OCT− / OCT+** | The lead an octave down / up (two each way). |
-| **SAVE** | On the Setup pages (Setup, Display, MIDI out): saves all ten cities. Elsewhere: the city again from its founding. Hold 1.5 s: the city back to its recipe. |
+| **SAVE** | On the Setup pages (Setup, Display, MIDI out): saves your settings for every power-on. Elsewhere: the city again from its founding. Hold 1.5 s: the biome's music back (tempo, flavor, lead, swing, echo, density, bed). |
 | **MASTER** | Volume. |
 
 Hold any button for a second and a card says what it does. MIDI notes in play the lead too.
@@ -100,7 +104,7 @@ Hold any button for a second and a card says what it does. MIDI notes in play th
 
 ![The pages](img/cty-pages.png)
 
-- **The header:** the city's name in a tag and what it is now (TOWN, SUBURB, CITY, HUGE CITY), then on the
+- **The header:** the city's name in a tag, its land and what it is now (DESERT CITY), then on the
   right the six chip channels as dots (lit as they play; resting, a play triangle), HOLD while growth is
   held, the tempo (EXT and the clock's tempo on MIDI clock) and a dot while something is unsaved. Messages
   take its place for a moment: what opens, what happens.
@@ -152,6 +156,26 @@ SAVE an incident. Any touch brings the pages back.
 
 ![The zones](img/cty-device-zones.png)
 
+### The land
+
+Each power-on picks a biome (City: Biome, Random by default) and a seed, and the seed draws the land:
+
+| Biome | The land | Its weather | Its disaster |
+|---|---|---|---|
+| **Forest** | Deep woods of oaks and pines, a river | Thunderstorms, mist, snow | **Wildfire:** it runs through the woods; what's in its way catches, the brigade comes; burnt woods stay cleared |
+| **Desert** | Sand, red mesas, cacti, palms by the water | Dust storms, heat haze, a rare shower or frost | **Dust devil:** a whirl of sand wanders through town |
+| **Alpine** | A valley under rock and snowy peaks, pines, a stream | Blizzards, low cloud, snow most of the year | **Avalanche:** the snow lets go off a mountain into the valley |
+| **Volcano isles** | Islands in a turquoise sea, palms, black sand, a smoking volcano | Typhoons, ash haze, ash fall | **Eruption:** lava runs downhill and the ash rises |
+| **Plains** | Golden grass, farms, a few groves | Thunderstorms, fog, snow | **Tornado:** the siren, then a twister across town (more in a storm) |
+| **Beach** | A long sandy shore, dune grass, palms | Tropical storms, sea fog, sleet | **Tsunami:** the siren, a wave line comes in, the shore floods and drains |
+| **River lands** | A wide river, a tributary, ponds and reeds | Thunderstorms, mist, snow | **Flood:** the river rises over its banks (more in the rain) |
+
+![The biomes](img/cty-biomes.png)
+
+![Their disasters](img/cty-disasters.png)
+
+![Their storms](img/cty-weather.png)
+
 ### Life
 
 Cars drive real routes on the roads from homes to work and shops, more at the rush hours, fewer at night and
@@ -168,7 +192,8 @@ storms, fog, snow.
 
 ### Incidents
 
-- **Lightning** strikes in storms, and may set a building alight. The nearest fire station sends its truck
+- **Lightning** strikes out of rain, storms and snow (not dust or ash), and may set a building alight (in the
+  forest, the woods). The nearest fire station sends its truck
   along the roads; it hoses the fire out, or the building burns down and its lot is cleared.
 - **An earthquake** shakes the screen and gates the music in time; a few buildings fall. Their rubble is
   cleared at the start of the next four-bar phrase, and the lots are built again.
@@ -176,9 +201,15 @@ storms, fog, snow.
   get away.
 - **A crash:** two cars collide. An ambulance comes from the hospital, then the wreck is towed.
 - **A UFO,** very rarely, flies in and beams someone up.
+- **A festival:** a crowd round a plaza or a park, confetti by day, fireworks at night; the music gets a
+  fanfare, a tambourine and doubled arpeggios.
+- **A blackout** at night: a district's windows and streetlights go out, the pad drops and the filter
+  closes, then the lights flicker back.
+- **A meteor shower** on a clear night: shooting stars, each a falling chime.
+- **The land's own disaster** (above).
 
-How often each happens is on the Events pages (Disasters turns fires and quakes off); black keys call them
-at once. With Follow on, the camera goes to each and stays until it's over.
+How often each happens is on the Events pages (Disasters stops them destroying); black keys call them at
+once. With Follow on, the camera goes to each and stays until it's over.
 
 ![What happens](img/cty-incidents.png)
 
@@ -197,36 +228,38 @@ the **triangle** (kick and bass), **noise** (hats, snares, the beltway's hiss, f
   rings in its own voice: homes soft bells, shops bright arpeggios, industry low thuds, the landmarks their
   own short motifs (the town hall a fanfare, the school a chime, the hospital two notes…). New buildings
   clink, towers rise, parks swell.
-- **The mood** of the city (homes against jobs, rent, the night, the weather) picks the mode, Lydian when it
-  thrives, through Ionian, Mixolydian and Dorian to Aeolian when it struggles.
+- **The land** sets the sound: each biome its own ladder of modes (the city's mood climbs or falls it), its own
+  percussion, its own bass, and its music recipe (tempo, flavor, lead, swing, echo):
+
+  | Biome | Modes, bright to dark | Rhythm and bass | Recipe |
+  |---|---|---|---|
+  | Forest | Ionian, Mixolydian, Dorian, Aeolian | Woodblocks; the usual bass | GB wave, 96 BPM, long echo |
+  | Desert | Mixolydian, Hijaz, harmonic minor, Phrygian | A hand drum (doum and tek); a drone on the root | SID saw, 88 BPM |
+  | Alpine | Lydian, Ionian, Dorian | A cowbell; long bass notes; the pad up | NES thin pulse, 84 BPM, the longest echo |
+  | Volcano isles | Ionian, Mixolydian, Dorian, Phrygian; pentatonic tunes | Son clave and a steel drum; syncopated bass | GB wave, 112 BPM, swung |
+  | Plains | Ionian, Mixolydian, Dorian, Aeolian; pentatonic tunes | Boom-chick: root and fifth, a chick on 2 and 4 | NES square, 100 BPM |
+  | Beach | Lydian, Mixolydian, Dorian, Aeolian | A surf backbeat, a tambourine; a walking bass | NES square, 120 BPM, a short echo |
+  | River lands | Lydian, Ionian, Dorian, Aeolian; pentatonic tunes | Rolling shakers; long bass | GB wave, 104 BPM, long echo |
+- **The mood** of the city (homes against jobs, rent, the night, the weather, a disaster or a festival) climbs
+  or falls the land's ladder of modes.
 - **The sky:** night closes a lowpass over everything and makes the pad louder; fog closes it more and
   lengthens the echo; rain and snow fall as filtered noise; birds overhead shorten the echo and chirp.
 - **The incidents:** sirens wail in key (the fire truck, the police, the ambulance), an alarm rings, thunder
-  rolls, a quake gates the whole mix, the UFO sings its own wavering tune.
+  rolls, a quake gates the whole mix, the UFO sings its own wavering tune. A tornado or a tsunami sets off
+  the civil-defense siren; dust storms, blizzards and typhoons blow as a wandering wind; lava, avalanches,
+  waves and floods rumble.
 - **The lead** on the keys snaps to the scale with a slow vibrato. In the idle view, the car the camera rides
   with plays it.
 
 ---
 
-## 7. The cities
+## 7. The biomes
 
-![Ten cities](img/cty-cities.png)
-
-| City | Seed | Music and world |
-|---|---|---|
-| **Brighton** | redtail | The NES, 104 BPM, the seasons going round |
-| **Cedarport** | 42 | The Game Boy, a port town, starting as a suburb |
-| **Faircrest** | maple | Spring, quick, growing at ×2 |
-| **Westhaven** | panda | Summer, slow and bright, long days |
-| **Stonedale** | harbor | The SID, a city already |
-| **Stonegate** | dusk | Autumn fog, long nights, dark |
-| **Ashcrest** | ember | Summer storms |
-| **Lakecrest** | fern | Spring rain |
-| **Belhaven** | nova | Fast, growing fast |
-| **Sunview** | violet | Winter, snow on the city |
-
-The same seed always grows the same city. EDIT gives a slot a new seed (and so a new name); SAVE on a
-Setup page keeps it; hold SAVE to go back to the recipe's.
+There are no preset cities: every power-on founds a new one, on a new seed. **Biome** (City page) picks the
+land: Random, or one of the seven. **PRESETS** moves to the next biome at once (a new city there, with its
+music); **EDIT** founds another on the same land; **SAVE** elsewhere than Setup grows the same city again
+from its founding. Your settings (SAVE on Setup) carry over to every new city, except the music recipe each
+biome brings: hold SAVE to get it back after changing it.
 
 ---
 
@@ -236,7 +269,9 @@ Setup page keeps it; hold SAVE to go back to the recipe's.
 
 - **Speed:** ×¼ to ×64; at ×1 about a week a second.
 - **Start as:** a new city grows at once to a Town, Suburb, City or Huge city (GROWING shows meanwhile).
-- **Traffic, People:** how many cars and people, 0–200%.
+- **Biome:** the land each power-on founds a city on: Random, or Forest, Desert, Alpine, Isles, Plains,
+  Beach, River.
+- **Traffic:** how many cars, 0–200%.
 
 ### Music (ENV)
 
@@ -262,26 +297,33 @@ Setup page keeps it; hold SAVE to go back to the recipe's.
 
 ### Weather (LFO again)
 
-- **Weather:** Auto (by the season), or Clear, Cloudy, Rain, Storm, Fog, Snow. Black keys 1–7 set it.
+- **Weather:** Auto (by the season and the land), or one of six, named as the land has them: clear; cloudy
+  (haze in the desert); rain (a shower); the storm (a thunderstorm, a dust storm, a blizzard, a typhoon, a
+  tropical storm); fog (mist, heat haze, low cloud, ash haze, sea fog); snow (frost, ash fall, sleet). Black keys
+  1–7 set it.
 - **Change:** how often Auto changes it.
 - **Birds:** how often flocks fly over.
-- **Chats:** people stopping to talk in speech bubbles.
+- **People:** how many people, 0–200%; they stop to talk in speech bubbles.
 
 ### Voices (SEQ) and Voices 2 (SEQ again)
 
 Each part's level, 0–150%: **Bells, Arps, Bass, Drums**; then **Pad, Lead, Effects** (weather, birds,
 thunder, the UFO) and **Sirens** (and alarms).
 
-### Events (FX) and Events 2 (FX again)
+### Events (FX), Events 2 (FX again), Events 3 (FX a third time)
 
-- **Lightning:** the chance a storm's strike starts a fire.
+- **Lightning:** the chance a strike starts a fire (it strikes out of rain, storms and snow).
 - **Quakes, Robbery, Crashes:** how many an hour (of the city's day).
 - **UFOs:** very rare by default.
+- **The land's disaster** (named for it: Wildfires, Dust devils, Avalanches, Eruptions, Tornadoes, Tsunamis,
+  Floods): how many an hour, more in its weather.
+- **Festivals, Blackouts, Meteors:** how many an hour (blackouts and meteors at night).
 - **Follow:** the camera goes to each incident.
-- **Disasters:** fires and earthquakes on or off.
+- **Disasters:** whether fires, quakes and the land's disasters destroy.
 - **Idle:** the idle view after 1, 2 or 5 minutes, or never.
 
-Black keys 1–6 on either page: lightning, an earthquake, a robbery, a crash, a UFO, birds.
+Black keys 1–10 on any of them: lightning, an earthquake, a robbery, a crash, a UFO, birds, the land's
+disaster, a festival, a blackout, meteors.
 
 ### Setup (GLO), Display (GLO again), MIDI out (GLO a third time)
 
@@ -350,11 +392,9 @@ the city's own sky and skyline, with whatever you press on the real one lit up.
 
 ## 10. Saving
 
-What you change is kept with the city while the FM-1 is on. Press SAVE on the Setup, Display or MIDI out
-page to keep all ten cities' settings and seeds through a power-off (a dot top right shows something is
-unsaved). The grown city itself isn't saved: its seed grows the same town again, and Start as grows it back
-to a stage at once. Hold SAVE for 1.5 s to put the city back to its recipe. Tune, Sync, MIDI out, Display,
-Follow and Idle are the same for every city.
+What you change is kept while the FM-1 is on. Press SAVE on the Setup, Display or MIDI out page to keep
+your settings through a power-off (a dot top right shows something is unsaved). The city itself isn't kept:
+each power-on founds a new one (Start as grows it to a stage at once), and its biome brings its music recipe.
 
 ---
 
