@@ -824,7 +824,6 @@ static void game_input(uint32_t btn, uint32_t keys);
 static void game_pos(float *x, float *y);
 
 /* --------------------------------------------------------- the camera --- */
-static const uint8_t TS[7] = {12, 10, 8, 6, 4, 3, 2};
 static int fits_at(int s) { return (C.maxx - C.minx + 4) * s <= cam.vw && (C.maxy - C.miny + 4) * s <= cam.vh; }
 /* SEL: ride along with a car on screen (another each press) */
 static void ride_next(void)
@@ -911,25 +910,12 @@ static int solo_pick(void)                       /* the idle view: a car near th
 }
 static void cam_update(float dt)
 {
-    int mode = proj.par[P_ZOOM], mins, target, k;   /* Zoom: 0 Auto (fit the city, else 100%), else that close */
+    int mode = proj.par[P_ZOOM], target;         /* Zoom: the dial, 25% .. 300% (0, once Auto: 100%) */
     float tx = cam.x, ty = cam.y, rate = 0.03f, fx, fy;
     cam.vw = 240;
     cam.vh = ui.full || game_on() ? 240 : 144;
-    mins = 8;
-    target = mins;
-    if (mode > 0 && mode <= EN_NZOOM)            /* the dial: as close as asked */
-        target = EN_ZOOM_TS[mode];
-    else
-        for (k = 0; k < 7; k++) {
-            if (TS[k] < mins)
-                break;
-            if (fits_at(TS[k])) {
-                target = TS[k];
-                break;
-            }
-        }
-    if (!cam.ts || target < cam.ts || (mode > 0 && cam.ts != target) || (ui.full && cam.ts != target && !fits_at(cam.ts)))
-        cam.ts = target;
+    target = EN_ZOOM_TS[mode > 0 && mode <= EN_NZOOM ? mode : EN_ZOOM_100];   /* as close as the dial says */
+    cam.ts = target;
     if (game_on())                               /* the secret game: close in */
         cam.ts = target = G_TS;
     if (ui.full && !game_on()) {                 /* the idle view: ride with the cars, the incidents first */

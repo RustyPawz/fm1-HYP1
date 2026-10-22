@@ -162,12 +162,12 @@ spin K3 1
 wait 400
 shot value.png
 spin K3 -2
-spin K2 1
+spin K2 -6
 wait 2500
 shot whole.png
 echo @whole
 leds
-spin K2 -1
+spin K2 6
 tap HOME
 wait 500
 shot t_asphalt.png

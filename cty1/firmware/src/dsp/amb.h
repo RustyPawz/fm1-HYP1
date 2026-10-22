@@ -56,7 +56,8 @@ enum {
     P_NPARAMS
 };
 #define EN_NTHEMES 6
-#define EN_NZOOM 14                     /* Zoom: 0 Auto, then 1..14 the tile size, out to in (EN_ZOOM_TS) */
+#define EN_NZOOM 14                     /* Zoom: 1..14 the tile size, out to in (EN_ZOOM_TS); 7 is 100% (0, once Auto, too) */
+#define EN_ZOOM_100 7
 extern const uint8_t EN_ZOOM_TS[EN_NZOOM + 1];
 typedef struct {
     const char *name;

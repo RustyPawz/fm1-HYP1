@@ -10,7 +10,8 @@ spin K3 1
 wait 400
 shot scr_value.png
 spin K3 -2
-spin K2 1
+expect par41 7
+spin K2 -6
 expect par41 1
 wait 2500
 shot scr_whole.png
@@ -19,7 +20,9 @@ expect par41 14
 wait 1000
 shot scr_close.png
 spin K2 -20
-expect par41 0
+expect par41 1
+spin K2 6
+expect par41 7
 tap HOME
 tap SEL
 wait 2500

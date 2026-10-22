@@ -53,7 +53,7 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Lightning", 0, 20, 9}, {"Quakes", 0, 30, 6}, {"Robbery", 0, 60, 12}, {"Crashes", 0, 60, 10},
     {"UFOs", 0, 100, 3}, {"Follow", 0, 1, 1}, {"Disasters", 0, 1, 1}, {"Idle", 0, 3, 1},
     {"Key", 0, 12, 0}, {"Tune", -50, 50, 0}, {"Sync", 0, 1, 1}, {"Mood", 0, 2, 0},
-    {"Theme", 0, EN_NTHEMES - 1, 0}, {"Zoom", 0, EN_NZOOM, 0}, {"Map", 0, 2, 0}, {"Labels", 0, 1, 1},
+    {"Theme", 0, EN_NTHEMES - 1, 0}, {"Zoom", 1, EN_NZOOM, EN_ZOOM_100}, {"Map", 0, 2, 0}, {"Labels", 0, 1, 1},
     {"Sends", 0, 3, 1}, {"Channels", 0, 9, 0},
     {"Biome", 0, EN_NBIOME, 0}, {"Regional", 0, 20, 2}, {"Festivals", 0, 20, 3}, {"Blackouts", 0, 20, 1},
     {"Meteors", 0, 20, 3},
@@ -148,8 +148,9 @@ void en_param_text(int i, int v, char *b)
     case P_TUNE: if (v > 0) *b++ = '+'; b = itoa_s(v, b); cpy(b, "c"); return;
     case P_MOOD: cpy(b, MOOD[(unsigned)v < 3u ? v : 0]); return;
     case P_THEME: cpy(b, THEME[(unsigned)v < EN_NTHEMES ? v : 0]); return;
-    case P_ZOOM:                                 /* Auto, or how close: 25% (the whole map) .. 300% */
-        if (v <= 0 || v > EN_NZOOM) { cpy(b, "Auto"); return; }
+    case P_ZOOM:                                 /* how close: 25% (the whole map) .. 300% */
+        if (v <= 0 || v > EN_NZOOM)
+            v = EN_ZOOM_100;
         b = itoa_s(EN_ZOOM_TS[v] * 100 / 8, b);
         cpy(b, "%");
         return;
