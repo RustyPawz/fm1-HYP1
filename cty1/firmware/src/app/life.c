@@ -961,12 +961,13 @@ static void spawn_flock(void)
 }
 
 /* ---------------------------------------------------------- incidents --- */
-#define NFIRE 4
+#define NFIRE 12
 static struct {
     uint8_t on;
     uint16_t si;
-    uint32_t born, t0, quick;
+    uint32_t born, t0, quick, spread;
     int8_t truck;
+    uint8_t spreads;                    /* how many it has lit (two at most: a fire grows, but not forever) */
     float x, y;
 } fires[NFIRE];
 static struct {
@@ -1020,39 +1021,58 @@ static const char *a_name(const st_t *s, char *b)  /* "A House" / "An Office blo
     return b;
 }
 static int st_alive(int si, uint32_t born) { return si && c_st[si].type && !(c_st[si].flags & SF_DEAD) && c_st[si].born == born; }
-/* the nearest station of a kind sends its vehicle along the roads to tile `to`; -1 none (and *quick set when the
- * station is just round the corner but the roads don't join) */
+/* the nearest station of a kind with a vehicle free sends it along the roads to tile `to`; -1 none (all out, or no
+ * road there: the caller tries again). Each station keeps two vehicles. They always drive: nothing arrives by
+ * itself. */
 static int dispatch(int vkind, int civ, float x, float y, int to, uint32_t *quick)
 {
-    int k, best = 0, n;
-    float bd = 1e9f;
+    int k, n, out = 0, stations = 0, tries;
+    uint16_t tried[3] = {0, 0, 0};
     car_t *c;
-    for (k = 0; k < C.nciv; k++) {
-        const st_t *s = &c_st[c_civ[k]];
-        float d = lhyp((float)s->x - x, (float)s->y - y);
-        if (s->kind == civ && d < bd) {
+    if (quick)
+        *quick = 0;
+    if (to < 0)
+        return -1;
+    for (k = 0; k < NCAR; k++)
+        out += cars[k].on && cars[k].kind == vkind;
+    for (k = 0; k < C.nciv; k++)
+        stations += c_st[c_civ[k]].kind == civ;
+    if (!stations || out >= 2 * stations)
+        return -1;
+    for (tries = 0; tries < 3; tries++) {       /* the nearest first; another if its roads don't reach */
+        int best = 0, j;
+        float bd = 1e9f;
+        for (k = 0; k < C.nciv; k++) {
+            const st_t *s = &c_st[c_civ[k]];
+            float d = lhyp((float)s->x - x, (float)s->y - y);
+            if (s->kind != civ || d >= bd)
+                continue;
+            for (j = 0; j < tries && tried[j] != c_civ[k]; j++)
+                ;
+            if (j < tries)
+                continue;
             bd = d;
             best = c_civ[k];
         }
+        if (!best)
+            return -1;
+        tried[tries] = (uint16_t)best;
+        c = car_new();
+        if (!c)
+            return -1;
+        n = find_path(road_near(&c_st[best], 1), to, 0, c->path, NPATH);
+        if (!n) {
+            c->on = 0;
+            continue;
+        }
+        c->len = (uint8_t)n;
+        c->kind = (uint8_t)vkind;
+        c->v = 3.6f;
+        c->keep = 1;
+        c->duty = 1;
+        return (int)(c - cars);
     }
-    if (!best || to < 0)
-        return -1;
-    c = car_new();
-    if (!c)
-        return -1;
-    n = find_path(road_near(&c_st[best], 1), to, 0, c->path, NPATH);
-    if (!n) {
-        c->on = 0;
-        if (bd < 6.0f && quick)
-            *quick = plat_ms() + 1500u;
-        return -1;
-    }
-    c->len = (uint8_t)n;
-    c->kind = (uint8_t)vkind;
-    c->v = 3.3f;
-    c->keep = 1;
-    c->duty = 1;
-    return (int)(c - cars);
+    return -1;
 }
 static void ignite(int si)
 {
@@ -1070,10 +1090,13 @@ static void ignite(int si)
     fires[f].born = s->born;
     fires[f].t0 = plat_ms();
     fires[f].quick = 0;
+    fires[f].spread = plat_ms() + 7000u;
+    fires[f].spreads = 0;
     fires[f].x = (float)s->x + (float)s->size * 0.5f;
     fires[f].y = (float)s->y + (float)s->size * 0.5f;
     news(N_FIRE, s->type, s->L);
-    fires[f].truck = (int8_t)dispatch(VK_FIRE, CV_FIRE, fires[f].x, fires[f].y, road_near(s, 1), &fires[f].quick);
+    fires[f].truck = (int8_t)dispatch(VK_FIRE, CV_FIRE, fires[f].x, fires[f].y, road_near(s, 1), 0);
+    fires[f].quick = plat_ms() + 1500u;          /* (here: when to ask again for a truck) */
 }
 static int region_start(void);
 static void strike(int hit)
@@ -1279,9 +1302,10 @@ static int start_ufo(void)
 }
 static uint32_t arrived_at(int c, uint32_t quick)
 {
+    (void)quick;
     if (c >= 0 && cars[c].on && cars[c].duty)
         return cars[c].arrived;
-    return quick && plat_ms() > quick ? quick : 0;
+    return 0;
 }
 static void send_home(int c)
 {
@@ -1301,13 +1325,39 @@ static void incidents_update(float dt)
             send_home(fires[f].truck);
             continue;
         }
-        arr = arrived_at(fires[f].truck, fires[f].quick);
+        if (fires[f].truck < 0 && (int32_t)(now - fires[f].quick) >= 0) {   /* no truck yet: ask again */
+            const st_t *s = &c_st[fires[f].si];
+            fires[f].quick = now + 1500u;
+            fires[f].truck = (int8_t)dispatch(VK_FIRE, CV_FIRE, fires[f].x, fires[f].y, road_near(s, 1), 0);
+        }
+        arr = arrived_at(fires[f].truck, 0);
+        if (!arr && now - fires[f].t0 > 7000u && (int32_t)(now - fires[f].spread) >= 0) {   /* left burning, it spreads */
+            const st_t *s = &c_st[fires[f].si];
+            int k2, n2 = 0, pick;
+            uint16_t nb[16];
+            fires[f].spread = now + 5000u + (uint32_t)lirnd(4000);
+            for (k2 = -1; k2 <= s->size && n2 < 16; k2++) {      /* the neighbours touching it */
+                int e2, p2[4][2] = {{s->x + k2, s->y - 1}, {s->x + k2, s->y + s->size}, {s->x - 1, s->y + k2}, {s->x + s->size, s->y + k2}};
+                for (e2 = 0; e2 < 4 && n2 < 16; e2++) {
+                    int si2;
+                    if (!in_map(p2[e2][0], p2[e2][1]) || !(si2 = c_ref[p2[e2][1] * MW + p2[e2][0]]))
+                        continue;
+                    if (c_st[si2].type != BT_CIV && !(c_st[si2].flags & (SF_BURN | SF_DEAD)))
+                        nb[n2++] = (uint16_t)si2;
+                }
+            }
+            if (n2 && fires[f].spreads < 2 && lrnd() < 0.4f * (1.0f - 0.7f * wet()) && proj.par[P_DISASTER]) {
+                pick = lirnd(n2);
+                fires[f].spreads++;
+                ignite(nb[pick]);
+            }
+        }
         if (arr && now - arr > 4500u) {
             c_st[fires[f].si].flags &= (uint8_t)~SF_BURN;
             fires[f].on = 0;
             send_home(fires[f].truck);
             news(N_SAVED, 0, 0);
-        } else if ((fires[f].truck < 0 && !fires[f].quick && now - fires[f].t0 > 16000u) || now - fires[f].t0 > 45000u) {
+        } else if (!arr && now - fires[f].t0 > 32000u) {   /* too long alight: it burns down */
             fires[f].on = 0;
             send_home(fires[f].truck);
             if (proj.par[P_DISASTER]) {
@@ -1346,10 +1396,14 @@ static void incidents_update(float dt)
                 rob.cop = (int8_t)dispatch(VK_POLICE, CV_POLICE, (float)c_st[rob.si].x, (float)c_st[rob.si].y, rob.road, &rob.quick);
             }
         } else if (rob.phase == 1) {
+            if (rob.cop < 0 && (int32_t)(now - rob.quick) >= 0) {   /* every car out: ask again */
+                rob.quick = now + 1500u;
+                rob.cop = (int8_t)dispatch(VK_POLICE, CV_POLICE, (float)c_st[rob.si].x, (float)c_st[rob.si].y, rob.road, 0);
+            }
             if (arrived_at(rob.cop, rob.quick)) {
                 rob.phase = 2;
                 rob.t2 = now;
-            } else if (now - rob.t1 > (rob.cop >= 0 ? 40000u : 14000u)) {
+            } else if (now - rob.t1 > 40000u) {
                 ped_t *p = &rob.robber;
                 int a = 0, b = p->len - 1;
                 while (a < b) {
@@ -1383,10 +1437,14 @@ static void incidents_update(float dt)
     }
     if (crash.on) {
         if (crash.phase == 0) {
+            if (crash.amb < 0 && (int32_t)(now - crash.quick) >= 0) {
+                crash.quick = now + 1500u;
+                crash.amb = (int8_t)dispatch(VK_AMB, CV_HOSPITAL, crash.x, crash.y, crash.i, 0);
+            }
             if (arrived_at(crash.amb, crash.quick)) {
                 crash.phase = 1;
                 crash.t2 = now;
-            } else if (now - crash.t0 > (crash.amb >= 0 ? 45000u : 20000u)) {
+            } else if (now - crash.t0 > 50000u) {
                 crash.on = 0;
                 news(N_TOWED, 0, 0);
                 send_home(crash.amb);
@@ -1463,6 +1521,8 @@ static int incident_at(float *x, float *y)
         CONSIDER(fest.t0, fest.x, fest.y);
     if (blackout.on)
         CONSIDER(blackout.t0, blackout.x, blackout.y);
+    if (show.on)                                 /* the show: the camera's first */
+        CONSIDER(0u, show.x, show.y - (show.kind == B_DESERT ? fm_minf(6.0f, fm_maxf(0.0f, show_t() - 5.0f) * 0.6f) : 0.0f));
 #undef CONSIDER
     return any;
 }
@@ -1735,6 +1795,7 @@ static void life_update(void)
     incidents_update(dt);
     region_update(dt);
     extras_update();
+    show_update();
     {   /* what fell: dust, and a crunch if it's on screen */
         rect_t r1 = view_rect(1.0f);
         while (demo_r != c_demo_w) {

@@ -142,7 +142,7 @@ on NES, Game Boy or SID voices.</p>
   <div class="card"><h3>It grows</h3><p>From a <b>town</b> at a crossroads to a <b>suburb</b>, a <b>city</b> and a <b>huge city</b>: blocks grow larger outward, avenues get planted medians, roundabouts and cul-de-sacs, bridges cross the river and a causeway the bay, and a beltway opens round it.</p></div>
   <div class="card"><h3>Zones</h3><p>Homes, shops and offices, and factories try to keep to their own districts, with some mixing. Rent and jobs set the balance; old lots are redeveloped, farms give way at the edge. A school, a hospital, a fire station and the police open as it needs them.</p></div>
   <div class="card"><h3>Life</h3><p>Cars drive real routes between homes and work; people walk, stroll the parks and stop to talk in speech bubbles. Day and night, four seasons, rain, storms, fog and snow, and birds overhead.</p></div>
-  <div class="card"><h3>Incidents</h3><p>Lightning (out of rain, storms and snow) starts a fire and the fire station sends a truck. An earthquake shakes the screen and gates the music. A robbery brings the police, a crash an ambulance. Festivals with fireworks, blackouts, meteor showers. And, very rarely, a UFO.</p></div>
+  <div class="card"><h3>Incidents</h3><p>Lightning (out of rain, storms and snow) starts a fire and the fire station sends a truck, lights flashing; left too long, a fire spreads. An earthquake shakes the screen and gates the music. A robbery brings the police, a crash an ambulance. Festivals with fireworks, blackouts, meteor showers. And, very rarely, a UFO.</p></div>
   <div class="card"><h3>The music</h3><p>The cars are the playheads: each road and building they pass is a rhythm and a bell. The bed of drums, bass and pad grows busier with the city; its mood picks the mode, the night closes the filter, rain and fog lengthen the echo, sirens wail in key.</p></div>
   <div class="card"><h3>You play</h3><p>The keys play a lead in the city's scale. Call any incident or the weather from the black keys, ride along with a car, or leave it: after a minute it takes the whole screen and follows the traffic, the lights playing along.</p></div>
 </div>
@@ -155,6 +155,17 @@ wave; the plains' golden grass and boom-chick; the beach's surf backbeat; the ri
 <div class="pair">
   <figure><img src="img/cty-device-eruption.png" width="1600" height="1161" alt="The FM-1 as the volcano erupts and lava runs down into the town."><figcaption><b>The biome's own disaster:</b> a wildfire, a dust devil, an avalanche, an eruption, a tornado, a tsunami or a flood. Its own look and sound; more in its weather.</figcaption></figure>
   <figure><img src="img/cty-device-desert.png" width="1600" height="1161" alt="The FM-1 showing a desert city among red mesas."><figcaption><b>The desert:</b> sand, mesas and cacti; the SID over a drone, a hand drum, Hijaz.</figcaption></figure>
+</div>
+<h2>Its own specials</h2>
+<figure><img src="img/cty-specials.png" width="2040" height="1112" alt="The last special of each biome, in a huge city: a biodome, a rocket launch site, an observatory, a cruise port, an airport, a theme park, a hydro plant."></figure>
+<p>Each land unlocks three of its own as the town becomes a suburb, a city and a huge city: a lumber mill, a ranger tower and a biodome
+in the forest; a solar farm, an oasis resort and, last, a rocket launch site in the desert; a ski lodge, a cable car and an observatory up
+high; a fishing harbor, a beach resort and a cruise port on the isles; grain silos, a county fair and an airport on the plains; a
+lighthouse, a boardwalk pier and a theme park at the beach; a watermill, a riverboat dock and a hydro plant in the river lands. The last
+puts on a show: the rocket lifts off, the plane takes off, the cruise ship sails.</p>
+<div class="pair">
+  <figure><img src="img/cty-device-launch.png" width="1600" height="1161" alt="The FM-1 as a rocket lifts off from the desert city's launch site on a column of smoke."><figcaption><b>Lift-off:</b> the desert's rocket counts down and climbs on its smoke, the music's rumble rising with it.</figcaption></figure>
+  <figure><img src="img/cty-hall.png" width="2040" height="568" alt="The town hall at each stage: a brick hall, a portico and clock tower, a copper dome over a plaza, a capitol."><figcaption><b>The town hall</b> stands by the crossroads from the founding, with a fire station, police and a hospital, and grows grander with the town.</figcaption></figure>
 </div>
 <h2>Disasters</h2>
 <figure><img src="img/cty-disasters.png" width="2040" height="1112" alt="Seven CTY-1 screens: a wildfire, a dust devil, an avalanche, an eruption, a tornado, a tsunami and a flood."></figure>

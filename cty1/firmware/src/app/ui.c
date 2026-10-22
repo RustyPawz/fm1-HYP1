@@ -295,6 +295,7 @@ static void new_city(int keep_view)
     ui.acc = 0.0f;
     ui.ride = -1;
     ui.look_until = 0;
+    ui.look_i = -1;                              /* ALGORITHM: the town hall first */
     ui.tour_next = 0;
     cam.x = (float)C.cx + 0.5f;
     cam.y = (float)C.cy + 0.5f;
@@ -397,12 +398,12 @@ static void city_news(void)
             break;
         }
         case N_CIVIC:
-            caps(a, CIVIC_NAME[e.a], sizeof a);
+            caps(a, civic_name(e.a), sizeof a);
             s_cpy(b, "OPENS");
             if (e.a < CV_GREEN0)
                 en_event(E_CIVIC, e.a, 0);
             break;
-        case N_GREEN: caps(a, CIVIC_NAME[e.a], sizeof a); s_cpy(b, "OPENS"); en_event(E_GREEN, e.a, 0); big = 0; break;
+        case N_GREEN: caps(a, civic_name(e.a), sizeof a); s_cpy(b, "OPENS"); en_event(E_GREEN, e.a, 0); big = 0; break;
         case N_SQUARE: s_cpy(a, "TOWN SQUARE"); s_cpy(b, "LAID OUT"); en_event(E_GREEN, 0, 0); break;
         case N_STAGE:
             s_cpy(a, "NOW A");
@@ -451,6 +452,22 @@ static void city_news(void)
                 s_cpy(b, "PASSES");
             }
             break;
+        case N_UNLOCK:
+            if (e.a == 100) { s_cpy(a, "LAUNCH IN"); s_cpy(b, "5 4 3 2 1"); break; }
+            if (e.a == 101) { s_cpy(a, "A FLIGHT"); s_cpy(b, "TAKES OFF"); break; }
+            if (e.a == 102) { s_cpy(a, "THE SHIP"); s_cpy(b, "SAILS"); break; }
+            if (e.a == 103) { s_cpy(a, "LIFT-OFF!"); break; }
+            caps(a, civic_name(e.a), sizeof a);
+            s_cpy(b, "OPENS");
+            en_event(E_FANFARE, 0, 0);
+            break;
+        case N_HALL: {
+            static const char *const HL[4] = {"", "GROWS", "GETS A DOME", "A CAPITOL"};
+            s_cpy(a, "TOWN HALL");
+            s_cpy(b, HL[e.a & 3]);
+            en_event(E_RISE, 0, 0);
+            break;
+        }
         case N_FEST: s_cpy(a, "FESTIVAL"); s_cpy(b, "TONIGHT"); if (day_lit() > 0.4f) s_cpy(b, "TODAY"); break;
         case N_BLACKOUT: s_cpy(a, "BLACKOUT"); break;
         case N_LIGHTS: s_cpy(a, "LIGHTS"); s_cpy(b, "BACK ON"); break;
@@ -574,6 +591,13 @@ static void key_down(int k)
         en_param_text(P_WEATHER, bk, t);
         caps(t, t, sizeof t);
         say("WEATHER", t);
+        return;
+    }
+    if (ui.view >= V_EVENTS && ui.view <= V_EVENTS3 && bk == 10) {   /* the biggest city's landmark: its show */
+        if (show_start())
+            say("THE SHOW", "BEGINS");
+        else
+            say("NOT YET:", "A HUGE CITY'S");
         return;
     }
     if (ui.view >= V_EVENTS && ui.view <= V_EVENTS3 && bk >= 0 && bk < 10) {
@@ -826,7 +850,7 @@ static void look_next(int d)
     int n = C.nciv, i;
     if (!n)
         return;
-    ui.look_i = ((ui.look_i + d) % n + n) % n;
+    ui.look_i = ui.look_i < 0 ? (d > 0 ? 0 : n - 1) : ((ui.look_i + d) % n + n) % n;
     i = c_civ[ui.look_i];
     ui.look_until = plat_ms() + 9000u;
     ui.tour_x = (float)c_st[i].x + (float)c_st[i].size * 0.5f;
@@ -836,7 +860,7 @@ static void look_next(int d)
     ui.ride = -1;
     {
         char t[20];
-        caps(t, CIVIC_NAME[c_st[i].kind], sizeof t);
+        caps(t, civic_name(c_st[i].kind), sizeof t);
         say("LOOKING AT", t);
     }
 }
@@ -2013,10 +2037,411 @@ static void sprite_i(const st_t *st, int n)
             P(1.0f + (float)k * 3.0f, 10.8f + (float)(k % 2) * 2.6f, 2.4f, 1.1f, CC[k % 4]);
     }
 }
+/* unit-space helpers: a disc, a line */
+static void circ(float cx, float cy, float r, uint16_t c) { disc(SXf + cx * SK - 0.5f, SYf + cy * SK - 0.5f, r * SK, c); }
+static void ln(float x0, float y0, float x1, float y1, uint16_t c)
+{
+    cv_line(rnd_i(SXf + x0 * SK), rnd_i(SYf + y0 * SK), rnd_i(SXf + x1 * SK), rnd_i(SYf + y1 * SK), c);
+}
+static void flag(float x, float y, uint16_t c)
+{
+    P(x, y, 0.4f, 3.0f, H(0x5d6168));
+    P(x + 0.4f, y, 1.6f, 1.0f, c);
+}
+/* the town hall: a 4 x 4 block by the crossroads, growing with the town (L 1..4) */
+static void sprite_hall(const st_t *st)
+{
+    float v = city_hashf(C.seed, st->x, st->y);
+    int k, L = st->L < 1 ? 1 : st->L > 4 ? 4 : st->L;
+    uint32_t now = plat_ms();
+    P(0, 0, 32, 32, H(0x79ad5a));                /* the lawn */
+    switch (L) {
+    case 1:                                      /* a modest brick hall, a flag, a path */
+        P(14.5f, 15, 3, 17, H(0xd8d0bc));
+        bevel(8, 5, 16, 10, H(0xb8664c));
+        P(8, 9.6f, 16, 0.8f, H(0x8f4a36));
+        P(14, 3, 4, 3, H(0xe8e0c8));
+        flag(20, 16.5f, H(0xd9473f));
+        tree(5, 6, 2.4f, v);
+        tree(27, 6, 2.4f, 1.0f - v);
+        tree(5, 26, 2.2f, v);
+        tree(27, 26, 2.0f, 1.0f - v);
+        P(9, 20, 4, 1, H(0x8a6a42));             /* a bench */
+        break;
+    case 2:                                      /* a portico of columns, a clock tower, flower beds */
+        P(13, 16, 6, 16, H(0xd8d0bc));
+        bevel(5, 4, 22, 12, H(0xe3d49c));
+        P(9, 14, 14, 2.4f, H(0xf4f0e2));
+        for (k = 0; k < 6; k++)
+            P(9.4f + (float)k * 2.5f, 14.4f, 1, 1.6f, H(0xc9c0a8));
+        bevel(14, 1, 4, 5, H(0xd8c890));
+        circ(16, 3.4f, 1.1f, H(0xf8f6ee));
+        ln(16, 3.4f, 16, 2.6f, H(0x2a2d33));
+        for (k = 0; k < 4; k++) {
+            P(3 + (float)k * 7.5f, 22, 4, 1.4f, k & 1 ? H(0xe8b931) : H(0xd9473f));
+            P(3 + (float)k * 7.5f, 28, 4, 1.4f, k & 1 ? H(0xd9473f) : H(0xf2a0c0));
+        }
+        flag(10, 18, H(0xd9473f));
+        flag(21, 18, H(0x3f8fd0));
+        tree(2.5f, 3, 2, v);
+        tree(29.5f, 3, 2, 1.0f - v);
+        break;
+    case 3:                                      /* neoclassical, a copper dome, a plaza and its fountain */
+        P(0, 18, 32, 14, H(0xd8d0bc));
+        for (k = 0; k < 16; k += 2)
+            P((float)k * 2.0f + (float)((k / 2) & 1), 18, 1, 14, H(0xcfc6ae));
+        bevel(3, 3, 26, 13, H(0xeee6d2));
+        P(3, 12.5f, 26, 1, H(0xd8ceb6));
+        circ(16, 8, 5.2f, H(0x5e9e8a));
+        circ(16, 8, 3.6f, H(0x7fb8a4));
+        circ(15, 7, 1.4f, H(0xa8dbc8));
+        circ(16, 25, 3.6f, H(0xb7ad96));
+        circ(16, 25, 2.8f, H(0x5fa8d8));
+        if ((now / 300u) & 1u)
+            circ(16, 25, 0.8f, H(0xe9f7fd));
+        for (k = 0; k < 4; k++)
+            flag(4.0f + (float)k * 2.4f, 18.5f, (k & 1) ? H(0x3f8fd0) : H(0xd9473f));
+        for (k = 0; k < 4; k++)
+            tree(3.0f + (float)k * 8.6f, 30, 1.6f, v + (float)k * 0.2f);
+        break;
+    default:                                     /* the capitol: a great dome gold-topped, two wings, a reflecting pool, hedges */
+        P(0, 0, 32, 32, H(0x6f9f52));
+        for (k = 0; k < 4; k++)
+            P(1.0f + (float)k * 8.0f, 1, 6, 2, H(0x4f7f3a));
+        bevel(1, 4, 9, 9, H(0xf2ecdc));
+        bevel(22, 4, 9, 9, H(0xf2ecdc));
+        bevel(8, 3, 16, 12, H(0xf6f0e2));
+        P(10, 13.5f, 12, 2.5f, H(0xfaf8f0));
+        for (k = 0; k < 7; k++)
+            P(10.4f + (float)k * 1.7f, 14, 0.8f, 2, H(0xd8ceb6));
+        circ(16, 8.5f, 5.8f, H(0xe8e2d0));
+        circ(16, 8.5f, 4.4f, H(0xf8f4ea));
+        circ(16, 8.5f, 1.6f, H(0xe8b931));
+        P(10, 17, 12, 9, H(0x3f7fb0));            /* the reflecting pool */
+        P(10.6f, 17.6f, 10.8f, 1.2f, H(0x8fc6e8));
+        P(15, 26, 2, 6, H(0xd8d0bc));
+        for (k = 0; k < 5; k++) {
+            P(2, 17.0f + (float)k * 3.0f, 6, 1.4f, H(0x3f6f32));
+            P(24, 17.0f + (float)k * 3.0f, 6, 1.4f, H(0x3f6f32));
+        }
+        for (k = 0; k < 4; k++)
+            dot(9.0f + (float)k * 4.8f, 27, H(0xf2d36b));   /* lamps */
+        flag(12, 28, H(0xd9473f));
+        flag(19, 28, H(0x3f8fd0));
+        break;
+    }
+}
+
+/* each biome's three specials (city.h CV_UNLOCK1..3): 2 x 2, 2 x 2, 3 x 3 */
+static void sprite_unlock(const st_t *st)
+{
+    float v = city_hashf(C.seed, st->x, st->y), t = (float)plat_ms() / 1000.0f;
+    int k, u = st->kind - CV_UNLOCK1, b = C.biome < NBIOME ? C.biome : 0;
+    switch (b * 3 + u) {
+    case 0:                                      /* forest: the lumber mill */
+        P(0, 0, 16, 16, H(0x8a7a52));
+        bevel(1, 1, 9, 7, H(0x9a6a3e));
+        P(1, 4.2f, 9, 0.6f, H(0x6a4a2a));
+        for (k = 0; k < 4; k++) {
+            circ(12.5f, 2.0f + (float)k * 1.9f, 0.9f, H(0xc8a070));
+            circ(14.5f, 2.0f + (float)k * 1.9f, 0.9f, H(0xb89060));
+        }
+        for (k = 0; k < 6; k++)
+            P(1.0f + (float)k * 2.4f, 10.5f + (float)(k & 1), 2, 4, H(0xa07848));
+        circ(5.5f, 4.5f, 1.4f, H(0xc9ccd0));
+        break;
+    case 1:                                      /* the ranger tower over the trees */
+        P(0, 0, 16, 16, SEAS[SC_FOREST]);
+        tree(3, 3, 2.5f, v);
+        tree(13, 13, 2.6f, 1.0f - v);
+        tree(3, 13, 2.2f, v);
+        PA(8, 9, 7, 7, H(0x101810), 90);
+        ln(4.5f, 4.5f, 11.5f, 11.5f, H(0x6a4a2a));
+        ln(11.5f, 4.5f, 4.5f, 11.5f, H(0x6a4a2a));
+        bevel(5, 5, 6, 6, H(0x8a6a44));
+        P(5, 5, 6, 1.4f, H(0xb85a3a));
+        P(12, 1, 3, 2.5f, H(0x7a5a38));
+        break;
+    case 2:                                      /* the biodome: a glass dome full of green */
+        P(0, 0, 24, 24, SEAS[SC_PARK]);
+        circ(12, 12, 10.5f, H(0x9ad8e8));
+        circ(12, 12, 9.5f, H(0x5aa85a));
+        for (k = 0; k < 7; k++)
+            tree(6.0f + (float)(k % 4) * 4.0f, 7.0f + (float)(k / 4) * 9.0f, 2.0f, v + (float)k * 0.13f);
+        for (k = 0; k < 6; k++) {
+            float a = (float)k / 6.0f * 6.2832f;
+            ln(12, 12, 12 + fm_cosf(a) * 10, 12 + fm_sinf(a) * 10, H(0xe8f6fa));
+        }
+        circ(12, 12, 2.2f, H(0xe8f6fa));
+        circ(9, 8, 2.0f, H(0xffffff));
+        break;
+    case 3:                                      /* desert: the solar farm */
+        P(0, 0, 16, 16, H(0xd8bf8a));
+        for (k = 0; k < 5; k++) {
+            P(1, 1.0f + (float)k * 3.0f, 14, 2.2f, H(0x2a4a7a));
+            P(1, 1.0f + (float)k * 3.0f, 14, 0.5f, H(0x6a9ad0));
+            for (int j = 1; j < 14; j += 3)
+                P((float)j, 1.0f + (float)k * 3.0f, 0.3f, 2.2f, H(0x8aaad0));
+        }
+        break;
+    case 4:                                      /* the oasis resort: palms round a pool */
+        P(0, 0, 16, 16, H(0xe0c890));
+        bevel(1, 1, 14, 4, H(0xf4f0e6));
+        for (k = 0; k < 6; k++)
+            P(2.0f + (float)k * 2.2f, 2, 1, 1.4f, H(0x8ac8e0));
+        blob(3, 7, 10, 6, H(0x3fb6d0));
+        P(4, 8, 8, 1, H(0x9ae0f0));
+        palm(2, 14, 1.8f, 0.2f);
+        palm(14, 14, 1.8f, 0.5f);
+        palm(14, 7, 1.6f, 0.3f);
+        dot(5, 14, H(0xd9473f));
+        dot(9, 14.5f, H(0xe8b931));
+        break;
+    case 5: {                                    /* the rocket launch site: the pad, the gantry, the rocket */
+        float h = show.on && show.kind == B_DESERT && show.si == (uint16_t)(st - c_st) ? show_t() - 5.0f : -1.0f;
+        P(0, 0, 24, 24, H(0xd8bf8a));
+        P(3, 3, 18, 18, H(0xb8b4ac));
+        P(10.5f, 12, 3, 12, H(0x5a5650));       /* the flame trench */
+        bevel(15, 6, 3, 9, H(0xc8463c));
+        for (k = 0; k < 4; k++)
+            ln(15, 6.0f + (float)k * 2.2f, 18, 8.2f + (float)k * 2.2f, H(0x8a2a24));
+        bevel(1, 19, 5, 4, H(0xd8d0c0));         /* the bunker */
+        P(21, 1, 0.5f, 6, H(0x8d8d8d));
+        if (h < 0.0f) {                          /* on the pad (smoking as it counts down) */
+            circ(12, 10, 2.2f, H(0xf4f4f2));
+            circ(12, 10, 1.1f, H(0x2a2d33));
+            P(9.4f, 9.4f, 1.2f, 1.2f, H(0xd9473f));
+            P(13.4f, 9.4f, 1.2f, 1.2f, H(0xd9473f));
+            if (show.on && show.kind == B_DESERT)
+                for (k = 0; k < 4; k++) {
+                    float ph = t * 1.5f + (float)k * 0.25f;
+                    ph -= fm_floorf(ph);
+                    PA(8.0f + ph * 6.0f - 1.5f, 13.0f + ph * 3.0f, 3, 3, H(0xe8e8e4), (uint32_t)(200.0f * (1.0f - ph)));
+                }
+        }
+        break;
+    }
+    case 6:                                      /* alpine: the ski lodge, an A-frame in the snow */
+        P(0, 0, 16, 16, H(0xeef3f6));
+        bevel(3, 2, 10, 8, H(0x6a4a30));
+        P(3, 2, 5, 8, H(0x7a5a3a));
+        P(3, 2, 10, 1.6f, H(0xf8fafc));
+        P(7.6f, 2, 0.8f, 8, H(0x4a3020));
+        for (k = 0; k < 5; k++)
+            P(2.5f + (float)k * 1.0f, 12, 0.4f, 3, k & 1 ? H(0xd9473f) : H(0x3f8fd0));
+        pine(13.5f, 12.5f, 2.0f, 0.9f);
+        dot(10, 13, H(0x2a2d33));
+        break;
+    case 7: {                                    /* the cable car: the station, the cable, a gondola climbing */
+        float g = t * 0.12f;
+        g -= fm_floorf(g);
+        P(0, 0, 16, 16, H(0xdfe6ea));
+        bevel(1, 9, 7, 6, H(0x8a8f96));
+        P(1, 9, 7, 1.4f, H(0xf4f6f8));
+        ln(4.5f, 11, 16, 0, H(0x2a2d33));
+        P(4.5f + g * 11.0f - 0.8f, 11.0f - g * 11.0f, 1.8f, 1.6f, H(0xd9473f));
+        pine(12, 12, 1.8f, 0.9f);
+        break;
+    }
+    case 8: {                                    /* the observatory: a white dome, its slit turning */
+        float a = t * 0.3f;
+        P(0, 0, 24, 24, H(0x9aa0a6));
+        P(2, 2, 20, 20, H(0xc9ccd0));
+        circ(12, 11, 7.5f, H(0xf4f6f8));
+        circ(12, 11, 6.5f, H(0xe4e8ec));
+        ln(12, 11, 12 + fm_cosf(a) * 7.0f, 11 + fm_sinf(a) * 7.0f, H(0x2a2d33));
+        ln(12.5f, 11.5f, 12.5f + fm_cosf(a) * 7.0f, 11.5f + fm_sinf(a) * 7.0f, H(0x2a2d33));
+        bevel(15, 18, 7, 4, H(0xd8d0c0));
+        P(3, 20, 8, 1, H(0x5d6168));
+        break;
+    }
+    case 9:                                      /* isles: the fishing harbor */
+        P(0, 0, 16, 16, H(0x3fb6c0));
+        P(0, 0, 16, 5, H(0xe8d7a6));
+        P(2, 4, 1.4f, 12, H(0xa07848));
+        P(8, 4, 1.4f, 12, H(0xa07848));
+        P(13, 4, 1.4f, 12, H(0xa07848));
+        for (k = 0; k < 3; k++) {
+            P(3.6f + (float)k * 5.2f, 7.0f + (float)(k & 1) * 4.0f, 3, 1.4f, k == 1 ? H(0xd9473f) : H(0xf4f4f2));
+            P(4.0f + (float)k * 5.2f, 6.4f + (float)(k & 1) * 4.0f, 0.3f, 1.0f, H(0x5d6168));
+        }
+        bevel(10, 1, 5, 3, H(0x7fb8d8));
+        break;
+    case 10:                                     /* the beach resort: a hotel, a pool, umbrellas */
+        P(0, 0, 16, 16, H(0xeadcb0));
+        bevel(1, 1, 14, 5, H(0xfaf6ee));
+        for (k = 0; k < 6; k++)
+            P(2.0f + (float)k * 2.2f, 2, 1, 3, H(0x7fc6e8));
+        blob(2, 8, 7, 4, H(0x3fc6d8));
+        for (k = 0; k < 4; k++)
+            circ(11.0f + (float)(k & 1) * 3.0f, 9.0f + (float)(k / 2) * 3.5f, 1.2f, k & 1 ? H(0xff6a8a) : H(0xffd04a));
+        palm(2, 14.5f, 1.6f, 0.3f);
+        break;
+    case 11: {                                   /* the cruise port: the terminal, a great white ship */
+        float go = show.on && show.kind == B_VOLCANO && show.si == (uint16_t)(st - c_st) ? fm_maxf(0.0f, show_t() - 2.0f) * 1.6f : 0.0f;
+        P(0, 0, 24, 24, H(0x2a8fb6));
+        P(0, 0, 24, 7, H(0xd8d0bc));
+        bevel(2, 1, 12, 5, H(0xf4f0e6));
+        P(2, 3, 12, 0.8f, H(0x3f8fd0));
+        P(15, 2, 7, 3, H(0x6a6d74));
+        if (go < 24.0f) {
+            float x0 = 2.0f + go;
+            blob(x0, 10, 20, 7, H(0xf8f8f6));
+            P(x0 + 2, 11, 15, 1, H(0x3f6fa0));
+            P(x0 + 2, 13.5f, 15, 1, H(0x3f6fa0));
+            P(x0 + 13, 11.5f, 3, 3, H(0xd9473f));
+            P(x0 + 13, 11.5f, 3, 0.8f, H(0x2a2d33));
+        }
+        break;
+    }
+    case 12:                                     /* plains: the grain silos */
+        P(0, 0, 16, 16, H(0xb8a868));
+        for (k = 0; k < 3; k++) {
+            circ(3.5f + (float)k * 4.2f, 4, 2.0f, H(0xc9ccd0));
+            circ(3.0f + (float)k * 4.2f, 3.5f, 0.9f, H(0xeef0f2));
+        }
+        bevel(2, 8.5f, 8, 6, H(0xb8463c));
+        P(2, 11, 8, 0.6f, H(0x8f332b));
+        P(12, 10, 3, 4, H(0xd9c06a));
+        break;
+    case 13: {                                   /* the county fair: tents, a little wheel */
+        float a = t * 0.8f;
+        P(0, 0, 16, 16, H(0x9cc06a));
+        for (k = 0; k < 3; k++) {
+            P(1.0f + (float)k * 3.6f, 10, 3, 4, H(0xf4f0e6));
+            P(1.0f + (float)k * 3.6f, 10, 1, 4, H(0xd9473f));
+            P(3.0f + (float)k * 3.6f, 10, 0.6f, 4, H(0xd9473f));
+        }
+        circ(11.5f, 5, 4.0f, H(0x8a8f96));
+        circ(11.5f, 5, 3.4f, H(0x9cc06a));
+        for (k = 0; k < 4; k++)
+            ln(11.5f, 5, 11.5f + fm_cosf(a + (float)k * 0.785f) * 3.6f, 5 + fm_sinf(a + (float)k * 0.785f) * 3.6f, H(0x5d6168));
+        for (k = 0; k < 6; k++) {
+            float b2 = a + (float)k * 1.047f;
+            dot(11.1f + fm_cosf(b2) * 3.6f, 4.6f + fm_sinf(b2) * 3.6f, k & 1 ? H(0xe8b931) : H(0x3f8fd0));
+        }
+        P(1, 1, 5, 2, H(0x8a6a42));
+        break;
+    }
+    case 14: {                                   /* the airport: the runway, the terminal, the tower, a plane */
+        float pt = show.on && show.kind == B_PLAINS && show.si == (uint16_t)(st - c_st) ? show_t() : -1.0f;
+        P(0, 0, 24, 24, H(0x9cb06a));
+        P(0, 9, 24, 5, H(0x3a3d44));
+        for (k = 0; k < 6; k++)
+            P(1.0f + (float)k * 4.0f, 11.3f, 2, 0.4f, H(0xf0f0ea));
+        bevel(2, 16, 14, 5, H(0xd8dce2));
+        P(2, 16, 14, 1.2f, H(0x7fb8e0));
+        bevel(19, 15, 3, 3, H(0xc9ccd0));
+        circ(20.5f, 16.5f, 1.2f, H(0x6ab8d8));
+        if (pt < 0.0f) {                         /* parked */
+            P(4, 3, 7, 1.4f, H(0xf4f4f2));
+            P(6.5f, 1, 1.4f, 5.5f, H(0xf4f4f2));
+            P(4, 2.5f, 1, 2.4f, H(0xd9473f));
+        }
+        break;
+    }
+    case 15: {                                   /* beach: the lighthouse, its beam turning at night */
+        P(0, 0, 16, 16, H(0xeadcb0));
+        bevel(9, 9, 6, 5, H(0xf4f0e6));
+        P(9, 9, 6, 1.4f, H(0xd9473f));
+        circ(6, 6, 3.6f, H(0xf4f4f2));
+        circ(6, 6, 2.8f, H(0xd9473f));
+        circ(6, 6, 1.8f, H(0xf4f4f2));
+        circ(6, 6, 1.0f, H(0xffe680));
+        break;
+    }
+    case 16:                                     /* the boardwalk pier: planks, stalls, benches */
+        P(0, 0, 16, 16, H(0x2f88b8));
+        P(3, 0, 10, 16, H(0xb08a5a));
+        for (k = 0; k < 16; k += 2)
+            P(3, (float)k, 10, 0.3f, H(0x8a6a42));
+        for (k = 0; k < 3; k++) {
+            P(3.5f, 1.0f + (float)k * 5.0f, 3, 3, k & 1 ? H(0x3f8fd0) : H(0xd9473f));
+            P(9.5f, 3.0f + (float)k * 5.0f, 3, 3, k & 1 ? H(0xe8b931) : H(0x3c9a5f));
+        }
+        break;
+    case 17: {                                   /* the theme park: a great wheel, a coaster, a carousel */
+        float a = t * 0.4f;
+        P(0, 0, 24, 24, H(0x9cc06a));
+        P(0, 11, 24, 2, H(0xd8d0bc));
+        P(11, 0, 2, 24, H(0xd8d0bc));
+        circ(5.5f, 5.5f, 5.0f, H(0x6a6d74));
+        circ(5.5f, 5.5f, 4.3f, H(0x9cc06a));
+        for (k = 0; k < 4; k++)
+            ln(5.5f, 5.5f, 5.5f + fm_cosf(a + (float)k * 0.785f) * 4.6f, 5.5f + fm_sinf(a + (float)k * 0.785f) * 4.6f, H(0x5d6168));
+        for (k = 0; k < 8; k++) {
+            float b2 = a + (float)k * 0.785f;
+            circ(5.5f + fm_cosf(b2) * 4.6f, 5.5f + fm_sinf(b2) * 4.6f, 0.6f, k & 1 ? H(0xff6a8a) : H(0xffd04a));
+        }
+        for (k = 0; k < 20; k++) {               /* the coaster's loop */
+            float b2 = (float)k / 20.0f * 6.2832f;
+            dot(18.0f + fm_cosf(b2) * 4.5f, 6.0f + fm_sinf(b2 * 2.0f) * 3.5f, H(0xd9473f));
+        }
+        {
+            float c2 = t * 2.0f;
+            dot(17.6f + fm_cosf(c2) * 4.5f, 5.6f + fm_sinf(c2 * 2.0f) * 3.5f, H(0xf4f4f2));
+        }
+        circ(18, 18, 3.6f, H(0xf4f0e6));
+        for (k = 0; k < 6; k++) {
+            float b2 = -a * 2.0f + (float)k * 1.047f;
+            circ(18 + fm_cosf(b2) * 2.4f, 18 + fm_sinf(b2) * 2.4f, 0.6f, k & 1 ? H(0x3f8fd0) : H(0xd9473f));
+        }
+        circ(18, 18, 1.0f, H(0xd9473f));
+        tree(4, 19, 2.2f, v);
+        tree(7, 22, 1.6f, 1.0f - v);
+        break;
+    }
+    case 18: {                                   /* river: the watermill, its wheel turning */
+        float a = t * 1.5f;
+        P(0, 0, 16, 16, SEAS[SC_PARK]);
+        P(10, 0, 4, 16, SEAS[SC_RIVER]);
+        bevel(1, 3, 8, 8, H(0xa8a090));
+        P(1, 3, 8, 2, H(0x7a5a3a));
+        circ(9.5f, 7, 2.8f, H(0x6a4a2a));
+        for (k = 0; k < 4; k++)
+            ln(9.5f + fm_cosf(a + (float)k * 0.785f) * 2.8f, 7 + fm_sinf(a + (float)k * 0.785f) * 2.8f,
+               9.5f - fm_cosf(a + (float)k * 0.785f) * 2.8f, 7 - fm_sinf(a + (float)k * 0.785f) * 2.8f, H(0x9a7a50));
+        P(10, 10.5f, 4, 1, H(0xe8f4fa));
+        break;
+    }
+    case 19: {                                   /* the riverboat dock: a paddle steamer */
+        float a = t * 3.0f;
+        P(0, 0, 16, 16, SEAS[SC_RIVER]);
+        P(0, 0, 4, 16, H(0xb08a5a));
+        blob(5, 3, 9, 11, H(0xf4f4f2));
+        P(6, 5, 7, 3, H(0xe8e4dc));
+        P(6.5f, 9, 6, 1, H(0x2a2d33));
+        P(8.6f, 1.5f, 1.8f, 2, H(0x2a2d33));
+        P(14, 6.0f + fm_sinf(a) * 0.6f, 1.6f, 5, H(0xd9473f));
+        break;
+    }
+    default: {                                   /* the hydro plant: the dam's wall, the spillway foaming */
+        uint32_t now = plat_ms();
+        P(0, 0, 24, 24, SEAS[SC_RIVER]);
+        P(0, 0, 24, 8, H(0x2a6fa0));
+        bevel(0, 8, 24, 4, H(0xc9ccd0));
+        P(0, 8, 24, 0.8f, H(0xe8eaec));
+        for (k = 0; k < 4; k++)
+            P(3.0f + (float)k * 5.0f, 12, 3, 7, ((now / 120u + (uint32_t)k) & 1u) ? H(0xf4fafc) : H(0xd6eaf4));
+        bevel(16, 16, 7, 7, H(0xa8acb2));
+        P(17, 17, 5, 1.2f, H(0xe8b931));
+        break;
+    }
+    }
+}
+
 static void sprite_civ(const st_t *st)
 {
     float v = city_hashf(C.seed, st->x, st->y), x, y;
     int k;
+    if (st->kind == CV_TOWNHALL) {
+        sprite_hall(st);
+        return;
+    }
+    if (st->kind >= CV_UNLOCK1) {
+        sprite_unlock(st);
+        return;
+    }
     switch (st->kind) {
     case CV_TOWNHALL:
         P(0, 0, 16, 16, H(0xcfc6b0));
@@ -2265,12 +2690,17 @@ static const uint16_t LOW_C[5] = {H(0x6fb0c4), H(0x5a9fcf), H(0xc9ccd0), H(0x7f9
 static const uint16_t LOW_I[5] = {H(0xb5a46c), H(0xa7acb2), H(0x8b9198), H(0x9aa0a6), H(0x7a8088)};
 static const uint16_t LOW_CIV[CV_N] = {H(0xd9c98e), H(0xd9473f), H(0xb8463c), H(0x3f5fa8), H(0xd0915a), H(0xf4f4f2), H(0xa374d4), H(0xbfc6cd),
                                        H(0x5ea84b), H(0x5ea84b), H(0xe3cf9a), H(0x7a5a3e), H(0xd8d0bc), H(0x4f8fc0), H(0x5aa14c), H(0x6f9f5a),
-                                       H(0x3871a0), H(0x86c068)};
+                                       H(0x3871a0), H(0x86c068), 0, 0, 0};
+static const uint16_t LOW_UNLOCK[NBIOME][3] = {   /* the specials, far out */
+    {H(0x9a6a3e), H(0x8a6a44), H(0x9ad8e8)}, {H(0x2a4a7a), H(0x3fb6d0), H(0xb8b4ac)}, {H(0x6a4a30), H(0x8a8f96), H(0xf4f6f8)},
+    {H(0xa07848), H(0xfaf6ee), H(0xf8f8f6)}, {H(0xc9ccd0), H(0xd9473f), H(0x3a3d44)}, {H(0xf4f4f2), H(0xb08a5a), H(0xff6a8a)},
+    {H(0xa8a090), H(0xf4f4f2), H(0xc9ccd0)}};
 static void draw_struct(const st_t *st, int px, int py, int s)
 {
     int n = st->size, w = s * n;
     if (s < 6) {
-        uint16_t c = st->type == BT_CIV ? LOW_CIV[st->kind] : (st->flags & SF_FARM) ? H(0xa9b862)
+        uint16_t c = st->type == BT_CIV ? (st->kind >= CV_UNLOCK1 ? LOW_UNLOCK[C.biome % NBIOME][st->kind - CV_UNLOCK1] : LOW_CIV[st->kind])
+                     : (st->flags & SF_FARM) ? H(0xa9b862)
                                                             : (st->type == BT_RES ? LOW_R : st->type == BT_COM ? LOW_C : LOW_I)[st->L - 1];
         cv_rect(px, py, w, w, c);
         if (s >= 3) {
@@ -2306,8 +2736,13 @@ static float st_height(const st_t *st)
     static const float CIVH[8] = {2, 0.8f, 1.2f, 1.2f, 1.2f, 3, 1, 2};
     if (st->flags & SF_FARM)
         return 0.6f;
-    if (st->type == BT_CIV)
+    if (st->type == BT_CIV) {
+        if (st->kind == CV_TOWNHALL)
+            return 1.5f + (float)st->L * 1.2f;
+        if (st->kind >= CV_UNLOCK1)
+            return st->kind == CV_UNLOCK3 ? 2.5f : 1.5f;
         return st->kind < 8 ? CIVH[st->kind] : 0.0f;
+    }
     if (st->type == BT_RES)
         return HR[st->L];
     if (st->type == BT_COM)
@@ -2345,15 +2780,30 @@ static void draw_cars(int s)
         x0 = (int)fm_floorf(cx - (float)w * 0.5f + 0.5f);
         y0 = (int)fm_floorf(cy - (float)h * 0.5f + 0.5f);
         if (c->kind >= VK_FIRE) {
-            int blink = (plat_ms() / 140u) & 1u;
+            int blink = (plat_ms() / 140u) & 1u, lx = x0 + (w >> 1), ly = y0 + (h >> 1);
+            uint16_t l1 = c->kind == VK_POLICE ? H(0xff3b30) : H(0xff3b30), l2 = c->kind == VK_POLICE ? H(0x4fa3ff) : c->kind == VK_AMB ? H(0xffffff) : H(0x4fa3ff);
             cv_rect(x0, y0, w, h, c->kind == VK_FIRE ? H(0xe03a2e) : H(0xf2f2ee));
             if (horiz)
                 cv_rect(x0, y0 + (h >> 1), w, 1, c->kind == VK_FIRE ? H(0xf0f0ea) : c->kind == VK_POLICE ? H(0x2c4a9a) : H(0xd9473f));
             else
                 cv_rect(x0 + (w >> 1), y0, 1, h, c->kind == VK_FIRE ? H(0xf0f0ea) : c->kind == VK_POLICE ? H(0x2c4a9a) : H(0xd9473f));
-            cv_rect(x0 + (w >> 1), y0 + (h >> 1), 1, 1,
-                    c->kind == VK_POLICE ? (blink ? H(0xff3b30) : H(0x4fa3ff)) : c->kind == VK_AMB ? (blink ? H(0xff3b30) : H(0xffffff))
-                                                                                     : (blink ? H(0x4fa3ff) : H(0xffffff)));
+            /* the light bar: two lamps flashing in turn, and their glow on the road while it answers a call */
+            if (horiz) {
+                cv_rect(lx - 1, ly, 1, 1, blink ? l1 : H(0x3a3d44));
+                cv_rect(lx + 1, ly, 1, 1, blink ? H(0x3a3d44) : l2);
+            } else {
+                cv_rect(lx, ly - 1, 1, 1, blink ? l1 : H(0x3a3d44));
+                cv_rect(lx, ly + 1, 1, 1, blink ? H(0x3a3d44) : l2);
+            }
+            if (c->duty || c->keep) {
+                int g;
+                for (g = -2; g <= 2; g++) {
+                    px_add(lx + g, ly - 2, blink ? l1 : l2, 70);
+                    px_add(lx + g, ly + 2, blink ? l1 : l2, 70);
+                    px_add(lx - 2, ly + g, blink ? l1 : l2, 70);
+                    px_add(lx + 2, ly + g, blink ? l1 : l2, 70);
+                }
+            }
         } else if (c->kind == VK_BUS) {
             int j;
             cv_rect(x0, y0, w, h, H(0xe8a531));
@@ -2495,6 +2945,31 @@ static void draw_night(int s, const uint16_t *vis, int nvis)
             px_add(VOX + (int)(((float)st->x + 0.15f + city_hashf((uint32_t)j, st->x, st->y + 7) * 0.7f * (float)st->size) * (float)s),
                    VOY + (int)(((float)st->y + 0.15f + city_hashf((uint32_t)j, st->y, st->x + 3) * 0.7f * (float)st->size) * (float)s), H(0xffcd69),
                    (uint32_t)(230.0f * a));
+        }
+    }
+    for (k = 0; k < nvis; k++) {                 /* the landmarks lit: the lighthouse's beam, the biodome, the domes */
+        const st_t *st = &c_st[vis[k]];
+        float cx = (float)VOX + ((float)st->x + (float)st->size * 0.5f) * (float)s, cy = (float)VOY + ((float)st->y + (float)st->size * 0.5f) * (float)s;
+        if (st->type != BT_CIV || blackout_at((float)st->x + 0.5f, (float)st->y + 0.5f))
+            continue;
+        if (st->kind == CV_TOWNHALL && st->L >= 3)
+            ellipse_mix(cx, cy - (float)s * 0.6f, (float)s * 0.8f, (float)s * 0.8f, H(0xfff0c0), (uint32_t)(90.0f * a));
+        if (st->kind == CV_UNLOCK1 && C.biome == B_BEACH) {   /* the lighthouse */
+            float an = (float)plat_ms() / 900.0f, lx = cx - (float)s * 0.25f, ly = cy - (float)s * 0.25f;
+            int j;
+            for (j = 2; j < 14; j++)
+                px_add((int)(lx + fm_cosf(an) * (float)j * (float)s * 0.3f), (int)(ly + fm_sinf(an) * (float)j * (float)s * 0.3f), H(0xfff0b0),
+                       (uint32_t)(220.0f * a * (1.0f - (float)j / 14.0f)));
+            px_add((int)lx, (int)ly, H(0xffffff), (uint32_t)(255.0f * a));
+        } else if (st->kind == CV_UNLOCK3 && (C.biome == B_FOREST || C.biome == B_BEACH)) {   /* the biodome, the theme park */
+            int j;
+            for (j = 0; j < 12; j++) {
+                float an = (float)j / 12.0f * 6.2832f + (C.biome == B_BEACH ? (float)plat_ms() / 2000.0f : 0.0f);
+                px_add((int)(cx + fm_cosf(an) * (float)s * 1.2f), (int)(cy + fm_sinf(an) * (float)s * 1.2f),
+                       C.biome == B_BEACH ? (j & 1 ? H(0xff6a8a) : H(0xffd04a)) : H(0x9affb0), (uint32_t)(240.0f * a));
+            }
+        } else if (st->kind == CV_UNLOCK3 && C.biome == B_ALPINE) {   /* the telescope's slit glowing */
+            px_add((int)cx, (int)(cy - (float)s * 0.1f), H(0xc0d8ff), (uint32_t)(200.0f * a));
         }
     }
     for (k = 0; k < NCAR; k++) {                 /* headlights, tail lights */
@@ -2858,11 +3333,51 @@ static void draw_region(int s, int x0, int x1, int y0, int y1, int glowing)
         }
     }
 }
+/* the show's vehicles: the rocket climbing on its flame, the plane lifting off, (the ship sails in its sprite) */
+static void draw_show(int s)
+{
+    float t = show_t(), sc = (float)s / 8.0f;
+    const st_t *st;
+    int k;
+    if (!show.on)
+        return;
+    st = &c_st[show.si];
+    if (show.kind == B_DESERT && t >= 5.0f) {
+        float u = t - 5.0f, h = u * u * 2.2f;    /* pixels up, accelerating */
+        float bx = (float)VOX + ((float)st->x + 1.5f) * (float)s, by = (float)VOY + ((float)st->y + 1.25f) * (float)s;
+        for (k = 0; k < 10; k++) {               /* the smoke it leaves, spreading */
+            float f = (float)k / 10.0f, yy = by - h * f, r = (2.0f + (1.0f - f) * u * 3.0f) * sc;
+            ellipse_mix(bx + fm_sinf((float)k * 1.7f) * u * sc, yy, r, r * 0.8f, H(0xe8e8e4), (uint32_t)(150.0f * (1.0f - f * 0.6f)));
+        }
+        if (h < 400.0f) {
+            float ry = by - h;
+            ellipse_mix(bx, ry + 4.0f * sc, 2.4f * sc, 4.0f * sc, H(0xffd04a), 255);   /* the flame */
+            ellipse_mix(bx, ry + 3.0f * sc, 1.4f * sc, 2.4f * sc, H(0xffffff), 255);
+            ellipse_mix(bx, ry, 2.0f * sc, 5.0f * sc, H(0xf4f4f2), 255);              /* the rocket */
+            ellipse_mix(bx, ry - 4.0f * sc, 1.2f * sc, 1.5f * sc, H(0x2a2d33), 255);
+            px_add((int)bx, (int)(ry + 6.0f * sc), H(0xffc060), 255);
+        }
+    } else if (show.kind == B_PLAINS) {
+        float x = t < 1.0f ? 0.0f : (t - 1.0f) * (t - 1.0f) * 1.2f, lift = x > 20.0f ? (x - 20.0f) * 0.4f : 0.0f;
+        float bx = (float)VOX + (float)st->x * (float)s + x * sc * 8.0f / 8.0f * 1.0f + 4.0f * sc, by = (float)VOY + ((float)st->y + 1.4f) * (float)s;
+        float g = 1.0f + lift * 0.03f;
+        if (lift > 0.0f)                         /* its shadow, left behind on the ground */
+            ellipse_mix(bx + lift * 0.6f, by + lift * 0.3f, 3.0f * sc, 1.2f * sc, H(0x101418), 80);
+        by -= lift;
+        cv_rect((int)(bx - 3.5f * sc * g), (int)(by - 0.7f * sc * g), (int)(7.0f * sc * g) + 1, (int)(1.4f * sc * g) + 1, H(0xf4f4f2));
+        cv_rect((int)(bx - 0.7f * sc * g), (int)(by - 2.8f * sc * g), (int)(1.4f * sc * g) + 1, (int)(5.6f * sc * g) + 1, H(0xf4f4f2));
+        cv_rect((int)(bx - 3.5f * sc * g), (int)(by - 1.2f * sc * g), (int)(1.0f * sc * g) + 1, (int)(2.4f * sc * g) + 1, H(0xd9473f));
+        if ((plat_ms() / 300u) & 1u)
+            px_add((int)(bx + 3.5f * sc * g), (int)by, H(0xff3030), 255);
+    }
+}
+
 /* the volcano smoking (every day), a festival, meteors */
 static void draw_extras(int s)
 {
     uint32_t now = plat_ms();
     int k;
+    draw_show(s);
     if (C.biome == B_VOLCANO && C.vx) {
         float cx = (float)VOX + ((float)C.vx + 0.5f) * (float)s, cy = (float)VOY + ((float)C.vy + 0.5f) * (float)s;
         for (k = 0; k < 4; k++) {
@@ -2987,6 +3502,9 @@ static void draw_info(void)
             s_cpy(u, "GROWING");
         } else if (incident_at(&fx, &fy)) {
             if (rg.on && !fires[0].on && !fires[1].on && !fires[2].on && !fires[3].on) s_cpy(u, REGION_NAME[rg.kind]);
+            else if (show.on && C.biome == B_DESERT) s_cpy(u, "LAUNCH");
+            else if (show.on && C.biome == B_PLAINS) s_cpy(u, "TAKE-OFF");
+            else if (show.on && C.biome == B_VOLCANO) s_cpy(u, "ALL ABOARD");
             else if (fest.on) s_cpy(u, "FESTIVAL");
             else if (blackout.on) s_cpy(u, "BLACKOUT");
             else if (ufo.on) s_cpy(u, "UFO");
@@ -3235,7 +3753,7 @@ static int help_lines(int b, const char *l[HELP_LINES])
     case B_LFO: L("TIME: THE DAY, SEASONS"); L("AGAIN: THE WEATHER"); L("BLACK KEYS: THE HOUR,"); L("THE SKY"); break;
     case B_SEQ: L("THE VOICES' LEVELS"); L("AGAIN: PAD, LEAD,"); L("EFFECTS, SIRENS"); break;
     case B_SEL: L("RIDE ALONG: THE"); L("CAMERA FOLLOWS A CAR"); L("AGAIN: ANOTHER"); break;
-    case B_FX: L("EVENTS: HOW OFTEN"); L("AGAIN: EVENTS 2, 3"); L("BLACK KEYS 1-10:"); L("CALL ONE NOW"); break;
+    case B_FX: L("EVENTS: HOW OFTEN"); L("AGAIN: EVENTS 2, 3"); L("BLACK KEYS 1-11:"); L("CALL ONE NOW"); break;
     case B_GLO: L("SETUP: KEY, TUNE,"); L("SYNC, MOOD"); L("AGAIN: DISPLAY, MIDI OUT"); L("SEL + GLO: REMOTE"); break;
     case B_EDIT: L("A NEW CITY,"); L("THE SAME BIOME"); L("(PRESETS: ANOTHER BIOME)"); break;
     case B_REC: L("HOLD: THE CITY STOPS"); L("GROWING; LIFE AND"); L("THE MUSIC GO ON"); break;
@@ -3442,6 +3960,8 @@ static void leds(void)
             if (fest.on) k |= 1u << BLACK_KEY[7];
             if (blackout.on) k |= 1u << BLACK_KEY[8];
             if (meteors.on) k |= 1u << BLACK_KEY[9];
+            k &= ~(1u << BLACK_KEY[10]);
+            if (show.on) k |= 1u << BLACK_KEY[10];
             if (anyfire || (bolt.on && plat_ms() - bolt.t0 < 600u)) k |= 1u << BLACK_KEY[0];
             if (quake.on) k |= 1u << BLACK_KEY[1];
             if (rob.on) k |= 1u << BLACK_KEY[2];

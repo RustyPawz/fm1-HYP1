@@ -4,8 +4,10 @@ tap SAVE
 wait 6000
 expect stage >1
 tap FX
+expect hall 3
 tapkey b0
 wait 1500
+expect trucks >0
 shot ev_bolt.png
 tapkey b1
 wait 600
@@ -17,9 +19,14 @@ wait 200
 expect robbery 1
 wait 2500
 shot ev_robbery.png
+wait 12000
+expect robphase >0
+expect cops >0
 tapkey b3
 wait 200
 expect crash 1
+wait 1000
+expect ambulances >0
 wait 2500
 shot ev_crash.png
 tapkey b4
@@ -80,3 +87,20 @@ expect weather 5
 shot ev_snow.png
 expect notes >100
 expect peak_db_max -0.5
+# a desert grown huge: its specials, the rocket on its pad, the launch
+wait 10
+tap HOME
+spin K2 1
+tap SAVE
+wait 6000
+expect biome 1
+expect unlocked 3
+expect hall 4
+tap FX
+tapkey b10
+wait 200
+expect show 1
+wait 9000
+shot ev_launch.png
+wait 9000
+expect show 0

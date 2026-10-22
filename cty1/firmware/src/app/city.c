@@ -36,15 +36,29 @@ static const char *const BIGNAME[4][6] = {
     {0}, {0}, {0, 0, 0, "Shopping ctr", "Office campus", "Skyscraper"}, {0, 0, 0, "Factory", "Power plant", "Logistics hub"}};
 const char *const CIVIC_NAME[CV_N] = {"Town hall", "Gas station", "Fire station", "Police", "School", "Hospital", "Station",
                                       "Stadium", "Park", "Pocket park", "Playground", "Garden", "Town square", "Pond park",
-                                      "Sports fields", "Cemetery", "Marina", "Golf course"};
+                                      "Sports fields", "Cemetery", "Marina", "Golf course", "Unlock 1", "Unlock 2", "Unlock 3"};
+/* each biome's three specials: as the town becomes a suburb, a city, a huge city */
+const char *const UNLOCK_NAME[NBIOME][3] = {
+    {"Lumber mill", "Ranger tower", "Biodome"},          {"Solar farm", "Oasis resort", "Rocket launch site"},
+    {"Ski lodge", "Cable car", "Observatory"},           {"Fishing harbor", "Beach resort", "Cruise port"},
+    {"Grain silos", "County fair", "Airport"},           {"Lighthouse", "Boardwalk pier", "Theme park"},
+    {"Watermill", "Riverboat dock", "Hydro plant"}};
+const char *civic_name(int kind)
+{
+    if (kind >= CV_UNLOCK1 && kind <= CV_UNLOCK3)
+        return UNLOCK_NAME[C.biome < NBIOME ? C.biome : 0][kind - CV_UNLOCK1];
+    return CIVIC_NAME[(unsigned)kind < CV_N ? kind : 0];
+}
 typedef struct { int16_t jobs; float lv; int8_t r, size; } civic_t;
 static const civic_t CIVIC[CV_N] = {
-    {20, 0.25f, 5, 2}, {4, 0, 0, 1}, {15, 0, 0, 1}, {25, 0, 0, 1}, {30, 0.1f, 5, 2}, {200, 0.08f, 6, 2}, {60, 0.25f, 8, 2},
+    {20, 0.3f, 6, 4}, {4, 0, 0, 1}, {15, 0, 0, 1}, {25, 0, 0, 1}, {30, 0.1f, 5, 2}, {200, 0.08f, 6, 2}, {60, 0.25f, 8, 2},
     {150, 0.1f, 6, 3}, {0, 0.18f, 4, 2}, {0, 0.1f, 3, 1}, {0, 0.08f, 3, 1}, {0, 0.08f, 3, 1}, {0, 0.15f, 4, 1},
-    {0, 0.2f, 5, 2}, {0, 0.06f, 4, 2}, {0, 0, 0, 2}, {0, 0.12f, 4, 2}, {0, 0.1f, 6, 3}};
-int civ_green(int kind) { return kind >= CV_GREEN0; }
+    {0, 0.2f, 5, 2}, {0, 0.06f, 4, 2}, {0, 0, 0, 2}, {0, 0.12f, 4, 2}, {0, 0.1f, 6, 3},
+    {40, 0.05f, 3, 2}, {80, 0.12f, 5, 2}, {200, 0.15f, 7, 3}};
+int civ_green(int kind) { return kind >= CV_GREEN0 && kind <= CV_GOLF; }
+/* every town starts with a town hall (at the founding), a small fire station, police and a hospital */
 static const struct { int32_t pop; uint8_t kind; } MILESTONES[] = {
-    {0, CV_TOWNHALL}, {40, CV_GAS}, {220, CV_SCHOOL}, {400, CV_POLICE}, {600, CV_FIRE}, {2200, CV_SCHOOL}, {3500, CV_HOSPITAL},
+    {0, CV_TOWNHALL}, {0, CV_FIRE}, {0, CV_POLICE}, {0, CV_HOSPITAL}, {40, CV_GAS}, {220, CV_SCHOOL}, {2200, CV_SCHOOL},
     {7000, CV_GAS}, {9000, CV_FIRE}, {9500, CV_POLICE}, {10000, CV_STATION}, {18000, CV_SCHOOL}, {24000, CV_HOSPITAL},
     {26000, CV_POLICE}, {30000, CV_STATION}, {46000, CV_STADIUM}, {55000, CV_STATION}, {60000, CV_FIRE}, {62000, CV_POLICE},
     {80000, CV_HOSPITAL}};
@@ -1312,16 +1326,91 @@ static float special_score(int kind, int x, int y, int n)
         int w = water_edge(x, y, n);
         return w >= 3 ? 1.0f + (float)w * 0.1f - (float)near_kind(x, y, kind, 16) * 2.0f + r : -1e9f;
     }
+    case CV_UNLOCK1: case CV_UNLOCK2: case CV_UNLOCK3: {
+        /* where each wants to be: by the water, by the mountains, out at the edge, or in town */
+        static const uint8_t SITE[NBIOME][3] = {{2, 2, 3}, {2, 1, 2}, {4, 4, 4}, {1, 1, 1}, {2, 2, 2}, {1, 1, 3}, {1, 1, 1}};
+        int site = SITE[C.biome < NBIOME ? C.biome : 0][kind - CV_UNLOCK1], w;
+        float edge = d - lv * 10.0f + r;
+        switch (site) {
+        case 1:                                  /* the water's edge (else the edge of town) */
+            w = water_edge(x, y, n);
+            return w >= 2 ? 20.0f + (float)w * 0.3f - d * 0.1f + r : edge - 20.0f;
+        case 4: {                                /* the mountains' foot */
+            int k2, near = 0;
+            for (k2 = 0; k2 < 24 && !near; k2++) {
+                int xx = x + (k2 % 5) * 2 - 4 + (n > 2), yy = y + (k2 / 5) * 2 - 4;
+                near = in_map(xx, yy) && TERR(yy * MW + xx) == T_ROCK;
+            }
+            return near ? 20.0f - d * 0.1f + r : edge - 20.0f;
+        }
+        case 3: return -fm_fabsf(lv - 0.45f) * 4.0f + r;   /* in town */
+        default: return edge;                    /* out at the edge */
+        }
+    }
     }
     return 0.0f;
 }
 
+static int civ_at(int kind, int best);
+/* the biome's specials: on open land, or over farms and small houses (cleared for it), by a road */
+static int unlock_fits(int x, int y, int n)
+{
+    int dx, dy, road = 0;
+    if (x < 1 || y < 1 || x + n >= MW - 1 || y + n >= MH - 1)
+        return 0;
+    for (dy = 0; dy < n; dy++)
+        for (dx = 0; dx < n; dx++) {
+            int i = (y + dy) * MW + x + dx, si = c_ref[i];
+            if (BLOCKED(i) || c_road[i] || is_line(i))
+                return 0;
+            if (c_bt[i] && (c_st[si].type == BT_CIV || (!(c_st[si].flags & SF_FARM) && c_st[si].L > 2)))
+                return 0;
+        }
+    for (dx = -1; dx <= n && !road; dx++)
+        road = (in_map(x + dx, y - 1) && c_road[(y - 1) * MW + x + dx]) || (in_map(x + dx, y + n) && c_road[(y + n) * MW + x + dx]) ||
+               (in_map(x - 1, y + dx) && c_road[(y + dx) * MW + x - 1]) || (in_map(x + n, y + dx) && c_road[(y + dx) * MW + x + n]);
+    return road;
+}
+static int place_unlock(int kind)
+{
+    int n = CIVIC[kind].size, x, y, best = -1, dx, dy;
+    float bs = -1e9f;
+    for (y = C.miny - 2; y <= C.maxy + 2; y++)
+        for (x = C.minx - 2; x <= C.maxx + 2; x++) {
+            float sc;
+            if (!unlock_fits(x, y, n))
+                continue;
+            sc = special_score(kind, x, y, n);
+            {
+                int occ = 0;                     /* the fewer to clear the better */
+                for (dy = 0; dy < n; dy++)
+                    for (dx = 0; dx < n; dx++)
+                        occ += c_bt[(y + dy) * MW + x + dx] != 0;
+                sc -= (float)occ * 0.5f;
+            }
+            if (sc > bs) {
+                bs = sc;
+                best = y * MW + x;
+            }
+        }
+    if (best < 0 || C.nciv >= 128)
+        return 0;
+    for (dy = 0; dy < n; dy++)
+        for (dx = 0; dx < n; dx++) {
+            int i = best + dy * MW + dx;
+            if (c_bt[i])
+                city_demolish(c_ref[i], 0);
+            c_zr[i] &= 0x0Fu;                    /* no rubble under it */
+        }
+    return civ_at(kind, best) != 0;
+}
 static int place_special(int kind)
 {
     const civic_t *d = &CIVIC[kind];
-    int n = d->size, best = -1, k, si, x, y;
+    int n = d->size, best = -1, k, x, y;
     float bs = -1e9f;
-    st_t *s;
+    if (kind == CV_TOWNHALL && C.hall)          /* the founding built it */
+        return 1;
     for (k = 0; k < C.nempty; k++) {
         int i = c_empty[k];
         float sc;
@@ -1337,6 +1426,13 @@ static int place_special(int kind)
     }
     if (best < 0 || bs < -1e8f || C.nciv >= 128)
         return 0;
+    return civ_at(kind, best) != 0;
+}
+static int civ_at(int kind, int best)
+{
+    const civic_t *d = &CIVIC[kind];
+    int n = d->size, si;
+    st_t *s;
     si = st_alloc();
     if (!si)
         return 0;
@@ -1354,7 +1450,13 @@ static int place_special(int kind)
     C.buildings++;
     if (civ_green(kind))
         C.greens++;
-    if (kind == CV_PLAZA && !FIRST(FI_SQUARE)) {
+    if (kind == CV_TOWNHALL) {
+        C.hall = (uint16_t)si;
+        s->L = (uint8_t)(C.stage + 1);
+    }
+    if (kind >= CV_UNLOCK1) {
+        news(N_UNLOCK, kind, C.biome);
+    } else if (kind == CV_PLAZA && !FIRST(FI_SQUARE)) {
         SETFIRST(FI_SQUARE);
         news(N_SQUARE, kind, 0);
     } else if (!civ_green(kind)) {
@@ -1364,7 +1466,7 @@ static int place_special(int kind)
     }
     if (civ_green(kind))
         SETFIRST(FI_GREEN0 + kind - CV_GREEN0);
-    return 1;
+    return si;
 }
 
 static int count_kind(int kind)
@@ -1406,6 +1508,39 @@ static void check_stage(void)
     while (C.stage < 3 && C.pop >= STAGE_MIN[C.stage + 1]) {
         C.stage++;
         news(N_STAGE, C.stage, 0);
+        if (C.hall && c_st[C.hall].kind == CV_TOWNHALL && !(c_st[C.hall].flags & SF_DEAD)) {   /* the town hall grows */
+            c_st[C.hall].L = (uint8_t)(C.stage + 1);
+            c_st[C.hall].born = C.tick;
+            news(N_HALL, C.stage, 0);
+        }
+    }
+}
+/* the town hall at the founding: a 4 x 4 block beside the crossroads (the plan's streets give way to it) */
+static void found_hall(void)
+{
+    static const int8_t Q[4][2] = {{2, 2}, {-4, 2}, {2, -4}, {-4, -4}};
+    int q, dx, dy;
+    for (q = 0; q < 4; q++) {
+        int x0 = C.cx + Q[q][0], y0 = C.cy + Q[q][1], ok = 1;
+        for (dy = 0; dy < 4 && ok; dy++)
+            for (dx = 0; dx < 4; dx++) {
+                int x = x0 + dx, y = y0 + dy;
+                if (x < 1 || y < 1 || x >= MW - 1 || y >= MH - 1 || BLOCKED(y * MW + x) || c_road[y * MW + x]) {
+                    ok = 0;
+                    break;
+                }
+            }
+        if (!ok)
+            continue;
+        for (dy = 0; dy < 4; dy++)
+            for (dx = 0; dx < 4; dx++) {
+                int i = (y0 + dy) * MW + x0 + dx;
+                c_plan[i] = PL_NONE;
+                c_lm[i] = 0;
+                c_fl2[i] &= (uint8_t)~(F2_STUB | F2_ROUND);
+            }
+        civ_at(CV_TOWNHALL, y0 * MW + x0);
+        return;
     }
 }
 
@@ -1448,6 +1583,7 @@ void city_new(uint32_t seed, int biome)
                 if (!c_road[i])
                     add_road(i, 0);
             }
+    found_hall();
     scan();
     compute_lv();
     compute_zones();
@@ -1481,6 +1617,16 @@ void city_step(void)
             C.milestone++;
             C.m_fails = 0;
         }
+    }
+    if (C.unlocked < C.stage && C.milestone >= 4) {   /* the biome's special for this size */
+        if (place_unlock(CV_UNLOCK1 + C.unlocked)) {
+            C.unlocked++;
+            return;
+        }
+        if ((C.tick & 15u) == 0u)
+            extend_roads(2);
+        if (C.tick % 400u == 399u)               /* nowhere for it: let it go */
+            C.unlocked++;
     }
     if (C.dev >= C.next_green) {
         C.next_green += 11 + C.stage * 6;

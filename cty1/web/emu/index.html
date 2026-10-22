@@ -216,7 +216,7 @@ body.stream .ctl.knob.sv-turn > circle:first-child { stroke: #ff9a3c; stroke-wid
       <div>
         <h3>Events <span>FX</span></h3>
         <dl>
-          <dt>Lightning, Quakes, Robbery, Crashes</dt><dd>How often each happens. Lightning strikes only out of rain, a storm or snow, and may start a fire: the fire station sends a truck. A quake shakes the screen and gates the music; what falls is cleared at the next phrase. A robber brings the police, a crash an ambulance.</dd>
+          <dt>Lightning, Quakes, Robbery, Crashes</dt><dd>How often each happens. Lightning strikes only out of rain, a storm or snow, and may start a fire: the fire station sends a truck, lights flashing, along the roads (two to a station; left waiting, a fire spreads). A quake shakes the screen and gates the music; what falls is cleared at the next phrase. A robber brings the police, a crash an ambulance.</dd>
         </dl>
       </div>
       <div>
@@ -230,7 +230,7 @@ body.stream .ctl.knob.sv-turn > circle:first-child { stroke: #ff9a3c; stroke-wid
         <dl>
           <dt>Meteors</dt><dd>Showers on clear nights, each a falling chime.</dd><dt>Follow</dt><dd>The camera goes to what happens and stays until it's over.</dd><dt>Disasters</dt><dd>Fires, quakes and the biome's disasters destroy, or not.</dd><dt>Idle</dt><dd>After a while untouched the city takes the whole screen and rides with the cars, each route singing the lead, and the lights play along.</dd>
         </dl>
-        <p>On any Events page the black keys call each now: 1 lightning, 2 a quake, 3 a robbery, 4 a crash, 5 a UFO, 6 birds, 7 the biome's disaster, 8 a festival, 9 a blackout, 10 meteors.</p>
+        <p>On any Events page the black keys call each now: 1 lightning, 2 a quake, 3 a robbery, 4 a crash, 5 a UFO, 6 birds, 7 the biome's disaster, 8 a festival, 9 a blackout, 10 meteors, 11 the huge city's special putting on its show (the desert's rocket launch, the plains' plane, the isles' cruise ship).</p>
       </div>
       <div>
         <h3>Setup <span>GLO</span></h3>
@@ -274,6 +274,7 @@ body.stream .ctl.knob.sv-turn > circle:first-child { stroke: #ff9a3c; stroke-wid
   <div>
     <h2>The biomes</h2>
     <p>Every switch-on founds a new city on new land. Each biome looks, sounds and storms its own way; underneath they all play the same. <b>Forest</b>: deep woods, the Game Boy's wave and woodblocks, wildfires. <b>Desert</b>: sand and red mesas, cacti, the SID over a drone and a hand drum in Hijaz, dust storms and dust devils. <b>Alpine</b>: a valley under snowy peaks and pines, bells and long echoes in Lydian, blizzards and avalanches. <b>Volcano isles</b>: palms, turquoise shallows and a smoking volcano, a clave and a steel-drum wave, typhoons, ash and eruptions. <b>Plains</b>: golden grass and farms, boom-chick and pentatonic tunes, tornadoes. <b>Beach</b>: a sandy shore, a surf backbeat and a walking bass, sea fog and tsunamis. <b>River lands</b>: a wide river, ponds and reeds, shakers and long bass, floods.</p>
+    <p>Every town starts with a town hall (it grows grander with the town), a fire station, police and a hospital. Each land unlocks three specials as the city grows; the desert's last is a rocket launch site.</p>
     <p>What you hear is the firmware running at the FM-1's 44.1 kHz, not a recording. Running FM-1 firmware in the browser comes from <a href="https://www.groove-os.com/">Groove OS</a>'s emulator, by way of AMB-1.</p>
   </div>
 </section>
@@ -375,7 +376,7 @@ function hit(c, cls) {
   c.hit = d;
 }
 // what each control does, on hover (the Buttons list below says the same)
-const TIP = { SEL: "Ride along with a car (again: another)", FX: "Events page (again: Events 2, 3); black keys 1-10 call one", ENV: "Music page", ARP: "Sound page", LFO: "Time page (again: Weather)", EDIT: "A new city on the same land", GLO: "Setup page (again: Display, MIDI out); on the FM-1, SEL + GLO plays this emulator",
+const TIP = { SEL: "Ride along with a car (again: another)", FX: "Events page (again: Events 2, 3); black keys 1-11 call one", ENV: "Music page", ARP: "Sound page", LFO: "Time page (again: Weather)", EDIT: "A new city on the same land", GLO: "Setup page (again: Display, MIDI out); on the FM-1, SEL + GLO plays this emulator",
   HOME: "City page: speed, start as, biome, traffic", SAVE: "On Setup: save; elsewhere: from its founding; hold: the biome's music back", SEQ: "Voices page (again: Voices 2)", PLAY: "Music plays / rests", REC: "Hold: the city stops growing",
   "OCT-": "The lead an octave down", "OCT+": "The lead an octave up", SELECT: "Every page in turn (HOME held: the tempo)", ALGORITHM: "Look around: the landmarks", PRESETS: "The next biome: a new city there",
   MASTER: "Volume" };

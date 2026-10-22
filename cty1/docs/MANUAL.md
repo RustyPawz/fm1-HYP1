@@ -66,7 +66,8 @@ minutes with it:
    in the header names each first: the first shop, the town square, the fire station, a bridge.
 3. **Play along.** The keys play a lead in the city's scale (the lit keys). OCT− / OCT+ move it.
 4. **Make something happen.** Press FX for Events. Black key 1 calls lightning, 2 an earthquake, 3 a
-   robbery, 4 a crash, 5 a UFO, 6 birds, 7 the land's own disaster, 8 a festival, 9 a blackout, 10 meteors.
+   robbery, 4 a crash, 5 a UFO, 6 birds, 7 the land's own disaster, 8 a festival, 9 a blackout, 10 meteors (and 11, once the city is huge,
+   its special's show).
    The camera goes there and stays until it's over.
 5. **Change the sky.** Press LFO: black keys 1–4 jump to dawn, noon, dusk and night. Press it again for
    Weather: black keys 1–7 set it, from Auto to snow.
@@ -82,14 +83,14 @@ minutes with it:
 
 | Control | What it does |
 |---|---|
-| **Keys** | The lead, kept to the city's scale (lit). On Time, black keys 1–4: dawn, noon, dusk, night. On Weather, black keys 1–7: Auto, then the land's six weathers. On the Events pages, black keys 1–10: lightning, an earthquake, a robbery, a crash, a UFO, birds, the land's disaster, a festival, a blackout, meteors. |
+| **Keys** | The lead, kept to the city's scale (lit). On Time, black keys 1–4: dawn, noon, dusk, night. On Weather, black keys 1–7: Auto, then the land's six weathers. On the Events pages, black keys 1–11: lightning, an earthquake, a robbery, a crash, a UFO, birds, the land's disaster, a festival, a blackout, meteors, the special's show. |
 | **PLAY** | The music plays / rests. The city lives on either way. |
 | **REC** | Hold: the city stops growing (HOLD in the header); life and the music go on. Again to let it grow. |
 | **EDIT** | A new city on the same land. |
 | **HOME ENV ARP LFO SEQ FX GLO** | The pages: City, Music, Sound, Time (again: Weather), Voices (again: Voices 2), Events (again: Events 2, Events 3), Setup (again: Display, then MIDI out). |
 | **SEL** | Ride along: the camera follows a car on screen (again: another). Held, with GLO: remote (the panel plays the browser emulator). |
 | **SELECT** | Every page in turn. With HOME held: the tempo. |
-| **ALGORITHM** | Look around: the camera to each landmark in turn (the town hall, the school, the stadium…), staying a few seconds. |
+| **ALGORITHM** | Look around: the camera to each landmark in turn, the town hall first (then the services, the school, the stadium, the specials…), staying a few seconds. |
 | **PRESETS** | The next biome (or the one before): a new city there, with the biome's music. |
 | **KNOB 1–4** | The page's four values. |
 | **OCT− / OCT+** | The lead an octave down / up (two each way). |
@@ -148,11 +149,37 @@ SAVE an incident. Any touch brings the pages back.
   balance: too few jobs and shops and factories come; too few homes and houses do. Farms spread at the edge
   and give way as the city reaches them. Small buildings grow into bigger ones, neighbours merge into
   shopping centres, office campuses and skyscrapers, and old lots are cleared and redeveloped.
-- **Landmarks.** As the population passes each mark, a gas station, the town hall, a fire station, a police
-  station, a school, a hospital, the railway station and the stadium open, plus green spaces: parks, pocket
-  parks, playgrounds, gardens, plazas, ponds, playing fields, a cemetery, a marina on the coast, a golf
-  course.
-- **Stages.** Town, Suburb, City, Huge city: each changes the music (below) and the headline.
+- **From the founding.** Every town starts with a **town hall** on a 4 × 4 block by the crossroads, and in its
+  first weeks a small **fire station**, a **police station** and a **hospital**. The town hall grows with the
+  town: a brick hall with a flag, then a portico and a clock tower, then a copper dome over a plaza and its
+  fountain, and at last a capitol with a gold-topped dome, two wings and a reflecting pool.
+- **Landmarks.** As the population passes each mark, gas stations, schools, more fire and police stations
+  and hospitals, the railway station and the stadium open, plus green spaces: parks, pocket parks,
+  playgrounds, gardens, plazas, ponds, playing fields, a cemetery, a marina on the coast, a golf course.
+- **Stages.** Town, Suburb, City, Huge city: each changes the music (below) and the headline, and unlocks one
+  of the land's three specials (below).
+
+![The town hall as the town grows](img/cty-hall.png)
+
+### The specials
+
+Each land unlocks three of its own, as the town becomes a suburb, a city and a huge city:
+
+| Biome | Suburb | City | Huge city |
+|---|---|---|---|
+| Forest | Lumber mill | Ranger tower | **Biodome** |
+| Desert | Solar farm | Oasis resort | **Rocket launch site** |
+| Alpine | Ski lodge | Cable car | **Observatory** |
+| Volcano isles | Fishing harbor | Beach resort | **Cruise port** |
+| Plains | Grain silos | County fair | **Airport** |
+| Beach | Lighthouse | Boardwalk pier | **Theme park** |
+| River lands | Watermill | Riverboat dock | **Hydro plant** |
+
+The last one puts on a show every few minutes (or on black key 11 of the Events pages): the rocket counts
+down and lifts off on a column of smoke, a plane takes off down the runway, the cruise ship sounds its horn and
+sails; the others light up with a festival and fireworks. The camera goes to watch.
+
+![The specials, grown huge](img/cty-specials.png)
 
 ![The zones](img/cty-device-zones.png)
 
@@ -193,8 +220,10 @@ storms, fog, snow.
 ### Incidents
 
 - **Lightning** strikes out of rain, storms and snow (not dust or ash), and may set a building alight (in the
-  forest, the woods). The nearest fire station sends its truck
-  along the roads; it hoses the fire out, or the building burns down and its lot is cleared.
+  forest, the woods). The nearest fire station with a truck free sends it, lights flashing, along the roads; it
+  hoses the fire out. Each station has two trucks: with more fires than that, the rest wait. A fire left
+  burning spreads to the buildings beside it (less in the rain), and after half a minute it burns down; so a
+  small town's one station can be overwhelmed. More stations open as the city grows.
 - **An earthquake** shakes the screen and gates the music in time; a few buildings fall. Their rubble is
   cleared at the start of the next four-bar phrase, and the lots are built again.
 - **A robbery:** a robber walks to a shop and an alarm rings. The police drive over and catch them, or they
@@ -209,7 +238,7 @@ storms, fog, snow.
 - **The land's own disaster** (above).
 
 How often each happens is on the Events pages (Disasters stops them destroying); black keys call them at
-once. With Follow on, the camera goes to each and stays until it's over.
+once. The police and the ambulances drive out the same way, two to a station, lights flashing. With Follow on, the camera goes to each and stays until it's over.
 
 ![What happens](img/cty-incidents.png)
 
@@ -322,8 +351,8 @@ thunder, the UFO) and **Sirens** (and alarms).
 - **Disasters:** whether fires, quakes and the land's disasters destroy.
 - **Idle:** the idle view after 1, 2 or 5 minutes, or never.
 
-Black keys 1–10 on any of them: lightning, an earthquake, a robbery, a crash, a UFO, birds, the land's
-disaster, a festival, a blackout, meteors.
+Black keys 1–11 on any of them: lightning, an earthquake, a robbery, a crash, a UFO, birds, the land's
+disaster, a festival, a blackout, meteors, and the huge city's special putting on its show.
 
 ### Setup (GLO), Display (GLO again), MIDI out (GLO a third time)
 

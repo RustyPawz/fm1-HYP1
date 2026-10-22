@@ -194,11 +194,13 @@ def screens(names, out, cols=None, label=None, scale=2, gap=24):
 BIOMES = ["forest", "desert", "alpine", "isles", "plains", "beach", "river"]
 BIOME_LABEL = ["FOREST", "DESERT", "ALPINE", "VOLCANO ISLES", "PLAINS", "BEACH", "RIVER LANDS"]
 DISASTER_LABEL = ["WILDFIRE", "DUST DEVIL", "AVALANCHE", "ERUPTION", "TORNADO", "TSUNAMI", "FLOOD"]
+SPECIAL_LABEL = ["BIODOME", "ROCKET LAUNCH", "OBSERVATORY", "CRUISE PORT", "AIRPORT", "THEME PARK", "HYDRO PLANT"]
 WEATHER_LABEL = ["THUNDERSTORM", "DUST STORM", "BLIZZARD", "TYPHOON", "THUNDERSTORM", "TROPICAL STORM", "THUNDERSTORM"]
 SCREENS = ["splash", "splash_cty", "city", "music", "sound", "time", "weather", "voices", "voices2", "events", "events2", "events3",
            "setup", "display", "midiout", "help", "full", "ride", "bolt", "quake", "robbery", "crash", "ufo", "festival", "night",
            "storm", "snow", "zones", "value", "whole", "game", "synced", "synced_setup",
-           *[f"b_{b}" for b in BIOMES], *[f"d_{b}" for b in BIOMES], *[f"w_{b}" for b in BIOMES],
+           *[f"b_{b}" for b in BIOMES], *[f"d_{b}" for b in BIOMES], *[f"w_{b}" for b in BIOMES], *[f"x_{b}" for b in BIOMES],
+           "hall0", "hall1", "hall2", "hall3",
            "t_asphalt", "t_neon", "t_blueprint", "t_sunset", "t_terminal", "t_mono"]
 
 
@@ -229,6 +231,10 @@ def main():
     screens([f"b_{n}" for n in BIOMES], OUT / "cty-biomes.png", cols=4, label=BIOME_LABEL)
     screens([f"d_{n}" for n in BIOMES], OUT / "cty-disasters.png", cols=4, label=DISASTER_LABEL)
     screens([f"w_{n}" for n in BIOMES], OUT / "cty-weather.png", cols=4, label=WEATHER_LABEL)
+    screens([f"x_{n}" for n in BIOMES], OUT / "cty-specials.png", cols=4, label=SPECIAL_LABEL)
+    screens(["hall0", "hall1", "hall2", "hall3"], OUT / "cty-hall.png", cols=4, label=["TOWN", "SUBURB", "CITY", "HUGE CITY"])
+    b, k = L["x_desert"]
+    scene(device("x_desert", b, k), OUT / "cty-device-launch.png", "LIFT-OFF", "THE DESERT'S LAST SPECIAL: THE ROCKET LAUNCH SITE", glow="#ffb050")
     b, k = L["d_isles"]
     scene(device("d_isles", b, k), OUT / "cty-device-eruption.png", "ERUPTION", "THE VOLCANO ISLES' OWN DISASTER", glow="#ff7a3c")
     b, k = L["b_desert"]

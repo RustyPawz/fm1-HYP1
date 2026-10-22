@@ -596,6 +596,21 @@ static void cue(int type, int a)
         noise(0, 2.2f, 0.55f * fx, 0.2f, 0, 0, 260.0f, 0.02f, 49);
         tone(CH_TRI, WV_TRI, 0.5f, 0, 33.0f, 1.2f, 0.45f * fx, 0, 0, 24.0f);
         break;
+    case E_LAUNCH:
+        noise(0, 9.0f, 0.5f * fx, 0.25f, 0, 0, 400.0f, 1.5f, 0);
+        tone(CH_TRI, WV_TRI, 0.5f, 0, 31.0f, 8.0f, 0.4f * fx, 1.0f, 0, 45.0f);
+        tone(CH_WAV, WV_SINE, 0.5f, samp(1.0f), (float)chord_tone(0, 1), 7.0f, 0.07f * fx, 2.0f, 0, (float)chord_tone(0, 4));
+        break;
+    case E_JET:
+        noise(0, 5.0f, 0.3f * fx, 1.2f, 0, 1500.0f, 0, 2.0f, 0);
+        tone(CH_WAV, WV_SINE, 0.5f, 0, (float)chord_tone(4, 2), 4.0f, 0.05f * fx, 1.5f, 0, (float)chord_tone(4, 3));
+        break;
+    case E_HORN:
+        for (k = 0; k < 2; k++) {
+            tone(CH_WAV, WV_SAW, 0.5f, samp((float)k * 1.6f), (float)note_of(0, -1), 1.2f, 0.16f * fx, 0.05f, 0.9f, 0);
+            tone(CH_WAV, WV_SAW, 0.5f, samp((float)k * 1.6f), (float)note_of(4, -1), 1.2f, 0.1f * fx, 0.05f, 0.9f, 0);
+        }
+        break;
     case E_FANFARE: {
         static const int8_t T[6] = {0, 2, 4, 7, 4, 7};
         for (k = 0; k < 6; k++)

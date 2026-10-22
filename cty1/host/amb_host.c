@@ -373,6 +373,20 @@ static int expect(const char *what, const char *val)
         got = blackout.on;
     else if (!strcmp(what, "meteors"))
         got = meteors.on;
+    else if (!strcmp(what, "robphase"))           /* 0 on the way, 1 robbing, 2 caught, 3 fleeing */
+        got = rob.on ? rob.phase : -1;
+    else if (!strcmp(what, "show"))               /* the biggest city's landmark putting on its show */
+        got = show.on;
+    else if (!strcmp(what, "unlocked"))           /* the biome's specials built */
+        got = C.unlocked;
+    else if (!strcmp(what, "hall"))               /* the town hall's level (0: none) */
+        got = C.hall ? c_st[C.hall].L : 0;
+    else if (!strcmp(what, "trucks") || !strcmp(what, "cops") || !strcmp(what, "ambulances")) {
+        int k, kind = what[0] == 't' ? VK_FIRE : what[0] == 'c' ? VK_POLICE : VK_AMB;
+        got = 0;
+        for (k = 0; k < NCAR; k++)
+            got += cars[k].on && cars[k].kind == kind;
+    }
     else if (!strcmp(what, "dirty"))
         got = ui.dirty;
     else if (!strcmp(what, "store_writes"))

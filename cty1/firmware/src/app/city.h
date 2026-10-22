@@ -47,7 +47,9 @@ enum { Z_NONE, Z_RES, Z_COM, Z_IND, Z_X, Z_FARM };
 enum { BT_NONE, BT_RES, BT_COM, BT_IND, BT_CIV };
 /* landmarks and green spaces */
 enum { CV_TOWNHALL, CV_GAS, CV_FIRE, CV_POLICE, CV_SCHOOL, CV_HOSPITAL, CV_STATION, CV_STADIUM,
-       CV_PARK, CV_POCKET, CV_PLAYGROUND, CV_GARDEN, CV_PLAZA, CV_POND, CV_FIELDS, CV_CEMETERY, CV_MARINA, CV_GOLF, CV_N };
+       CV_PARK, CV_POCKET, CV_PLAYGROUND, CV_GARDEN, CV_PLAZA, CV_POND, CV_FIELDS, CV_CEMETERY, CV_MARINA, CV_GOLF,
+       CV_UNLOCK1, CV_UNLOCK2, CV_UNLOCK3,   /* each biome's own, unlocked as the city becomes a suburb, a city, a huge city */
+       CV_N };
 #define CV_GREEN0 CV_PARK
 #define SF_FARM 0x01u
 #define SF_DEAD 0x02u
@@ -82,6 +84,8 @@ typedef struct {
     uint16_t nempty, nbl[4];            /* open lots; buildings by type (anchors) */
     uint16_t nciv;
     uint16_t nrounds;
+    uint8_t unlocked;                   /* the biome's specials built (0..3) */
+    uint16_t hall;                      /* the town hall's slot */
 } city_t;
 extern city_t C;
 
@@ -109,7 +113,7 @@ enum {
     N_FARMS, N_FARMGONE, N_REDEV, N_BUILTOUT, N_BUILD, N_TOWER,
     /* life's */
     N_FIRE, N_BURNT, N_SAVED, N_QUAKE, N_ROBBERY, N_CAUGHT, N_ESCAPED, N_CRASH, N_TREATED, N_TOWED, N_UFO,
-    N_REGION, N_REGION_END, N_FEST, N_BLACKOUT, N_LIGHTS, N_METEOR,   /* a = the region's kind (B_*), b = how many fell */
+    N_REGION, N_REGION_END, N_FEST, N_BLACKOUT, N_LIGHTS, N_METEOR, N_UNLOCK, N_HALL,   /* a = the region's kind (B_*), b = how many fell */
 };
 typedef struct { uint8_t code, a, b; } news_t;
 #define NNEWS 32
@@ -126,6 +130,8 @@ void city_demolish(int si, int cause);   /* cause: 0 redevelop, 1 burn, 2 quake 
 int city_ready(void);                    /* founded */
 const char *st_name(const st_t *s);      /* "House", "Shopping center", "Hospital" */
 extern const char *const CIVIC_NAME[CV_N];
+const char *civic_name(int kind);        /* a landmark's name; the unlocks by the biome ("Rocket launch site") */
+extern const char *const UNLOCK_NAME[NBIOME][3];
 extern const char *const STAGE_NAME[4];
 extern const int32_t STAGE_MIN[4];
 uint32_t city_hash(uint32_t seed, int32_t x, int32_t y);

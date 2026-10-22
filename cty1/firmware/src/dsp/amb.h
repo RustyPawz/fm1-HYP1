@@ -106,7 +106,10 @@ enum {
     E_FIREWORK,      /* a rocket: a whistle up, a crackle */
     E_METEOR,        /* a shooting star: a falling chime */
     E_BOOM,          /* an eruption, a wave breaking, an avalanche letting go */
-    E_FANFARE,       /* a festival opens */
+    E_FANFARE,       /* a festival opens, a landmark opens */
+    E_LAUNCH,        /* a rocket lifts off: a rumble rising, a tone climbing */
+    E_JET,           /* a plane takes off */
+    E_HORN,          /* a ship's horn */
     E_NEV
 };
 void en_event(int type, int a, int b);

@@ -114,7 +114,7 @@ def panel(screen_png):
             s.append(what(x + 27, 330, bot[i][1]))
     s.append(keybed(36, 400, W - 72, 270))
     s.append(what(W / 2, 698, "Keys: the lead (lit: the scale)   ·   Time: black 1-4 the hour   ·   Weather: black 1-7 the sky   ·   "
-                              "Events: black 1-10 call one   ·   Hold a button: what it does"))
+                              "Events: black 1-11 call one   ·   Hold a button: what it does"))
     s.append("</svg>")
     return "".join(s)
 

@@ -362,6 +362,108 @@ shot w_river.png
 tapkey b2
 tap HOME
 wait 500
+tap HOME
+spin K2 1
+spin PRESET 1
+wait 9000
+tap FX
+tapkey b10
+wait 2500
+shot x_forest.png
+echo @x_forest
+leds
+wait 12000
+tap HOME
+spin PRESET 1
+wait 9000
+tap FX
+tapkey b10
+wait 9500
+shot x_desert.png
+echo @x_desert
+leds
+wait 12000
+tap HOME
+spin PRESET 1
+wait 9000
+tap FX
+tapkey b10
+wait 2500
+shot x_alpine.png
+echo @x_alpine
+leds
+wait 12000
+tap HOME
+spin PRESET 1
+wait 9000
+tap FX
+tapkey b10
+wait 6000
+shot x_isles.png
+echo @x_isles
+leds
+wait 12000
+tap HOME
+spin PRESET 1
+wait 9000
+tap FX
+tapkey b10
+wait 6000
+shot x_plains.png
+echo @x_plains
+leds
+wait 12000
+tap HOME
+spin PRESET 1
+wait 9000
+tap FX
+tapkey b10
+wait 2500
+shot x_beach.png
+echo @x_beach
+leds
+wait 12000
+tap HOME
+spin PRESET 1
+wait 9000
+tap FX
+tapkey b10
+wait 2500
+shot x_river.png
+echo @x_river
+leds
+wait 12000
+tap HOME
+tap HOME
+spin K2 -3
+tap SAVE
+wait 4000
+turn ALGO 1
+wait 3000
+shot hall0.png
+tap HOME
+spin K2 1
+tap SAVE
+wait 4000
+turn ALGO 1
+wait 3000
+shot hall1.png
+tap HOME
+spin K2 1
+tap SAVE
+wait 4000
+turn ALGO 1
+wait 3000
+shot hall2.png
+tap HOME
+spin K2 1
+tap SAVE
+wait 4000
+turn ALGO 1
+wait 3000
+shot hall3.png
+tap HOME
+spin K2 -1
 tap LFO
 spin K1 -3
 tap LFO

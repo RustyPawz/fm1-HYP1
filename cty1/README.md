@@ -2,12 +2,15 @@
 
 CTY-1 turns the M-VAVE FM-1 into a small city that builds itself and plays a generative chiptune. Each power-on
 founds a new town on new land (forest, desert, alpine, volcano isles, plains, beach or river lands, each with its
-own look, weather, disaster and sound), then grows it week by week, zoned into homes, shops and
+own look, weather, disaster and sound), with a town hall, a fire station, police and a hospital from the start,
+then grows it week by week, zoned into homes, shops and
 offices, factories and farms, with parks, landmarks, avenues, roundabouts, bridges and a beltway, to a huge
 city of towers. Cars drive real routes and are the music's playheads; people stop to talk in speech bubbles;
 days, seasons and weather go round; lightning starts fires, earthquakes knock buildings down, robbers bring the
 police and crashes an ambulance; each land has its own disaster (wildfire, dust devil, avalanche, eruption,
-tornado, tsunami, flood); festivals, blackouts and meteor showers; and very rarely a UFO comes. All of it plays on NES, Game Boy or SID voices.
+tornado, tsunami, flood); fire trucks, police cars and ambulances drive out with their lights flashing, and a
+fire left too long spreads; each land unlocks three specials as the city grows (the desert's last: a rocket
+launch site); festivals, blackouts and meteor showers; and very rarely a UFO comes. All of it plays on NES, Game Boy or SID voices.
 A RedtailWorks project, alongside HYP-1 in this repository.
 
 > **Experimental.** Built and tested in the simulator and the browser emulator, not yet on a real FM-1.
@@ -20,6 +23,8 @@ A RedtailWorks project, alongside HYP-1 in this repository.
 
 ![Their disasters](docs/img/cty-disasters.png)
 
+![Their specials, grown huge](docs/img/cty-specials.png)
+
 - **Try it in the browser:** <https://rustypawz.github.io/fm1-HYP1/cty/emu/>: with sound, MIDI in and
   out, eight channels (each voice apart) for your DAW, and a stream view.
 - **Install it** (Chrome or Edge, the FM-1 plugged in): <https://rustypawz.github.io/fm1-HYP1/cty/install/>
@@ -29,7 +34,7 @@ A RedtailWorks project, alongside HYP-1 in this repository.
 
 | | |
 |---|---|
-| Keys | The lead, in the city's scale. On Time: black keys 1–4 the hour. On Weather: black keys 1–7 the sky. On Events: black keys 1–10 call lightning, a quake, a robbery, a crash, a UFO, birds, the land's disaster, a festival, a blackout, meteors |
+| Keys | The lead, in the city's scale. On Time: black keys 1–4 the hour. On Weather: black keys 1–7 the sky. On Events: black keys 1–11 call lightning, a quake, a robbery, a crash, a UFO, birds, the land's disaster, a festival, a blackout, meteors, the special's show |
 | PLAY · REC · EDIT | The music plays / rests · hold the growth · a new city on the same land |
 | HOME · ENV · ARP · LFO · SEQ · FX · GLO | The pages: City, Music, Sound, Time (again: Weather), Voices (again: Voices 2), Events (again: Events 2, 3), Setup (again: Display, MIDI out) |
 | SELECT | Every page in turn; with HOME held, the tempo |
@@ -55,7 +60,7 @@ rain and stage as CCs 20–25.
 
 `docs/img/` holds the renders: the device on several pages (`cty-device-*.png`, `cty-hero.png`), every
 screen at 2× (`cty-screen-*.png`), and the sheets `cty-pages.png`, `cty-incidents.png`,
-`cty-views.png`, `cty-themes.png`, `cty-boot.png`, `cty-biomes.png`, `cty-disasters.png` and `cty-weather.png`, all drawn from the firmware itself in the simulator. The
+`cty-views.png`, `cty-themes.png`, `cty-boot.png`, `cty-biomes.png`, `cty-disasters.png`, `cty-weather.png`, `cty-specials.png` and `cty-hall.png`, all drawn from the firmware itself in the simulator. The
 workflow redraws them on each push.
 
 ## Building

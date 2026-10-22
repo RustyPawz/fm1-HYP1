@@ -391,10 +391,79 @@ static void extras_update(void)
             meteors.on = 0;
     }
 }
+/* the biggest city's own landmark puts on a show: the desert's rocket launches, the plains' plane takes off, the
+ * isles' cruise ship sails with its horn; the others light up with fireworks (a festival round them) */
+static struct { uint8_t on, kind, done; uint16_t si; uint32_t t0, born, next; float x, y; } show;
+#define SHOW_MS 16000u
+static int show_site(void)
+{
+    int k;
+    for (k = 0; k < C.nciv; k++)
+        if (c_st[c_civ[k]].kind == CV_UNLOCK3 && !(c_st[c_civ[k]].flags & SF_DEAD))
+            return c_civ[k];
+    return 0;
+}
+static int show_start(void)
+{
+    int si = show_site();
+    const st_t *s;
+    if (show.on || !si)
+        return 0;
+    s = &c_st[si];
+    show.on = 1;
+    show.kind = C.biome;
+    show.si = (uint16_t)si;
+    show.born = s->born;
+    show.t0 = plat_ms();
+    show.done = 0;
+    show.x = (float)s->x + (float)s->size * 0.5f;
+    show.y = (float)s->y + (float)s->size * 0.5f;
+    switch (show.kind) {
+    case B_DESERT: news(N_UNLOCK, 100, 0); break;     /* (a = 100: the countdown) */
+    case B_PLAINS: news(N_UNLOCK, 101, 0); en_event(E_JET, 0, 0); break;
+    case B_VOLCANO: news(N_UNLOCK, 102, 0); en_event(E_HORN, 0, 0); break;
+    default:
+        if (!fest.on) {
+            festival_start();
+            fest.x = show.x;
+            fest.y = show.y;
+        }
+        break;
+    }
+    return 1;
+}
+static void show_update(void)
+{
+    uint32_t now = plat_ms(), el;
+    if (!show.on) {                              /* now and then on its own, every few minutes */
+        if (show_site() && (int32_t)(now - show.next) >= 0) {
+            if (show.next)
+                show_start();
+            show.next = now + 150000u + (uint32_t)lirnd(150000);
+        }
+        return;
+    }
+    el = now - show.t0;
+    if (show.kind == B_DESERT && el >= 5000u && !(show.done & 1u)) {   /* lift-off (once) */
+        show.done |= 1u;
+        en_event(E_LAUNCH, 0, 0);
+        news(N_UNLOCK, 103, 0);
+    }
+    if (show.kind == B_VOLCANO && el >= 1700u && !(show.done & 2u)) {
+        show.done |= 2u;
+        en_event(E_HORN, 0, 0);
+    }
+    if (el > SHOW_MS || !st_alive(show.si, show.born))
+        show.on = 0;
+}
+/* where the show's vehicle is: the rocket's height (tiles), the plane along the runway, the ship sailing (0..1) */
+static float show_t(void) { return show.on ? (float)(plat_ms() - show.t0) / 1000.0f : -1.0f; }
+
 static void extras_reset(void)
 {
     memset(&rg, 0, sizeof rg);
     memset(&fest, 0, sizeof fest);
     memset(&blackout, 0, sizeof blackout);
     memset(&meteors, 0, sizeof meteors);
+    memset(&show, 0, sizeof show);
 }

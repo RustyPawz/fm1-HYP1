@@ -28,7 +28,17 @@ static int run(int argc)
         int bad = 0;
         int at[4] = {0, 0, 0, 0}, cnt[5] = {0}, farms = 0, big = 0, civ[CV_N] = {0};
         city_new(seed, bio);
+        CHECK(C.hall && c_st[C.hall].kind == CV_TOWNHALL && c_st[C.hall].size == 4, "%s: a town hall at the founding", C.name);
         for (k = 0; k < 2400; k++) {
+            if (k == 40) {
+                int f = 0, p = 0, h = 0, j;
+                for (j = 0; j < C.nciv; j++) {
+                    f += c_st[c_civ[j]].kind == CV_FIRE;
+                    p += c_st[c_civ[j]].kind == CV_POLICE;
+                    h += c_st[c_civ[j]].kind == CV_HOSPITAL;
+                }
+                CHECK(f && p && h, "%s: a fire station, police and a hospital in its first weeks", C.name);
+            }
             city_step();
             if (k % 64 == 0)
                 city_sweep();
@@ -50,6 +60,8 @@ static int run(int argc)
                 bad++;
         }
         CHECK(!bad, "%s: nothing on water or rock (%d)", C.name, bad);
+        CHECK(C.unlocked == 3 && civ[CV_UNLOCK3] == 1, "%s: its three specials (%d), the last: %s", C.name, C.unlocked, UNLOCK_NAME[bio][2]);
+        CHECK(c_st[C.hall].L == 4, "%s: the town hall grown with it (%d)", C.name, c_st[C.hall].L);
         printf("%-8s %s: %s  coast %d river %d  stages %d %d %d  pop %d  homes %d shops %d ind %d farms %d civic %d big %d roads %d\n",
                BIOME_SHORT[bio], SEEDS[si], C.name, C.has_coast, C.has_river, at[1], at[2], at[3], (int)C.pop, cnt[1], cnt[2], cnt[3], farms, cnt[4], big, (int)C.roads);
         if (verbose) {
