@@ -16,6 +16,8 @@ PRODUCTS = [("hyp", "HYP-1", "hypnotic techno and acid", ""), ("lof", "LOF-1", "
             ("cty", "CTY-1", "a city grows and plays", "cty/")]
 EXPERIMENTAL = {"lof", "eco", "grav", "cty"}
 SECTIONS = ("emu", "install", "manual", "board")
+# RedtailWorks' browser tools on their own sites: offered on every bar after the firmwares
+EXTRAS = [("https://rustypawz.github.io/orrery/", "Orrery · generative modular in your browser")]
 
 BAR = """<style>
 .rw-switch { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .7rem; box-sizing: border-box;
@@ -89,6 +91,8 @@ def main(root):
             opts.append(f'<option value="{href}"{" selected" if key == prod else ""}>{label}</option>')
         if len(opts) < 2 + hub:
             continue
+        opts.append('<optgroup label="Also by RedtailWorks">' + "".join(
+            f'<option value="{url}">{label}</option>' for url, label in EXTRAS) + "</optgroup>")
         home = f'<a class="rw-all" href="{up or "./"}"><span aria-hidden="true">&larr;</span> All firmwares</a>' if hub else ""
         bar = BAR.replace("__ALL__", home).replace("__OPTS__", "".join(opts)).replace(
             "__TAG__", '<span class="tag">Experimental</span>' if prod in EXPERIMENTAL else "").replace(

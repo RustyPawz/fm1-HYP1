@@ -133,6 +133,10 @@ a.open1:hover, a.open1:focus-visible { border-color: var(--orange); color: var(-
 a.open1 img { width: 100%; height: auto; display: block; border-radius: 8px; }
 a.open1 span { color: var(--muted); }
 a.open1 b { font: 700 1.6rem "Chakra Petch", sans-serif; color: var(--orange); letter-spacing: .04em; }
+a.open1.orrery { border-left-color: #c9f27a; margin-bottom: .5rem; }
+a.open1.orrery:hover, a.open1.orrery:focus-visible { border-color: #c9f27a; }
+a.open1.orrery b, a.open1.orrery em { color: #c9f27a; border-color: #c9f27a; }
+a.open1.orrery u { text-decoration-color: #c9f27a; }
 a.open1 em { font: 700 .72rem "Chakra Petch", sans-serif; font-style: normal; letter-spacing: .1em; text-transform: uppercase; color: var(--orange);
              border: 1px solid var(--orange); border-radius: 999px; padding: .15em .7em; vertical-align: middle; margin-left: .4rem; }
 a.open1 u { color: var(--ink); text-decoration-color: var(--orange); text-decoration-thickness: 2px; text-underline-offset: 3px; font-weight: 600; }
@@ -158,6 +162,7 @@ footer .rw span:nth-of-type(1) { color: var(--purple-2); } footer .rw span:nth-o
       <select id="fw-pick" onchange="if (this.value) location.href = this.value">
         <option value="">Choose a firmware…</option>
 __OPTIONS__
+        <optgroup label="Also by RedtailWorks"><option value="https://rustypawz.github.io/orrery/">Orrery · generative modular in your browser</option></optgroup>
       </select></div>
   </div>
 </section>
@@ -173,6 +178,10 @@ __OPTIONS__
 <div class="fws">
 __CARDS__
 </div>
+
+<h2>Also by RedtailWorks: Orrery</h2>
+<a class="open1 orrery" href="https://rustypawz.github.io/orrery/"><img src="img/orrery.png" width="1200" height="630" alt="Orrery's patch canvas: circular modules for clocks, sequencers, chords, synths, drums and effects, wired together and grouped into labelled sections" loading="lazy">
+  <span><b>ORRERY</b> <em>In your browser</em><br>A generative modular studio: wire clocks, sequencers, chords, synths, drums, samples, FX and modulation into patches that play themselves. Save songs, map knobs on any MIDI controller, and play it from a keyboard. <u>Open Orrery</u></span></a>
 
 <h2>What's next: OPEN-1</h2>
 <a class="open1" href="open1/"><img src="open1/media/open1-v2.jpg" width="1340" height="980" alt="Concept render of OPEN-1, a compact 27-key synth with 16 pads, running HYP-1" loading="lazy">
@@ -215,6 +224,7 @@ def main(root):
         if f.exists():
             f.write_text(f.read_text(encoding="utf-8").replace('href="../"', 'href="../hyp/"'), encoding="utf-8")
     shutil.copy(SRC / "docs" / "img" / "fw-scene.png", root / "img" / "fw-scene.png")
+    shutil.copy(SRC / "docs" / "img" / "orrery.png", root / "img" / "orrery.png")
 
     built = [fw for fw in FIRMWARES if fw[0] == "hyp" or (root / fw[0] / "index.html").exists()]
     options, cards = [], []
