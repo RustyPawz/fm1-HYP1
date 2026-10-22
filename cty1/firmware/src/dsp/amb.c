@@ -1131,6 +1131,8 @@ static inline float echo_step(float in)
             rp += (float)ECHO_N;
         i0 = (int)rp;
         f = rp - (float)i0;
+        if ((unsigned)i0 >= (unsigned)ECHO_N)       /* (rp just under ECHO_N rounds up to it) */
+            i0 = 0;
         y0 = (float)echo_buf[i0] * (1.0f / 32768.0f);
         y1 = (float)echo_buf[i0 + 1 < ECHO_N ? i0 + 1 : 0] * (1.0f / 32768.0f);
         echo_hold = y0 + (y1 - y0) * f;

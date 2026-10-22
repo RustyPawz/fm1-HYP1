@@ -95,11 +95,20 @@ static inline void cv_pset(int32_t x, int32_t y, uint16_t c)
         cv_px[(uint32_t)y * cv_w + (uint32_t)x] = swap16(c);
 }
 
+/* a + b without wrapping (a far-off or runaway size must clip, never loop for ever) */
+static int32_t sat_add(int32_t a, int32_t b)
+{
+    if (b > 0 && a > 0x7FFFFFFF - b)
+        return 0x7FFFFFFF;
+    if (b < 0 && a < (-0x7FFFFFFF - 1) - b)
+        return -0x7FFFFFFF - 1;
+    return a + b;
+}
 static void cv_rect(int32_t x, int32_t y, int32_t w, int32_t h, uint16_t c)
 {
-    int32_t x1 = x + w, y1 = y + h + cv_oy, i;
+    int32_t x1 = sat_add(x, w), y1 = sat_add(sat_add(y, h), cv_oy), i;
     uint16_t sc = swap16(c);
-    y += cv_oy;                             /* clipped once, then filled row by row */
+    y = sat_add(y, cv_oy);                  /* clipped once, then filled row by row */
     if (x < 0)
         x = 0;
     if (y < cv_y0)

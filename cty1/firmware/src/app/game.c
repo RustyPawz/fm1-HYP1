@@ -373,7 +373,6 @@ static void game_start(void)
     gm.back_view = ui.view;
     ui.full = 0;
     g_reset();
-    cam.ts = 0;
     lcd_fill(0, 0, 240, 240, K_BG);
 }
 static void game_stop(void)
@@ -386,7 +385,6 @@ static void game_stop(void)
     ui.view = gm.back_view;
     ui.sig[0] = ui.sig[1] = ui.sig[2] = 0;
     ui.act_t = plat_ms();
-    cam.ts = 0;
     lcd_fill(0, 0, 240, 240, K_BG);
 }
 
@@ -408,6 +406,7 @@ static void game_update(void)
             g_scene_done();
         return;
     }
+    WHERE(91);
     g_drive(dt);
     if (gm.call && !g_call_live()) {
         g_miss();

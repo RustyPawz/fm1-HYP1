@@ -8,16 +8,24 @@
  * Part of the unity build (ui.c includes it after city.c); the camera is ui.c's (cam). */
 
 /* ------------------------------------------------------------ camera --- */
+/* where the main loop is, for a watchdog reset to tell (kept through the reset: main_fm1.c shows it at boot) */
+static volatile uint32_t ui_where __attribute__((section(".noinit")));
+#define WHERE(n) (ui_where = (uint32_t)(n))
 static struct {
     float x, y;                         /* the view's middle, in tiles */
     int ts;                             /* pixels a tile */
     int vw, vh;                         /* the view, in pixels */
 } cam = {48.0f, 40.0f, 8, 240, 144};
+static int cam_ts(void) { return cam.ts > 0 ? cam.ts : 8; }   /* (never 0: everything divides by it) */
 typedef struct { float x0, y0, x1, y1; } rect_t;
 static rect_t view_rect(float m)
 {
     rect_t r;
-    float hw = (float)cam.vw / (float)cam.ts * 0.5f, hh = (float)cam.vh / (float)cam.ts * 0.5f;
+    float hw = (float)cam.vw / (float)cam_ts() * 0.5f, hh = (float)cam.vh / (float)cam_ts() * 0.5f;
+    if (!(cam.x > -200.0f && cam.x < 300.0f && cam.y > -200.0f && cam.y < 300.0f)) {   /* (NaN too): back to the middle */
+        cam.x = (float)MW * 0.5f;
+        cam.y = (float)MH * 0.5f;
+    }
     r.x0 = cam.x - hw - m;
     r.y0 = cam.y - hh - m;
     r.x1 = cam.x + hw + m;
@@ -1229,7 +1237,7 @@ static void strike(int hit)
         }
     }
     sx = tx + (lrnd() - 0.5f) * 6.0f;
-    sy = ty - (float)cam.vh / (float)cam.ts * 0.8f;
+    sy = ty - (float)cam.vh / (float)cam_ts() * 0.8f;
     for (k = 0; k < 8; k++) {
         float f = (float)k / 7.0f;
         bolt.sx[k] = sx + (tx - sx) * f + (k && k < 7 ? (lrnd() - 0.5f) * 1.6f : 0.0f);
@@ -1392,8 +1400,8 @@ static int start_ufo(void)
     }
     side = lrnd() < 0.5f ? -1.0f : 1.0f;
     ufo.on = 1;
-    ufo.ux = ufo.tx + side * (float)cam.vw / (float)cam.ts;
-    ufo.uy = ufo.ty - (float)cam.vh / (float)cam.ts * 0.6f;
+    ufo.ux = ufo.tx + side * (float)cam.vw / (float)cam_ts();
+    ufo.uy = ufo.ty - (float)cam.vh / (float)cam_ts() * 0.6f;
     ufo.vx = -side * 2.0f;
     ufo.vy = -3.0f;
     ufo.t0 = plat_ms();
@@ -1821,7 +1829,7 @@ static void life_update(void)
     }
     cloud_amt = fm_minf(1.0f, wlvl(W_CLOUDY) + wet() + wlvl(W_SNOW) * 0.8f + wlvl(W_FOG) * 0.3f);
     {
-        float vw = (float)cam.vw / (float)cam.ts, vh = (float)cam.vh / (float)cam.ts;
+        float vw = (float)cam.vw / (float)cam_ts(), vh = (float)cam.vh / (float)cam_ts();
         for (k = 0; k < NCLOUD; k++) {
             if (cloud[k].r <= 0.0f) {
                 cloud[k].x = cam.x - vw + lrnd() * vw * 2.0f;
@@ -1893,14 +1901,21 @@ static void life_update(void)
     if (proj.par[P_METEOR] && !meteors.on && day_lit() < 0.2f && wlvl(W_CLEAR) > 0.6f &&
         lrnd() < rate_per_ms(proj.par[P_METEOR]) * 3.0f * (float)dms)
         meteors_start();
+    WHERE(41);
     cars_update(dt);
+    WHERE(42);
     peds_update(dt, dms);
+    WHERE(43);
     boats_update(dt);
+    WHERE(44);
     incidents_update(dt);
+    WHERE(45);
     region_update(dt);
+    WHERE(46);
     extras_update();
     show_update();
     specials_update();
+    WHERE(47);
     {   /* what fell: dust, and a crunch if it's on screen */
         rect_t r1 = view_rect(1.0f);
         while (demo_r != c_demo_w) {

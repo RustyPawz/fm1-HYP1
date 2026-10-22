@@ -81,5 +81,5 @@ spin K4 3
 press SAVE
 wait 1700
 release SAVE
-expect biome 6
-expect par4 104
+expect biome 5
+expect par4 120

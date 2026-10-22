@@ -267,6 +267,35 @@ static void fm1_main(void)
         fm1_delay_ms(2500);
         fm1_wdt_feed();
     }
+    if (fm1_boot.p3_rst & 4u) {                     /* the watchdog reset it: something hung; say where, a moment */
+        char b[32];
+        uint32_t w = ui_where % 100u, cpu = (en_dbg.cpu_q8 * 100u) >> 8, n = 0;
+        static const char T[] = "HUNG AT ";
+        while (T[n]) {
+            b[n] = T[n];
+            n++;
+        }
+        b[n++] = (char)('0' + w / 10u);
+        b[n++] = (char)('0' + w % 10u);
+        b[n++] = en_dbg.in_audio ? 'A' : ' ';    /* A: in the audio */
+        b[n++] = ' ';
+        if (cpu > 999u)
+            cpu = 999u;
+        if (cpu >= 100u)
+            b[n++] = (char)('0' + cpu / 100u);
+        if (cpu >= 10u)
+            b[n++] = (char)('0' + cpu / 10u % 10u);
+        b[n++] = (char)('0' + cpu % 10u);
+        b[n++] = '%';
+        b[n] = 0;
+        draw_text_box(0, 176, 240, &FONT_S, "RESTARTED: IT HUNG", RGB(255, 170, 60), 1);
+        draw_text_box(0, 196, 240, &FONT_S, b, C_GRAY, 1);
+        fm1_wdt_feed();
+        fm1_delay_ms(2500);
+        fm1_wdt_feed();
+    }
+    ui_where = 0;
+    en_dbg.in_audio = 0;
     en_dbg.boots++;
     en_dbg.max_us = 0;
     fm1_input_init();

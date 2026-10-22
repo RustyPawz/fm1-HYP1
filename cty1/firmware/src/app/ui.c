@@ -243,8 +243,6 @@ static void knob_set(int k, int v)
     if (k < P_NPARAMS) {
         proj.par[k] = (int16_t)v;
         en_set(k, v);
-        if (k == P_ZOOM)
-            cam.ts = 0;
     } else if (k == K_LEDS) {
         proj.leds = (uint8_t)v;
     }
@@ -301,7 +299,6 @@ static void new_city(int keep_view)
     ui.tour_next = 0;
     cam.x = (float)C.cx + 0.5f;
     cam.y = (float)C.cy + 0.5f;
-    cam.ts = 0;
     if (!keep_view)
         ui.touched = -1;
 }
@@ -979,7 +976,7 @@ static void cam_update(float dt)
         ui.ride = -1;
     {
         float kk = 1.0f - fm_powf(rate, dt);
-        float vw = (float)cam.vw / (float)cam.ts, vh = (float)cam.vh / (float)cam.ts;
+        float vw = (float)cam.vw / (float)cam_ts(), vh = (float)cam.vh / (float)cam_ts();
         cam.x += (tx - cam.x) * kk;
         cam.y += (ty - cam.y) * kk;
         cam.x = vw < (float)MW ? fm_clampf(cam.x, vw * 0.5f, (float)MW - vw * 0.5f) : (float)MW * 0.5f;
@@ -1013,7 +1010,6 @@ static void input(void)
             ui.keys = keys;
             ui.act_t = plat_ms();
             ui.sig[0] = ui.sig[1] = ui.sig[2] = 0;
-            cam.ts = 0;
             lcd_fill(0, 0, 240, 240, K_BG);
         }
         midi_in();
@@ -1167,22 +1163,39 @@ static void px_add(int32_t x, int32_t y, uint16_t c, uint32_t a)
     b = (bg & 31u) + (((c & 31u) * a) >> 8);
     *q = swap16((r > 31u ? 31u : r) << 11 | (g > 63u ? 63u : g) << 5 | (b > 31u ? 31u : b));
 }
+/* the drawing's safety: every loop over pixels is clipped to the canvas first, and floats come to ints through
+ * fpx (NaN and the infinities to far off), so no runaway coordinate can loop for long (the watchdog's 8 s) */
+static int32_t fpx(float v) { return v != v ? -1000000 : v < -1000000.0f ? -1000000 : v > 1000000.0f ? 1000000 : (int32_t)v; }
+static void clip_box(int32_t *x0, int32_t *y0, int32_t *x1, int32_t *y1)   /* [x0, x1) x [y0, y1), unoffset rows */
+{
+    int32_t top = cv_y0 - cv_oy, bot = cv_y1 - cv_oy;
+    if (*x0 < 0)
+        *x0 = 0;
+    if (*x1 > (int32_t)cv_w)
+        *x1 = (int32_t)cv_w;
+    if (*y0 < top)
+        *y0 = top;
+    if (*y1 > bot)
+        *y1 = bot;
+}
 static void rect_mix(int32_t x, int32_t y, int32_t w, int32_t h, uint16_t c, uint32_t a)
 {
-    int32_t i, j;
+    int32_t i, j, x1 = sat_add(x, w), y1 = sat_add(y, h);
     if (a >= 256u) {
         cv_rect(x, y, w, h, c);
         return;
     }
-    for (j = y; j < y + h; j++)
-        for (i = x; i < x + w; i++)
+    clip_box(&x, &y, &x1, &y1);
+    for (j = y; j < y1; j++)
+        for (i = x; i < x1; i++)
             px_mix(i, j, c, a);
 }
 static void rect_add(int32_t x, int32_t y, int32_t w, int32_t h, uint16_t c, uint32_t a)
 {
-    int32_t i, j;
-    for (j = y; j < y + h; j++)
-        for (i = x; i < x + w; i++)
+    int32_t i, j, x1 = sat_add(x, w), y1 = sat_add(y, h);
+    clip_box(&x, &y, &x1, &y1);
+    for (j = y; j < y1; j++)
+        for (i = x; i < x1; i++)
             px_add(i, j, c, a);
 }
 /* the whole canvas toward c, a out of 256 */
@@ -1202,27 +1215,31 @@ static void tint(uint16_t c, float af)
 }
 static void ellipse_mix(float cx, float cy, float rx, float ry, uint16_t c, uint32_t a)
 {
-    int32_t y0 = (int32_t)fm_floorf(cy - ry), y1 = (int32_t)(cy + ry), x, y;
-    if (rx < 0.5f || ry < 0.5f)
+    int32_t y0 = fpx(fm_floorf(cy - ry)), y1 = fpx(cy + ry) + 1, x, y, l = 0, r = 1;
+    if (!(rx >= 0.5f && ry >= 0.5f))
         return;
-    for (y = y0; y <= y1; y++) {
+    clip_box(&l, &y0, &r, &y1);
+    for (y = y0; y < y1; y++) {
         float dy = ((float)y + 0.5f - cy) / ry, w;
         int32_t xa, xb;
         if (dy * dy >= 1.0f)
             continue;
         w = rx * fm_sqrtf(1.0f - dy * dy);
-        xa = (int32_t)fm_floorf(cx - w + 0.5f);
-        xb = (int32_t)fm_floorf(cx + w + 0.5f);
+        xa = fpx(fm_floorf(cx - w + 0.5f));
+        xb = fpx(fm_floorf(cx + w + 0.5f));
+        xa = xa < 0 ? 0 : xa;
+        xb = xb > (int32_t)cv_w ? (int32_t)cv_w : xb;
         for (x = xa; x < xb; x++)
             px_mix(x, y, c, a);
     }
 }
 static void disc(float cx, float cy, float r, uint16_t c)
 {
-    int32_t x0 = (int32_t)fm_floorf(cx - r - 1.0f), x1 = (int32_t)(cx + r + 1.0f);
-    int32_t y0 = (int32_t)fm_floorf(cy - r - 1.0f), y1 = (int32_t)(cy + r + 1.0f), x, y;
-    for (y = y0; y <= y1; y++)
-        for (x = x0; x <= x1; x++) {
+    int32_t x0 = fpx(fm_floorf(cx - r - 1.0f)), x1 = fpx(cx + r + 1.0f) + 1;
+    int32_t y0 = fpx(fm_floorf(cy - r - 1.0f)), y1 = fpx(cy + r + 1.0f) + 1, x, y;
+    clip_box(&x0, &y0, &x1, &y1);
+    for (y = y0; y < y1; y++)
+        for (x = x0; x < x1; x++) {
             float dx = (float)x + 0.5f - cx, dy = (float)y + 0.5f - cy, d = fm_sqrtf(dx * dx + dy * dy);
             px_blend(x, y, c, (uint32_t)(fm_clampf(r - d + 0.5f, 0.0f, 1.0f) * 16.0f + 0.5f));
         }
@@ -2824,9 +2841,13 @@ static void draw_struct(const st_t *st, int px, int py, int s)
 {
     int n = st->size, w = s * n;
     if (s < 6) {
-        uint16_t c = st->type == BT_CIV ? (st->kind >= CV_UNLOCK1 ? LOW_UNLOCK[C.biome % NBIOME][st->kind - CV_UNLOCK1] : LOW_CIV[st->kind])
-                     : (st->flags & SF_FARM) ? H(0xa9b862)
-                                                            : (st->type == BT_RES ? LOW_R : st->type == BT_COM ? LOW_C : LOW_I)[st->L - 1];
+        const uint16_t *lo = st->type == BT_RES ? LOW_R : st->type == BT_COM ? LOW_C : LOW_I;
+        int li = st->L < 1 ? 0 : st->L > 5 ? 4 : st->L - 1;
+        uint16_t c;
+        if (st->type == BT_CIV)
+            c = st->kind >= CV_N ? LOW_CIV[0] : st->kind >= CV_UNLOCK1 ? LOW_UNLOCK[C.biome % NBIOME][st->kind - CV_UNLOCK1] : LOW_CIV[st->kind];
+        else
+            c = (st->flags & SF_FARM) ? H(0xa9b862) : lo[li];
         cv_rect(px, py, w, w, c);
         if (s >= 3) {
             if (st->kind == CV_HOSPITAL && st->type == BT_CIV) {
@@ -3758,6 +3779,7 @@ static void draw_view(int r0, int bh)
             else
                 draw_ground(x, y, px, py, s, sh);
         }
+    WHERE(71);
     draw_rounds(s);
     draw_cars(s);
     for (y = y0 - 3 < 0 ? 0 : y0 - 3; y <= y1; y++)     /* the buildings here (the big ones may start above or left) */
@@ -3766,6 +3788,7 @@ static void draw_view(int r0, int bh)
             if (si && c_st[si].x == x && c_st[si].y == y && !(c_st[si].flags & SF_DEAD) && nvis < 1024)
                 vis_list[nvis++] = (uint16_t)si;
         }
+    WHERE(72);
     draw_boats(s);
     for (k = 0; k < nvis; k++) {                 /* the docks out into the water */
         const st_t *st = &c_st[vis_list[k]];
@@ -3801,6 +3824,7 @@ static void draw_view(int r0, int bh)
         const st_t *st = &c_st[vis_list[k]];
         draw_struct(st, VOX + st->x * s, VOY + st->y * s, s);
     }
+    WHERE(73);
     draw_peds(s);
     {
         uint32_t now = plat_ms();
@@ -3823,6 +3847,7 @@ static void draw_view(int r0, int bh)
             ellipse_mix(cx, cy, r, r * 0.6f, H(0x141c28), (uint32_t)(41.0f * cloud_amt));
             ellipse_mix(cx + cloud[k].r * 0.8f * (float)s, cy + cloud[k].r * 0.2f * (float)s, r * 0.7f, r * 0.45f, H(0x141c28), (uint32_t)(41.0f * cloud_amt));
         }
+    WHERE(74);
     draw_region(s, x0, x1, y0, y1, 0);
     draw_night(s, vis_list, nvis);
     if (blackout.on) {                           /* the power's out: the whole town a shade dimmer, day or night */
@@ -3833,6 +3858,7 @@ static void draw_view(int r0, int bh)
         tint(H(0x0c1018), 0.22f * k2);
     }
     draw_region(s, x0, x1, y0, y1, 1);
+    WHERE(75);
     draw_fires(s);
     {
         uint32_t now = plat_ms();
@@ -3849,8 +3875,10 @@ static void draw_view(int r0, int bh)
                      (int)r, (int)r, H(0x9e9484), (uint32_t)(180.0f * a));
         }
     }
+    WHERE(76);
     draw_incidents(s);
     draw_extras(s);
+    WHERE(77);
     draw_birds(s);
     draw_weather();
     if (bolt.on && plat_ms() - bolt.t0 < 230u && ((plat_ms() - bolt.t0) / 60u) % 2u == 0u) {   /* the bolt */
@@ -3866,6 +3894,7 @@ static void draw_view(int r0, int bh)
         if (fa > 0.0f && fa <= 1.0f)
             tint(H(0xebf0ff), 0.45f * fa);
     }
+    WHERE(78);
     draw_map(s, x0, x1, y0, y1);
     if (!game_on())
         draw_info();
@@ -4339,23 +4368,31 @@ void ui_frame(void)
         if (!en_playing)
             en_play(1);
     }
+    WHERE(1);
     input();
+    WHERE(2);
     grow(dms);
+    WHERE(3);
     city_news();
+    WHERE(4);
     life_update();
+    WHERE(5);
     shake(&shake_dx, &shake_dy);
     cam_update((float)dms * 0.001f);
     if (!ui.full && !game_on() && !ui.help && proj.par[P_IDLE] && plat_ms() - ui.act_t >= IDLE_MS[proj.par[P_IDLE] & 3]) {
         ui.full = 1;                             /* untouched a while: the city on the whole screen */
-        cam.ts = 0;
         lcd_fill(0, 0, 240, 240, K_BG);
     }
+    WHERE(6);
     if (!ui.full && !game_on())
         draw_header();
+    WHERE(7);
     draw_main();
+    WHERE(8);
     if (!ui.full && !game_on())
         draw_knobs();
     leds();
+    WHERE(0);
     ui.frame++;
 }
 

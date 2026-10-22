@@ -19,7 +19,7 @@ wait 200
 expect robbery 1
 wait 2500
 shot ev_robbery.png
-wait 12000
+wait 4000
 expect robphase >0
 expect cops >0
 tapkey b3
