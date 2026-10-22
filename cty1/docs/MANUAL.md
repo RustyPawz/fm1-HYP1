@@ -122,8 +122,10 @@ Hold any button for a second and a card says what it does. MIDI notes in play th
 - **The knob strip:** the page's name and the walk's dots, then the four knobs. The one being turned lights
   up.
 
-**The camera.** On Detail it fits the whole city while it's small, then tours the newest and tallest
-buildings, a new one every few seconds; Close stays near; Whole shows it all. An incident takes it (Follow);
+**The camera.** Zoom (Display, knob 2) is a dial: Auto, then 25% (the whole map) to 300% (close over the
+roofs), in fourteen steps. On Auto it fits the whole city while it's small, then holds at 100% and tours the
+newest and tallest buildings, a new one every few seconds; dialled in, it stays at that zoom and tours the same
+way (or centres the city, while it fits). An incident takes it (Follow);
 SEL rides with a car; ALGORITHM looks at the landmarks.
 
 **The idle view.** Untouched for a minute (Idle), the city takes the whole screen. The camera rides with one
@@ -404,7 +406,7 @@ disaster, a festival, a blackout, meteors, and the huge city's special putting o
 - **Setup:** Key (Seed: from the city's seed; or C to B), Tune (cents), Sync (Off or Clock), Mood (Auto, or
   kept Bright or Dark).
 - **Display:** Theme (Asphalt, Neon, Blueprint, Sunset, Terminal, Mono: the frame; the city keeps its own
-  colours), Zoom (Detail, Close, Whole), Map (the City, its Zones, its land Value), Labels.
+  colours), Zoom (a dial: Auto, or 25% to 300%), Map (the City, its Zones, its land Value), Labels.
 - **MIDI out:** Sends (Off, Notes, Both, CCs), Channels (which seven), Lights (the key lights), CPU (the
   audio load).
 

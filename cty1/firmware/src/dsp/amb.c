@@ -18,6 +18,7 @@ const char *const EN_NOTE_NAME[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G",
 const char *const EN_MODE_NAME[EN_NMODES] = {"Lydian", "Ionian", "Mixolydian", "Dorian", "Aeolian", "Phrygian", "Hijaz", "Harm. minor"};
 const char *const EN_BIOME_NAME[EN_NBIOME] = {"Forest", "Desert", "Alpine", "Isles", "Plains", "Beach", "River"};
 const char *const EN_FLAVOR_NAME[EN_NFLAVOR] = {"NES", "GB", "SID"};
+const uint8_t EN_ZOOM_TS[EN_NZOOM + 1] = {0, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 16, 18, 20, 24};   /* pixels a tile; 8 is 100% */
 static const uint8_t MODES[EN_NMODES][7] = {{0, 2, 4, 6, 7, 9, 11}, {0, 2, 4, 5, 7, 9, 11}, {0, 2, 4, 5, 7, 9, 10},
                                             {0, 2, 3, 5, 7, 9, 10}, {0, 2, 3, 5, 7, 8, 10}, {0, 1, 3, 5, 7, 8, 10},
                                             {0, 1, 4, 5, 7, 8, 10}, {0, 2, 3, 5, 7, 8, 11}};
@@ -52,7 +53,7 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Lightning", 0, 20, 9}, {"Quakes", 0, 30, 6}, {"Robbery", 0, 60, 12}, {"Crashes", 0, 60, 10},
     {"UFOs", 0, 100, 3}, {"Follow", 0, 1, 1}, {"Disasters", 0, 1, 1}, {"Idle", 0, 3, 1},
     {"Key", 0, 12, 0}, {"Tune", -50, 50, 0}, {"Sync", 0, 1, 1}, {"Mood", 0, 2, 0},
-    {"Theme", 0, EN_NTHEMES - 1, 0}, {"Zoom", 0, 2, 0}, {"Map", 0, 2, 0}, {"Labels", 0, 1, 1},
+    {"Theme", 0, EN_NTHEMES - 1, 0}, {"Zoom", 0, EN_NZOOM, 0}, {"Map", 0, 2, 0}, {"Labels", 0, 1, 1},
     {"Sends", 0, 3, 1}, {"Channels", 0, 9, 0},
     {"Biome", 0, EN_NBIOME, 0}, {"Regional", 0, 20, 2}, {"Festivals", 0, 20, 3}, {"Blackouts", 0, 20, 1},
     {"Meteors", 0, 20, 3},
@@ -102,7 +103,6 @@ void en_param_text(int i, int v, char *b)
     static const char *const IDLE[4] = {"Off", "1 min", "2 min", "5 min"};
     static const char *const MOOD[3] = {"Auto", "Bright", "Dark"};
     static const char *const THEME[EN_NTHEMES] = {"Asphalt", "Neon", "Blueprint", "Sunset", "Terminal", "Mono"};
-    static const char *const ZOOM[3] = {"Detail", "Close", "Whole"};
     static const char *const MAP[3] = {"City", "Zones", "Value"};
     static const char *const SENDS[4] = {"Off", "Notes", "Both", "CCs"};
     switch (i) {
@@ -148,7 +148,11 @@ void en_param_text(int i, int v, char *b)
     case P_TUNE: if (v > 0) *b++ = '+'; b = itoa_s(v, b); cpy(b, "c"); return;
     case P_MOOD: cpy(b, MOOD[(unsigned)v < 3u ? v : 0]); return;
     case P_THEME: cpy(b, THEME[(unsigned)v < EN_NTHEMES ? v : 0]); return;
-    case P_ZOOM: cpy(b, ZOOM[(unsigned)v < 3u ? v : 0]); return;
+    case P_ZOOM:                                 /* Auto, or how close: 25% (the whole map) .. 300% */
+        if (v <= 0 || v > EN_NZOOM) { cpy(b, "Auto"); return; }
+        b = itoa_s(EN_ZOOM_TS[v] * 100 / 8, b);
+        cpy(b, "%");
+        return;
     case P_MAP: cpy(b, MAP[(unsigned)v < 3u ? v : 0]); return;
     case P_MIDI: cpy(b, SENDS[v & 3]); return;
     case P_MCH: b = itoa_s(v + 1, b); *b++ = '-'; itoa_s(v + 7, b); return;

@@ -911,13 +911,15 @@ static int solo_pick(void)                       /* the idle view: a car near th
 }
 static void cam_update(float dt)
 {
-    int mode = proj.par[P_ZOOM], mins, target, k;
+    int mode = proj.par[P_ZOOM], mins, target, k;   /* Zoom: 0 Auto (fit the city, else 100%), else that close */
     float tx = cam.x, ty = cam.y, rate = 0.03f, fx, fy;
     cam.vw = 240;
     cam.vh = ui.full || game_on() ? 240 : 144;
-    mins = ui.full || game_on() ? 8 : mode == 2 ? 2 : mode == 1 ? 12 : 8;
+    mins = 8;
     target = mins;
-    if (mode != 1 || ui.full)
+    if (mode > 0 && mode <= EN_NZOOM)            /* the dial: as close as asked */
+        target = EN_ZOOM_TS[mode];
+    else
         for (k = 0; k < 7; k++) {
             if (TS[k] < mins)
                 break;
@@ -926,7 +928,7 @@ static void cam_update(float dt)
                 break;
             }
         }
-    if (!cam.ts || target < cam.ts || (ui.full && cam.ts != target && !fits_at(cam.ts)))
+    if (!cam.ts || target < cam.ts || (mode > 0 && cam.ts != target) || (ui.full && cam.ts != target && !fits_at(cam.ts)))
         cam.ts = target;
     if (game_on())                               /* the secret game: close in */
         cam.ts = target = G_TS;

@@ -250,7 +250,7 @@ def main():
     screens(["game_pick", "game"], OUT / "cty-game.png", label=["SEL + EDIT: PICK YOUR RIDE", "ON A CALL: FOLLOW THE ARROW"])
     b, k = L["game"]
     scene(device("game", b, k), OUT / "cty-device-game.png", "FIRST RESPONDER", "SEL + EDIT: TAKE THE CALLS YOURSELF", glow="#ffd02a")
-    screens(["zones", "value", "whole", "ride"], OUT / "cty-views.png", cols=4, label=["ZONES", "LAND VALUE", "THE WHOLE CITY", "RIDING ALONG"])
+    screens(["zones", "value", "whole", "ride"], OUT / "cty-views.png", cols=4, label=["ZONES", "LAND VALUE", "ZOOMED OUT: 25%", "RIDING ALONG"])
     screens(["t_asphalt", "t_neon", "t_blueprint", "t_sunset", "t_terminal", "t_mono"], OUT / "cty-themes.png", cols=3,
             label=["ASPHALT", "NEON", "BLUEPRINT", "SUNSET", "TERMINAL", "MONO"])
     screens(["splash", "splash_cty"], OUT / "cty-boot.png", label=["REDTAILWORKS", "CTY-1"])
