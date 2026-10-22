@@ -10,7 +10,10 @@ days, seasons and weather go round; lightning starts fires, earthquakes knock bu
 police and crashes an ambulance; each land has its own disaster (wildfire, dust devil, avalanche, eruption,
 tornado, tsunami, flood); fire trucks, police cars and ambulances drive out with their lights flashing, and a
 fire left too long spreads; each land unlocks three specials as the city grows (the desert's last: a rocket
-launch site); festivals, blackouts and meteor showers; and very rarely a UFO comes. All of it plays on NES, Game Boy or SID voices.
+launch site), and every special and the town hall have their moments on their own clocks, each with its sound;
+houses by the water get docks and boats come out on it; blackouts wind every instrument down and bring them back
+one by one; festivals and meteor showers; and very rarely a UFO comes. Behind SEL + EDIT, a game: drive the
+fire truck, the police car or the ambulance to one call after another. All of it plays on NES, Game Boy or SID voices.
 A RedtailWorks project, alongside HYP-1 in this repository.
 
 > **Experimental.** Built and tested in the simulator and the browser emulator, not yet on a real FM-1.
@@ -35,10 +38,10 @@ A RedtailWorks project, alongside HYP-1 in this repository.
 | | |
 |---|---|
 | Keys | The lead, in the city's scale. On Time: black keys 1–4 the hour. On Weather: black keys 1–7 the sky. On Events: black keys 1–11 call lightning, a quake, a robbery, a crash, a UFO, birds, the land's disaster, a festival, a blackout, meteors, the special's show |
-| PLAY · REC · EDIT | The music plays / rests · hold the growth · a new city on the same land |
+| PLAY · REC · EDIT | The music plays / rests · hold the growth · a new city (new land, a biome by luck, from a town) |
 | HOME · ENV · ARP · LFO · SEQ · FX · GLO | The pages: City, Music, Sound, Time (again: Weather), Voices (again: Voices 2), Events (again: Events 2, 3), Setup (again: Display, MIDI out) |
 | SELECT | Every page in turn; with HOME held, the tempo |
-| SEL · ALGORITHM · PRESETS | Ride along with a car · look at the landmarks · the next biome (a new city there) |
+| SEL · ALGORITHM · PRESETS | Ride along with a car · look at the landmarks · a new city too |
 | OCT− / OCT+ | The lead's octave |
 | SAVE | On the Setup pages, saves your settings; elsewhere, the city again from its founding; held, the biome's music back |
 
@@ -51,10 +54,10 @@ rain and stage as CCs 20–25.
 - `firmware/src/app/city.c`: the city: terrain, the road plan, growth, zoning, land value, redevelopment,
   landmarks. Deterministic from the seed; `tests/host/city_test.c` grows five cities and checks them.
 - `firmware/src/app/life.c`: the day, seasons, each biome's weather, routes, cars, people, birds and the
-  incidents, and what they tell the music; `region.c` the biomes' disasters, festivals, blackouts, meteors.
+  incidents, and what they tell the music; `region.c` the biomes' disasters, festivals, blackouts, meteors, the specials' moments.
 - `firmware/src/dsp/amb.c`: the chiptune engine: 32 voices on six chip channels, the bed, the events,
   sirens, weather, the echo, MIDI.
-- `firmware/src/app/ui.c`: the pages, the camera and the renderer; `game.c` a secret.
+- `firmware/src/app/ui.c`: the pages, the camera and the renderer; `game.c` a secret (FIRST RESPONDER).
 
 ## Renders
 

@@ -71,8 +71,8 @@ minutes with it:
    The camera goes there and stays until it's over.
 5. **Change the sky.** Press LFO: black keys 1–4 jump to dawn, noon, dusk and night. Press it again for
    Weather: black keys 1–7 set it, from Auto to snow.
-6. **Try another land.** Turn PRESETS: a new city in the next biome, with its music. EDIT founds another
-   on the same land. Switch off and on: a new one again.
+6. **Try another land.** Press EDIT (or turn PRESETS): a new city, on new land in a biome of its own, with
+   its music, from a town. Switching off and on does the same.
 7. **Leave it.** After a minute untouched the city takes the whole screen and rides along with its cars.
 
 ---
@@ -86,12 +86,12 @@ minutes with it:
 | **Keys** | The lead, kept to the city's scale (lit). On Time, black keys 1–4: dawn, noon, dusk, night. On Weather, black keys 1–7: Auto, then the land's six weathers. On the Events pages, black keys 1–11: lightning, an earthquake, a robbery, a crash, a UFO, birds, the land's disaster, a festival, a blackout, meteors, the special's show. |
 | **PLAY** | The music plays / rests. The city lives on either way. |
 | **REC** | Hold: the city stops growing (HOLD in the header); life and the music go on. Again to let it grow. |
-| **EDIT** | A new city on the same land. |
+| **EDIT** | A new city: new land, a biome drawn by luck, a town again, with the biome's music. No need to switch off and on. |
 | **HOME ENV ARP LFO SEQ FX GLO** | The pages: City, Music, Sound, Time (again: Weather), Voices (again: Voices 2), Events (again: Events 2, Events 3), Setup (again: Display, then MIDI out). |
-| **SEL** | Ride along: the camera follows a car on screen (again: another). Held, with GLO: remote (the panel plays the browser emulator). |
+| **SEL** | Ride along: the camera follows a car on screen (again: another). Held, with GLO: remote (the panel plays the browser emulator). Held, with EDIT: the secret (section 5, *First responder*). |
 | **SELECT** | Every page in turn. With HOME held: the tempo. |
 | **ALGORITHM** | Look around: the camera to each landmark in turn, the town hall first (then the services, the school, the stadium, the specials…), staying a few seconds. |
-| **PRESETS** | The next biome (or the one before): a new city there, with the biome's music. |
+| **PRESETS** | A new city too, like EDIT. |
 | **KNOB 1–4** | The page's four values. |
 | **OCT− / OCT+** | The lead an octave down / up (two each way). |
 | **SAVE** | On the Setup pages (Setup, Display, MIDI out): saves your settings for every power-on. Elsewhere: the city again from its founding. Hold 1.5 s: the biome's music back (tempo, flavor, lead, swing, echo, density, bed). |
@@ -118,7 +118,7 @@ Hold any button for a second and a card says what it does. MIDI notes in play th
   Day turns to night (windows, streetlights, headlights), the seasons colour the trees and fields, and snow
   settles on the roofs.
 - **The labels** (Display: Labels): the hour and the sky top left, the population bottom left, and bottom
-  right what the camera follows: RIDING, FIRE, QUAKE, ROBBERY, CRASH, UFO, GROWING (Start as), HOLD.
+  right what the camera follows: RIDING, FIRE, QUAKE, ROBBERY, CRASH, UFO, BLACKOUT, the special's show, HOLD.
 - **The knob strip:** the page's name and the walk's dots, then the four knobs. The one being turned lights
   up.
 
@@ -175,9 +175,35 @@ Each land unlocks three of its own, as the town becomes a suburb, a city and a h
 | Beach | Lighthouse | Boardwalk pier | **Theme park** |
 | River lands | Watermill | Riverboat dock | **Hydro plant** |
 
-The last one puts on a show every few minutes (or on black key 11 of the Events pages): the rocket counts
-down and lifts off on a column of smoke, a plane takes off down the runway, the cruise ship sounds its horn and
-sails; the others light up with a festival and fireworks. The camera goes to watch.
+Each keeps its own clock and has its moment, with its own sound: the first two every minute or two, the last
+every four minutes.
+
+| Special | Its moment |
+|---|---|
+| Lumber mill | The saw screams through a log, sawdust flies, a log rolls off ("timber!") |
+| Ranger tower | The lamp up top flashes, the bell rings three times, the birds lift off the trees |
+| Biodome | Flowers open through the dome to a slow chime |
+| Solar farm | A glint sweeps the panels as they turn to the sun, a hum rising |
+| Oasis resort | A splash in the pool, the rings spreading |
+| Ski lodge | A skier comes down the slope to a yodel |
+| Cable car | A second gondola runs down, its bell ringing, the cable creaking |
+| Observatory | The dome turns, the shutter opens, a beam to the stars |
+| Fishing harbor | A boat heads out, gulls wheel and cry, the buoy bell tolls |
+| Beach resort | Steel drums, notes rising |
+| Grain silos | The auger pours grain into a truck |
+| County fair | The calliope plays, balloons let go |
+| Lighthouse | The lamp blazes and swings round, the foghorn sounds twice |
+| Boardwalk pier | The ice-cream cart rolls along to its jingle |
+| Theme park | The coaster train clanks up, drops, and they scream |
+| Watermill | The millstones thump round, spray off the wheel |
+| Riverboat dock | The steam whistle, puff on puff |
+| Hydro plant | The floodgates open, the spillway bursts white and rumbles |
+
+The last one's moment is a show (black key 11 of the Events pages calls it too): the rocket counts down and
+lifts off on a column of smoke, a plane takes off down the runway, the cruise ship sounds its horn and sails;
+the biodome, the observatory, the theme park and the hydro plant light up with a festival and fireworks. The
+camera goes to watch. The town hall keeps time too: its flags fly, its clock tower (once it has one) shows the
+city's hour, and from then on its bells ring each hour, one to three times.
 
 ![The specials, grown huge](img/cty-specials.png)
 
@@ -185,7 +211,7 @@ sails; the others light up with a festival and fireworks. The camera goes to wat
 
 ### The land
 
-Each power-on picks a biome (City: Biome, Random by default) and a seed, and the seed draws the land:
+Each new city (each power-on, EDIT or PRESETS) draws a seed, and the seed picks the biome and draws the land:
 
 | Biome | The land | Its weather | Its disaster |
 |---|---|---|---|
@@ -210,6 +236,10 @@ in the rain. Buses and trucks too. People walk the pavements and stroll the park
 talk in speech bubbles (a heart, a note, coffee, the sun, a frown…), each a chirp in the music. Birds fly over
 in flocks, gulls by the sea.
 
+Houses and shops built against the water now and then get a dock, a jetty with a boat tied up, and once
+there are docks the boats come out, as big as their water allows: rowboats and canoes on the ponds, motorboats
+and barges on the rivers and lakes, sailboats, ferries and cargo ships at sea.
+
 ### The day and the seasons
 
 A day lasts 2–16 minutes (Time: Day), or it can stay noon. Seasons go round every few days (Cycle), follow
@@ -232,10 +262,26 @@ storms, fog, snow.
 - **A UFO,** very rarely, flies in and beams someone up.
 - **A festival:** a crowd round a plaza or a park, confetti by day, fireworks at night; the music gets a
   fanfare, a tambourine and doubled arpeggios.
-- **A blackout** at night: a district's windows and streetlights go out, the pad drops and the filter
-  closes, then the lights flicker back.
+- **A blackout,** now and then on any land, day or night, and more often in the land's storms (a dust storm,
+  a blizzard, a typhoon) or a disaster: the whole town's windows and streetlights go out and the picture dims.
+  The music loses its power: each instrument winds down and stops at its own rate, slowing and sagging as it
+  goes, until it's quiet. Then the lights flicker back, and the instruments kick back in one at a time, each
+  with a spin-up blip: the bass, the drums, the pad, the bells, the arps, the lead.
 - **A meteor shower** on a clear night: shooting stars, each a falling chime.
 - **The land's own disaster** (above).
+
+### First responder (the secret)
+
+Hold SEL and press EDIT. Pick your ride with white keys 1–3: the fire truck, the police car or the ambulance.
+The camera comes down close and the vehicle rolls out of its station, siren going. It drives itself: straight
+on where it can, round the bends, and a dead end just turns it round. White key 1 turns left at the next
+junction, white key 2 right (it holds the turn until there's a road that way). The calls come one after
+another, your kind only (no one else is sent to them while you're on shift): a building alight, a hold-up, a
+crash. A yellow arrow round the vehicle points the way, as the crow flies (the roads are yours to find), the
+bottom bar says how far and how long is left, and a beacon marks the scene when it's on screen. Get there
+before the building burns down, the robber gets away or the wreck is towed: 100 points and 5 for each second
+to spare. Three missed and the shift's over; the best score lasts until the FM-1 is switched off. HOME, or SEL
++ EDIT again, goes back. The city grows and plays on meanwhile, and its other incidents still happen.
 
 How often each happens is on the Events pages (Disasters stops them destroying); black keys call them at
 once. The police and the ambulances drive out the same way, two to a station, lights flashing. With Follow on, the camera goes to each and stays until it's over.
@@ -284,10 +330,9 @@ the **triangle** (kick and bass), **noise** (hats, snares, the beltway's hiss, f
 
 ## 7. The biomes
 
-There are no preset cities: every power-on founds a new one, on a new seed. **Biome** (City page) picks the
-land: Random, or one of the seven. **PRESETS** moves to the next biome at once (a new city there, with its
-music); **EDIT** founds another on the same land; **SAVE** elsewhere than Setup grows the same city again
-from its founding. Your settings (SAVE on Setup) carry over to every new city, except the music recipe each
+There are no preset cities: every power-on founds a new one, on a new seed, and the seed picks the land: any
+of the seven, by luck. Every city starts as a town. **EDIT** (or PRESETS) founds a new one at once, without
+switching off; **SAVE** elsewhere than Setup grows the same city again from its founding. Your settings (SAVE on Setup) carry over to every new city, except the music recipe each
 biome brings: hold SAVE to get it back after changing it.
 
 ---
@@ -297,10 +342,9 @@ biome brings: hold SAVE to get it back after changing it.
 ### City (HOME)
 
 - **Speed:** ×¼ to ×64; at ×1 about a week a second.
-- **Start as:** a new city grows at once to a Town, Suburb, City or Huge city (GROWING shows meanwhile).
-- **Biome:** the land each power-on founds a city on: Random, or Forest, Desert, Alpine, Isles, Plains,
-  Beach, River.
 - **Traffic:** how many cars, 0–200%.
+- **People:** how many people, 0–200%.
+- **Chats:** whether people who meet stop to talk in speech bubbles (each a chirp in the music).
 
 ### Music (ENV)
 
@@ -332,7 +376,7 @@ biome brings: hold SAVE to get it back after changing it.
   1–7 set it.
 - **Change:** how often Auto changes it.
 - **Birds:** how often flocks fly over.
-- **People:** how many people, 0–200%; they stop to talk in speech bubbles.
+- **Night:** the night lights (windows, streetlights, headlights) on or off.
 
 ### Voices (SEQ) and Voices 2 (SEQ again)
 
@@ -346,7 +390,8 @@ thunder, the UFO) and **Sirens** (and alarms).
 - **UFOs:** very rare by default.
 - **The land's disaster** (named for it: Wildfires, Dust devils, Avalanches, Eruptions, Tornadoes, Tsunamis,
   Floods): how many an hour, more in its weather.
-- **Festivals, Blackouts, Meteors:** how many an hour (blackouts and meteors at night).
+- **Festivals, Blackouts, Meteors:** how many an hour (meteors at night; blackouts any time, more in the
+  land's storms).
 - **Follow:** the camera goes to each incident.
 - **Disasters:** whether fires, quakes and the land's disasters destroy.
 - **Idle:** the idle view after 1, 2 or 5 minutes, or never.
@@ -423,7 +468,7 @@ the city's own sky and skyline, with whatever you press on the real one lit up.
 
 What you change is kept while the FM-1 is on. Press SAVE on the Setup, Display or MIDI out page to keep
 your settings through a power-off (a dot top right shows something is unsaved). The city itself isn't kept:
-each power-on founds a new one (Start as grows it to a stage at once), and its biome brings its music recipe.
+each power-on (or EDIT) founds a new one, a town, and its biome brings its music recipe.
 
 ---
 

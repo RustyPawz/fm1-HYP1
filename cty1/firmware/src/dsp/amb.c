@@ -54,7 +54,7 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Key", 0, 12, 0}, {"Tune", -50, 50, 0}, {"Sync", 0, 1, 1}, {"Mood", 0, 2, 0},
     {"Theme", 0, EN_NTHEMES - 1, 0}, {"Zoom", 0, 2, 0}, {"Map", 0, 2, 0}, {"Labels", 0, 1, 1},
     {"Sends", 0, 3, 1}, {"Channels", 0, 9, 0},
-    {"Biome", 0, EN_NBIOME, 0}, {"Regional", 0, 20, 2}, {"Festivals", 0, 20, 3}, {"Blackouts", 0, 20, 2},
+    {"Biome", 0, EN_NBIOME, 0}, {"Regional", 0, 20, 2}, {"Festivals", 0, 20, 3}, {"Blackouts", 0, 20, 1},
     {"Meteors", 0, 20, 3},
     {"Seed", -32768, 32767, 0}, {"Seed", -32768, 32767, 0},
 };
@@ -280,6 +280,10 @@ typedef struct {
 static voice_t vo[NV];
 static const uint8_t CAPS[EN_NCH] = {6, 6, 4, 8, 8, 4};
 static float bus_level[EN_NCH] = {1, 1, 1, 1, 1, 1};
+/* the power: a blackout winds each channel down (its pitch sagging like a tape stopping) and brings them back one
+ * at a time, each spinning up */
+static float pw[EN_NCH] = {1, 1, 1, 1, 1, 1}, pscale[EN_NCH] = {1, 1, 1, 1, 1, 1}, restore_t = 99.0f;
+static uint8_t pw_out[EN_NCH];
 
 static voice_t *voice_get(int bus)
 {
@@ -542,6 +546,7 @@ static void play_event(int type, int a, int b, int at, int s)
 /* the cues: now, not on the grid */
 static float gate_depth, gate_to, gate_until;    /* the quake's tremolo */
 static struct { uint8_t on; float ph, inc, inc_to, g, g_to, vph; uint32_t next; float base; } ufo_v;
+static struct { uint8_t on, kind; float ph, inc, g, g_to, tt; } siren_v;   /* the game's siren: 1 wail, 2 yelp, 3 hi-lo */
 static void cue(int type, int a)
 {
     float fx = lvl(par[P_VFX]), sx = s16();
@@ -583,6 +588,15 @@ static void cue(int type, int a)
         ufo_v.next = now_s;
         break;
     case E_UFO_OFF: ufo_v.g_to = 0.0f; break;
+    case E_SIREN:
+        if (a) {
+            siren_v.on = 1;
+            siren_v.kind = (uint8_t)a;
+            siren_v.g_to = 0.035f * fx;
+        } else {
+            siren_v.g_to = 0.0f;
+        }
+        break;
     case E_STAGE: pending = a; break;
     case E_FIREWORK:                             /* a whistle up, then the bang and its crackle */
         tone(CH_PB, WV_PULSE, 0.125f, 0, 72.0f + (float)irand(8), 0.6f, 0.04f * fx, 0.05f, 0.0f, 96.0f);
@@ -609,6 +623,106 @@ static void cue(int type, int a)
         for (k = 0; k < 2; k++) {
             tone(CH_WAV, WV_SAW, 0.5f, samp((float)k * 1.6f), (float)note_of(0, -1), 1.2f, 0.16f * fx, 0.05f, 0.9f, 0);
             tone(CH_WAV, WV_SAW, 0.5f, samp((float)k * 1.6f), (float)note_of(4, -1), 1.2f, 0.1f * fx, 0.05f, 0.9f, 0);
+        }
+        break;
+    case E_CHIME:                                /* the town hall's bells: the hour */
+        for (k = 0; k < a && k < 4; k++) {
+            tone(CH_PA, WV_PULSE, 0.125f, samp((float)k * 0.9f), (float)note_of(0, 3), 1.4f, 0.08f * lvl(par[P_VBELLS]), 0, 1.3f, 0);
+            tone(CH_PB, WV_TRI, 0.5f, samp((float)k * 0.9f), (float)note_of(4, 2), 1.2f, 0.07f * lvl(par[P_VBELLS]), 0, 1.1f, 0);
+        }
+        break;
+    case E_SPECIAL:                              /* a special's moment, its own sound */
+        switch (a) {
+        case 0:                                  /* lumber mill: the saw */
+            tone(CH_WAV, WV_SAW, 0.5f, 0, 47.0f, 2.6f, 0.07f * fx, 0.3f, 0.6f, 52.0f);
+            noise(0, 2.6f, 0.06f * fx, 1.8f, 1, 2500.0f, 0, 0.3f, 0);
+            noise(samp(2.7f), 0.5f, 0.25f * fx, 0.4f, 0, 0, 700.0f, 0, 0);   /* timber! */
+            break;
+        case 1:                                  /* ranger tower: the bell */
+            for (k = 0; k < 3; k++)
+                tone(CH_PA, WV_PULSE, 0.125f, samp((float)k * 0.6f), (float)note_of(4, 3), 0.9f, 0.08f * fx, 0, 0.8f, 0);
+            break;
+        case 2: case 20:                         /* biodome blooming, the hydro plant's spillway sings */
+            for (k = 0; k < 6; k++)
+                tone(CH_WAV, WV_SINE, 0.5f, samp((float)k * 0.35f), (float)note_of(k * 2, a == 2 ? 2 : 1), 2.5f, 0.05f * fx, 0.3f, 1.5f, 0);
+            if (a == 20) {                       /* and the floodgates rumble */
+                noise(0, 5.0f, 0.22f * fx, 0.2f, 0, 0, 500.0f, 1.0f, 0);
+                tone(CH_TRI, WV_TRI, 0.5f, 0, 30.0f, 4.0f, 0.3f * fx, 0.8f, 1.5f, 0);
+            }
+            break;
+        case 3:                                  /* solar farm: the panels turn to the sun */
+            tone(CH_WAV, WV_SINE, 0.5f, 0, (float)note_of(0, 1), 3.0f, 0.06f * fx, 0.5f, 1.0f, (float)note_of(0, 2));
+            tone(CH_PB, WV_PULSE, 0.5f, samp(3.0f), (float)note_of(4, 3), 0.3f, 0.05f * fx, 0, 0.2f, 0);
+            break;
+        case 4:                                  /* oasis resort: a splash */
+            noise(0, 0.8f, 0.2f * fx, 0.6f, 0, 300.0f, 3000.0f, 0, 0);
+            for (k = 0; k < 4; k++)
+                tone(CH_PB, WV_PULSE, 0.25f, samp(0.2f + (float)k * 0.12f), (float)note_of(7 - k, 3), 0.08f, 0.05f * fx, 0, 0, 0);
+            break;
+        case 5: case 11: case 14:                /* the rocket, the cruise ship, the plane: a countdown (their show does the rest) */
+            for (k = 0; k < 3; k++)
+                tone(CH_PA, WV_PULSE, 0.5f, samp((float)k * 1.0f), (float)note_of(k == 2 ? 7 : 4, 2), 0.18f, 0.08f * fx, 0, 0, 0);
+            break;
+        case 6: {                                /* ski lodge: a yodel down the slope */
+            static const int8_t T[6] = {0, 5, 2, 7, 4, 9};
+            for (k = 0; k < 6; k++)
+                tone(CH_LEAD, WV_PULSE, 0.25f, samp((float)k * 0.22f), (float)note_of(T[k], 2), 0.24f, 0.08f * fx, 0.01f, 0.1f, 0);
+            break;
+        }
+        case 7:                                  /* cable car: its bell, the cable creaks */
+            tone(CH_PA, WV_PULSE, 0.125f, 0, (float)note_of(2, 3), 0.5f, 0.07f * fx, 0, 0.4f, 0);
+            tone(CH_PA, WV_PULSE, 0.125f, samp(0.25f), (float)note_of(2, 3), 0.5f, 0.07f * fx, 0, 0.4f, 0);
+            noise(samp(0.5f), 3.0f, 0.04f * fx, 2.2f, 1, 4000.0f, 0, 1.0f, 0);
+            break;
+        case 8:                                  /* observatory: the dome turns, the shutter opens */
+            tone(CH_WAV, WV_SAW, 0.5f, 0, 40.0f, 3.0f, 0.05f * fx, 0.4f, 0.5f, 43.0f);
+            tone(CH_PB, WV_SINE, 0.5f, samp(3.1f), (float)note_of(4, 4), 1.5f, 0.05f * fx, 0, 1.4f, 0);
+            break;
+        case 9:                                  /* fishing harbor: gulls and the buoy */
+            for (k = 0; k < 3; k++)
+                tone(CH_PB, WV_PULSE, 0.125f, samp((float)k * 0.5f), 86.0f - (float)k, 0.3f, 0.04f * fx, 0, 0, 79.0f);
+            tone(CH_PA, WV_TRI, 0.5f, samp(1.8f), (float)note_of(0, 1), 1.6f, 0.1f * fx, 0, 1.5f, 0);
+            break;
+        case 10: {                               /* beach resort: steel drums */
+            static const int8_t T[8] = {0, 4, 7, 9, 7, 4, 9, 11};
+            for (k = 0; k < 8; k++)
+                tone(CH_PA, WV_SINE, 0.5f, samp((float)k * sx), (float)note_of(T[k], 2), 0.35f, 0.08f * fx, 0, 0.3f, 0);
+            break;
+        }
+        case 12:                                 /* grain silos: the auger pours */
+            tone(CH_WAV, WV_SAW, 0.5f, 0, 35.0f, 3.5f, 0.06f * fx, 0.5f, 1.0f, 0);
+            noise(0, 3.5f, 0.08f * fx, 1.2f, 0, 0, 2500.0f, 0.5f, 0);
+            break;
+        case 13: case 16: {                      /* county fair's calliope, the boardwalk's ice-cream jingle */
+            static const int8_t T[2][8] = {{0, 4, 7, 4, 9, 7, 4, 2}, {7, 7, 9, 7, 4, 4, 2, 0}};
+            for (k = 0; k < 8; k++)
+                tone(a == 13 ? CH_PA : CH_PB, WV_PULSE, a == 13 ? 0.5f : 0.125f, samp((float)k * sx * 2.0f), (float)note_of(T[a == 16][k], 3), sx * 1.8f,
+                     0.07f * fx, 0, 0, 0);
+            break;
+        }
+        case 15:                                 /* lighthouse: the foghorn, twice */
+            for (k = 0; k < 2; k++)
+                tone(CH_WAV, WV_SAW, 0.5f, samp((float)k * 2.2f), (float)note_of(0, -1), 1.6f, 0.13f * fx, 0.15f, 0.6f, 0);
+            break;
+        case 17:                                 /* theme park: the coaster clanks up, drops, they scream */
+            for (k = 0; k < 8; k++)
+                noise(samp((float)k * 0.22f), 0.04f, 0.08f * fx, 2.0f, 1, 3000.0f, 0, 0, 0);
+            tone(CH_WAV, WV_SAW, 0.5f, samp(1.8f), 60.0f, 1.5f, 0.05f * fx, 0.05f, 1.0f, 40.0f);
+            noise(samp(1.8f), 1.6f, 0.08f * fx, 1.4f, 0, 1800.0f, 0, 0.1f, 0);
+            for (k = 0; k < 3; k++)
+                tone(CH_PB, WV_PULSE, 0.25f, samp(1.9f + (float)k * 0.1f), 84.0f + (float)k * 2.0f, 0.8f, 0.03f * fx, 0.05f, 0.5f, 79.0f);
+            break;
+        case 18:                                 /* watermill: the millstones thump round */
+            for (k = 0; k < 6; k++)
+                tone(CH_TRI, WV_TRI, 0.5f, samp((float)k * 0.45f), 36.0f, 0.2f, 0.3f * fx, 0, 0, 30.0f);
+            noise(0, 2.8f, 0.05f * fx, 0.6f, 0, 0, 1500.0f, 0.4f, 0);
+            break;
+        case 19:                                 /* riverboat dock: the steam whistle */
+            tone(CH_PA, WV_PULSE, 0.5f, 0, (float)note_of(4, 2), 1.4f, 0.08f * fx, 0.05f, 0.4f, 0);
+            tone(CH_PB, WV_PULSE, 0.5f, 0, (float)note_of(7, 2), 1.4f, 0.06f * fx, 0.05f, 0.4f, 0);
+            noise(0, 1.4f, 0.05f * fx, 2.0f, 1, 5000.0f, 0, 0.05f, 0);
+            break;
+        default: break;
         }
         break;
     case E_FANFARE: {
@@ -897,10 +1011,11 @@ static void render_voices(uint32_t n)
     for (k = 0; k < NV; k++) {
         voice_t *v = &vo[k];
         uint32_t j;
-        float bl, gl, gr;
+        float bl, gl, gr, psc;
         if (!v->on)
             continue;
         bl = BUS_G[v->bus] * bus_level[v->bus];
+        psc = pscale[v->bus];
         gl = bl * (1.0f - v->pan);
         gr = bl * (1.0f + v->pan);
         for (j = 0; j < n; j++) {
@@ -943,7 +1058,7 @@ static void render_voices(uint32_t n)
             case WV_SAW: x = (2.0f * ph - 1.0f - blep(ph, v->inc)) * 0.5f; break;
             case WV_SINE: x = fm_sin_turns(ph); break;
             default: {                           /* the LFSR */
-                v->nacc += v->nrate;
+                v->nacc += v->nrate * psc;
                 while (v->nacc >= 1.0f) {
                     uint16_t r = v->lfsr, bit = (uint16_t)((r ^ (r >> 1)) & 1u);
                     v->nacc -= 1.0f;
@@ -971,9 +1086,9 @@ static void render_voices(uint32_t n)
                     v->vib_ph += 5.5f / EN_SR;
                     if (v->vib_ph >= 1.0f)
                         v->vib_ph -= 1.0f;
-                    ph += v->inc * (1.0f + 0.0081f * v->vib * fm_sin_turns(v->vib_ph));
+                    ph += v->inc * psc * (1.0f + 0.0081f * v->vib * fm_sin_turns(v->vib_ph));
                 } else {
-                    ph += v->inc;
+                    ph += v->inc * psc;
                 }
                 if (v->slide_k != 1.0f)
                     v->inc *= v->slide_k;
@@ -1096,8 +1211,57 @@ static void control(uint32_t n)
         if (ufo_v.g_to <= 0.0f && ufo_v.g < 0.001f)
             ufo_v.on = 0;
     }
-    for (b = 0; b < EN_NCH; b++)
-        bus_level[b] = 1.0f;
+    if (siren_v.on) {                            /* the siren: its own sweep */
+        float f0, u;
+        siren_v.tt += dt;
+        if (siren_v.kind == 1) {
+            u = siren_v.tt / 3.2f;
+            u -= fm_floorf(u);
+            f0 = 560.0f + 520.0f * (0.5f - 0.5f * fm_cosf(u * FM_TWO_PI));
+        } else if (siren_v.kind == 2) {
+            u = siren_v.tt / 0.32f;
+            u -= fm_floorf(u);
+            f0 = 700.0f + 700.0f * u;
+        } else {
+            f0 = ((int)(siren_v.tt / 0.55f) & 1) ? 770.0f : 960.0f;
+        }
+        siren_v.inc = f0 * (1.0f / EN_SR);
+        siren_v.g += (siren_v.g_to - siren_v.g) * fm_minf(dt / 0.3f, 1.0f);
+        if (siren_v.g_to <= 0.0f && siren_v.g < 0.001f)
+            siren_v.on = 0;
+    }
+    {   /* the power */
+        static const uint8_t ORDER[EN_NCH] = {CH_TRI, CH_NOI, CH_WAV, CH_PA, CH_PB, CH_LEAD};
+        int o;
+        if (en_city.blackout) {
+            restore_t = 0.0f;
+            for (b = 0; b < EN_NCH; b++) {        /* down, each at its own rate */
+                pw[b] = fm_maxf(0.0f, pw[b] - dt / (1.6f + 0.35f * (float)b));
+                if (pw[b] <= 0.0f)
+                    pw_out[b] = 1;
+            }
+        } else {
+            restore_t += dt;
+            for (o = 0; o < EN_NCH; o++) {        /* back one at a time, a second and a half apart */
+                b = ORDER[o];
+                if (restore_t < 0.8f + 1.5f * (float)o)
+                    continue;
+                if (pw_out[b]) {                 /* its power-up: a thump and a rising blip */
+                    pw_out[b] = 0;
+                    if (b == CH_NOI)
+                        noise(0, 0.5f, 0.3f * lvl(par[P_VFX]), 0.3f, 0, 0, 0, 0.4f, 0);
+                    else
+                        tone(b, b == CH_TRI ? WV_TRI : WV_PULSE, 0.25f, 0, (float)chord_tone(0, b == CH_TRI ? -1 : 1), 0.9f,
+                             0.12f * lvl(par[P_VFX]), 0.3f, 0, (float)chord_tone(0, b == CH_TRI ? 0 : 2));
+                }
+                pw[b] = fm_minf(1.0f, pw[b] + dt / 0.6f);
+            }
+        }
+        for (b = 0; b < EN_NCH; b++) {
+            bus_level[b] = pw[b] * pw[b];
+            pscale[b] = 0.2f + 0.8f * pw[b];
+        }
+    }
 }
 
 static void render_chunk(int32_t *out, uint32_t n, float gain, uint32_t at)
@@ -1150,6 +1314,15 @@ static void render_chunk(int32_t *out, uint32_t n, float gain, uint32_t at)
             l += e;
             r += e;
             esend[j] += e;
+            BUS(4, j, e);
+        }
+        if (siren_v.on) {
+            siren_v.ph += siren_v.inc;
+            if (siren_v.ph >= 1.0f)
+                siren_v.ph -= 1.0f;
+            e = (siren_v.ph < 0.5f ? 1.0f : -1.0f) * siren_v.g * 0.5f + fm_sin_turns(siren_v.ph) * siren_v.g * 0.5f;
+            l += e * 0.8f;
+            r += e;
             BUS(4, j, e);
         }
         /* the lowpass: a state-variable filter, each side */

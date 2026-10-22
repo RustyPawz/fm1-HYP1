@@ -416,6 +416,7 @@ static car_t cars[NCAR] EN_POOL;
 static int ncars;
 static uint32_t traffic_t;
 static int solo_car = -1;                       /* the camera's car in the idle view: its route plays the lead */
+static int game_car = -1, game_kind = -1;      /* the secret game's: the player drives it (game.c); its kind isn't dispatched */
 
 static void car_pos(const car_t *c, float *x, float *y, int *dx, int *dy)
 {
@@ -580,6 +581,10 @@ static void cars_update(float dt)
         float x, y, sp;
         if (!c->on)
             continue;
+        if (k == game_car) {                     /* the player drives this one */
+            ncars++;
+            continue;
+        }
         sp = c->v * (c_plan[c->path[c->k]] == PL_BELTWAY ? 1.8f : 1.0f);
         c->d += sp * dt;
         while (c->d >= 1.0f && c->k < c->len - 1) {
@@ -960,6 +965,101 @@ static void spawn_flock(void)
     }
 }
 
+/* -------------------------------------------------------------- boats --- */
+/* on the water, once the town has docks: rowboats and canoes on ponds, motorboats and barges on rivers and lakes,
+ * sailboats, ferries and cargo ships at sea. A boat goes on along its water, turning where it must. */
+enum { BK_ROW, BK_CANOE, BK_MOTOR, BK_BARGE, BK_SAIL, BK_FERRY, BK_CARGO };
+#define NBOAT 8
+static struct {
+    uint8_t on, kind, col;
+    int8_t dx, dy;
+    float x, y, sp;                     /* the tile it's heading for is (x, y) + its direction, as it reaches each centre */
+    uint32_t until;
+} boats[NBOAT];
+static uint32_t boat_next;
+static const float BOAT_SP[7] = {0.4f, 0.55f, 1.4f, 0.5f, 0.8f, 0.9f, 0.45f};
+static int water_of(int x, int y, int cls) { return in_map(x, y) && TERR(y * MW + x) == T_WATER && c_wb[y * MW + x] == cls; }
+static void boat_turn(int b)
+{
+    static const int8_t D[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    int x = (int)boats[b].x, y = (int)boats[b].y, cls = c_wb[y * MW + x], d, opts[4], n = 0;
+    if (water_of(x + boats[b].dx, y + boats[b].dy, cls) && lrnd() < 0.85f)
+        return;                                  /* on, mostly */
+    for (d = 0; d < 4; d++)
+        if (water_of(x + D[d][0], y + D[d][1], cls) && !(D[d][0] == -boats[b].dx && D[d][1] == -boats[b].dy))
+            opts[n++] = d;
+    if (!n) {                                    /* a dead end: back */
+        boats[b].dx = (int8_t)-boats[b].dx;
+        boats[b].dy = (int8_t)-boats[b].dy;
+        return;
+    }
+    d = opts[lirnd(n)];
+    boats[b].dx = D[d][0];
+    boats[b].dy = D[d][1];
+}
+static void spawn_boat(void)
+{
+    rect_t r = view_rect(4.0f);
+    int b, tries, want = C.docks / 2 + (C.docks ? 1 : 0) + (C.has_coast && C.stage >= 1 ? 2 : 0);
+    if (want > NBOAT)
+        want = NBOAT;
+    for (b = 0, tries = 0; b < NBOAT; b++)
+        tries += boats[b].on;
+    if (tries >= want)
+        return;
+    for (b = 0; b < NBOAT && boats[b].on; b++)
+        ;
+    for (tries = 0; tries < 30; tries++) {       /* a water tile near the view */
+        int x = (int)(r.x0 + lrnd() * (r.x1 - r.x0)), y = (int)(r.y0 + lrnd() * (r.y1 - r.y0)), cls, k;
+        if (!in_map(x, y) || TERR(y * MW + x) != T_WATER || !(cls = c_wb[y * MW + x]))
+            continue;
+        k = cls == 1 ? (lrnd() < 0.5f ? BK_ROW : BK_CANOE) : cls == 2 ? (lrnd() < 0.65f ? BK_MOTOR : BK_BARGE)
+                                                                     : (lrnd() < 0.45f ? BK_SAIL : lrnd() < 0.5f ? BK_FERRY : BK_CARGO);
+        boats[b].on = 1;
+        boats[b].kind = (uint8_t)k;
+        boats[b].col = (uint8_t)lirnd(10);
+        boats[b].x = (float)x + 0.5f;
+        boats[b].y = (float)y + 0.5f;
+        boats[b].dx = 1;
+        boats[b].dy = 0;
+        boats[b].sp = BOAT_SP[k] * (0.8f + lrnd() * 0.4f);
+        boats[b].until = plat_ms() + 60000u + (uint32_t)lirnd(60000);
+        boat_turn(b);
+        return;
+    }
+}
+static void boats_update(float dt)
+{
+    int b;
+    uint32_t now = plat_ms();
+    if ((int32_t)(now - boat_next) >= 0) {
+        boat_next = now + 4000u + (uint32_t)lirnd(5000);
+        spawn_boat();
+    }
+    for (b = 0; b < NBOAT; b++) {
+        float cx0, cy0, nx, ny;
+        if (!boats[b].on)
+            continue;
+        if ((int32_t)(now - boats[b].until) >= 0) {
+            boats[b].on = 0;
+            continue;
+        }
+        cx0 = fm_floorf(boats[b].x) + 0.5f;
+        cy0 = fm_floorf(boats[b].y) + 0.5f;
+        nx = boats[b].x + (float)boats[b].dx * boats[b].sp * dt;
+        ny = boats[b].y + (float)boats[b].dy * boats[b].sp * dt;
+        if ((boats[b].dx > 0 && boats[b].x < cx0 && nx >= cx0) || (boats[b].dx < 0 && boats[b].x > cx0 && nx <= cx0) ||
+            (boats[b].dy > 0 && boats[b].y < cy0 && ny >= cy0) || (boats[b].dy < 0 && boats[b].y > cy0 && ny <= cy0)) {
+            boats[b].x = cx0;                    /* a tile's centre: on, or turn */
+            boats[b].y = cy0;
+            boat_turn(b);
+        } else {
+            boats[b].x = nx;
+            boats[b].y = ny;
+        }
+    }
+}
+
 /* ---------------------------------------------------------- incidents --- */
 #define NFIRE 12
 static struct {
@@ -1031,7 +1131,7 @@ static int dispatch(int vkind, int civ, float x, float y, int to, uint32_t *quic
     car_t *c;
     if (quick)
         *quick = 0;
-    if (to < 0)
+    if (to < 0 || vkind == game_kind)            /* the player answers these */
         return -1;
     for (k = 0; k < NCAR; k++)
         out += cars[k].on && cars[k].kind == vkind;
@@ -1309,7 +1409,7 @@ static uint32_t arrived_at(int c, uint32_t quick)
 }
 static void send_home(int c)
 {
-    if (c >= 0 && cars[c].on && cars[c].keep)
+    if (c >= 0 && c != game_car && cars[c].on && cars[c].keep)
         car_home(&cars[c]);
 }
 static void incidents_update(float dt)
@@ -1665,6 +1765,7 @@ static void life_reset(void)
     memset(&quake, 0, sizeof quake);
     extras_reset();
     memset(flock, 0, sizeof flock);
+    memset(boats, 0, sizeof boats);
     memset(dust, 0, sizeof dust);
     bolt.on = 0;
     for (k = 0; k < NCAR; k++)
@@ -1784,18 +1885,22 @@ static void life_update(void)
     }
     if (proj.par[P_FEST] && !fest.on && C.stage >= 1 && lrnd() < rate_per_ms(proj.par[P_FEST]) * (float)dms)
         festival_start();
-    if (proj.par[P_BLACKOUT] && !blackout.on && day_lit() < 0.35f && C.stage >= 1 &&
-        lrnd() < rate_per_ms(proj.par[P_BLACKOUT]) * 2.0f * (float)dms)
-        blackout_start();
+    {   /* a blackout: any time, likelier in extreme weather and in a disaster */
+        float k3 = 1.0f + 4.0f * (llvl(LK_STORM) + llvl(LK_TYPHOON) + llvl(LK_BLIZZARD) + llvl(LK_DUST)) + (rg.on ? 3.0f : 0.0f);
+        if (proj.par[P_BLACKOUT] && !blackout.on && lrnd() < rate_per_ms(proj.par[P_BLACKOUT]) * k3 * (float)dms)
+            blackout_start();
+    }
     if (proj.par[P_METEOR] && !meteors.on && day_lit() < 0.2f && wlvl(W_CLEAR) > 0.6f &&
         lrnd() < rate_per_ms(proj.par[P_METEOR]) * 3.0f * (float)dms)
         meteors_start();
     cars_update(dt);
     peds_update(dt, dms);
+    boats_update(dt);
     incidents_update(dt);
     region_update(dt);
     extras_update();
     show_update();
+    specials_update();
     {   /* what fell: dust, and a crunch if it's on screen */
         rect_t r1 = view_rect(1.0f);
         while (demo_r != c_demo_w) {

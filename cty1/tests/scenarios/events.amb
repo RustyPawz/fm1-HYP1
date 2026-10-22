@@ -1,6 +1,6 @@
-# CTY-1: every incident called from the black keys, the biomes' own disasters, the weather and the hour, the camera follows
-spin K2 2
-tap SAVE
+# CTY-1 (set 1 N: the tests grow a new city to stage N straight; set 46 B+1 picks its biome): every incident called from the black keys, the biomes' own disasters, the weather and the hour, the camera follows
+set 1 2
+tap EDIT
 wait 6000
 expect stage >1
 tap FX
@@ -54,16 +54,13 @@ wait 40000
 expect region 0
 expect festival 0
 expect blackout 0
-spin PRESET 1
-spin K2 2
-tap SAVE
+tap EDIT
 wait 5000
 tapkey b6
 wait 6000
 expect region 1
 shot ev_region2.png
 spin PRESET 1
-tap SAVE
 wait 5000
 tapkey b6
 wait 6000
@@ -90,8 +87,9 @@ expect peak_db_max -0.5
 # a desert grown huge: its specials, the rocket on its pad, the launch
 wait 10
 tap HOME
-spin K2 1
-tap SAVE
+set 46 2
+set 1 3
+tap EDIT
 wait 6000
 expect biome 1
 expect unlocked 3
@@ -104,3 +102,16 @@ wait 9000
 shot ev_launch.png
 wait 9000
 expect show 0
+# its specials keep their own clocks: the solar farm's and the resort's moments, the launch on the hour's
+wait 100000
+expect moments >2
+# the docks on the water, the boats on it (isles, a city)
+tap HOME
+set 46 4
+set 1 2
+tap EDIT
+wait 30000
+expect biome 3
+expect docks >0
+expect boats >0
+shot ev_boats.png

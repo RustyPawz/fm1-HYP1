@@ -320,9 +320,9 @@ static int blackout_start(void)
         return 0;
     blackout.on = 1;
     blackout.t0 = plat_ms();
-    blackout.x = cam.x + (lrnd() - 0.5f) * 8.0f;
-    blackout.y = cam.y + (lrnd() - 0.5f) * 6.0f;
-    blackout.r = 7.0f + lrnd() * 5.0f;
+    blackout.x = (float)(C.minx + C.maxx) * 0.5f;   /* the whole city goes dark */
+    blackout.y = (float)(C.miny + C.maxy) * 0.5f;
+    blackout.r = 200.0f;
     news(N_BLACKOUT, 0, 0);
     en_event(E_CRUMBLE, 0, 0);
     return 1;
@@ -333,7 +333,7 @@ static int blackout_at(float x, float y)        /* the lights out here (and flic
     if (!blackout.on || lhyp(x - blackout.x, y - blackout.y) > blackout.r)
         return 0;
     el = plat_ms() - blackout.t0;
-    if (el > 24000u)
+    if (el > 14000u)                             /* the lights back, flickering */
         return ((el / 90u) * 7u) % 5u < 2u;
     return 1;
 }
@@ -364,7 +364,7 @@ static void extras_update(void)
         if (now - fest.t0 > 28000u)
             fest.on = 0;
     }
-    if (blackout.on && now - blackout.t0 > 27000u) {
+    if (blackout.on && now - blackout.t0 > 16000u) {
         blackout.on = 0;
         news(N_LIGHTS, 0, 0);
     }
@@ -435,14 +435,8 @@ static int show_start(void)
 static void show_update(void)
 {
     uint32_t now = plat_ms(), el;
-    if (!show.on) {                              /* now and then on its own, every few minutes */
-        if (show_site() && (int32_t)(now - show.next) >= 0) {
-            if (show.next)
-                show_start();
-            show.next = now + 150000u + (uint32_t)lirnd(150000);
-        }
+    if (!show.on)                                /* (the specials' clock starts it: specials_update) */
         return;
-    }
     el = now - show.t0;
     if (show.kind == B_DESERT && el >= 5000u && !(show.done & 1u)) {   /* lift-off (once) */
         show.done |= 1u;
@@ -459,6 +453,71 @@ static void show_update(void)
 /* where the show's vehicle is: the rocket's height (tiles), the plane along the runway, the ship sailing (0..1) */
 static float show_t(void) { return show.on ? (float)(plat_ms() - show.t0) / 1000.0f : -1.0f; }
 
+/* every special has its moment, on a fixed clock: the lumber mill's saw, the ranger's bell, the biodome blooming,
+ * the solar farm turning to the sun, the oasis' splash, the rocket's launch, the ski jump, the cable car's bell,
+ * the observatory opening, the boats coming in, the steel drums, the cruise ship sailing, the silos pouring, the
+ * fair's calliope, the plane taking off, the foghorn, the ice-cream jingle, the coaster, the millstones, the steam
+ * whistle, the floodgates. And the town hall's bells ring the hours. */
+#define SP_EVENT_MS 6000u
+static const uint32_t SP_PERIOD[3] = {70000u, 100000u, 240000u};
+static uint32_t sp_t0[3], sp_next[3];
+static int sp_hour = -1;
+static uint32_t sp_count;                        /* moments so far (the tests) */
+static int special_of(int u)
+{
+    int k;
+    for (k = 0; k < C.nciv; k++)
+        if (c_st[c_civ[k]].kind == CV_UNLOCK1 + u && !(c_st[c_civ[k]].flags & SF_DEAD))
+            return c_civ[k];
+    return 0;
+}
+static float sp_ev(int u)                        /* 0..1 through its moment, or -1 */
+{
+    uint32_t a;
+    if ((unsigned)u > 2u || !sp_t0[u])
+        return -1.0f;
+    a = plat_ms() - sp_t0[u];
+    return a < SP_EVENT_MS ? (float)a / (float)SP_EVENT_MS : -1.0f;
+}
+static int special_moment(int u)
+{
+    int si = special_of(u);
+    if (!si)
+        return 0;
+    sp_t0[u] = plat_ms() | 1u;
+    sp_count++;
+    if (u == 2)
+        show_start();                            /* the biggest: its show (the rocket, the plane, the ship, a festival) */
+    en_event(E_SPECIAL, C.biome * 3 + u, 0);
+    if ((C.biome == B_FOREST && u == 1) || (C.biome == B_VOLCANO && u == 0)) {   /* birds up from the trees, gulls in */
+        spawn_flock();
+    }
+    return 1;
+}
+static void specials_update(void)
+{
+    uint32_t now = plat_ms();
+    int u;
+    for (u = 0; u < 3; u++) {
+        if (!special_of(u)) {
+            sp_next[u] = 0;
+            continue;
+        }
+        if (!sp_next[u])                         /* its clock starts when it opens: the first a little later */
+            sp_next[u] = now + SP_PERIOD[u] / 3u;
+        if ((int32_t)(now - sp_next[u]) >= 0) {
+            sp_next[u] = now + SP_PERIOD[u];
+            special_moment(u);
+        }
+    }
+    if (C.hall && c_st[C.hall].L >= 2) {   /* the town hall's bells: each hour, 1 to 3 */
+        int h = (int)(phase() * 24.0f);
+        if (sp_hour >= 0 && h != sp_hour)
+            en_event(E_CHIME, 1 + h % 3, 0);
+        sp_hour = h;
+    }
+}
+
 static void extras_reset(void)
 {
     memset(&rg, 0, sizeof rg);
@@ -466,4 +525,7 @@ static void extras_reset(void)
     memset(&blackout, 0, sizeof blackout);
     memset(&meteors, 0, sizeof meteors);
     memset(&show, 0, sizeof show);
+    memset(sp_t0, 0, sizeof sp_t0);
+    memset(sp_next, 0, sizeof sp_next);
+    sp_hour = -1;
 }

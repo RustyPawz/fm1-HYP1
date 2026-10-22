@@ -54,6 +54,7 @@ enum { CV_TOWNHALL, CV_GAS, CV_FIRE, CV_POLICE, CV_SCHOOL, CV_HOSPITAL, CV_STATI
 #define SF_FARM 0x01u
 #define SF_DEAD 0x02u
 #define SF_BURN 0x04u
+#define SF_DOCK 0x08u                   /* a dock out into the water beside it (pad: the side, 1 E, 2 W, 3 S, 4 N) */
 
 typedef struct {
     uint8_t type, L, x, y, size, kind, flags, pad;
@@ -86,6 +87,7 @@ typedef struct {
     uint16_t nrounds;
     uint8_t unlocked;                   /* the biome's specials built (0..3) */
     uint16_t hall;                      /* the town hall's slot */
+    uint16_t docks;                     /* docks on the water: the boats come */
 } city_t;
 extern city_t C;
 
@@ -97,7 +99,8 @@ extern uint16_t c_empty[MN];             /* open lots this week */
 extern uint16_t c_bl[4][NBL];            /* building anchors (tile index) by type, this week */
 extern uint16_t c_scr[MN];               /* scratch: the plan's at the founding, then life's routes (BFS) */
 extern uint16_t c_civ[128];              /* landmarks and green spaces (building slots) */
-extern uint16_t c_round[64];             /* roundabouts: their top-left tile */
+extern uint16_t c_round[64];
+extern uint8_t c_wb[MN];                 /* each water tile's body: 0 land, 1 a pond, 2 a river or lake, 3 the sea */             /* roundabouts: their top-left tile */
 
 #define TERR(i) (c_terr[i] & 3u)
 #define ZONE(i) (c_zr[i] & 7u)

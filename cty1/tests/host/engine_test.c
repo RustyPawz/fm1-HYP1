@@ -100,6 +100,7 @@ int main(void)
     memset((void *)&en_city, 0, sizeof en_city);
     en_city.day = 1.0f;
     en_event(E_UFO_OFF, 0, 0);
+    en_event(E_SIREN, 0, 0);
     en_play(0);
     en_panic();
     run(6.0f, &pk);

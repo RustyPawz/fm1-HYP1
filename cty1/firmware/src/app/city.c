@@ -15,6 +15,7 @@ uint16_t c_bl[4][NBL] EN_POOL;
 uint16_t c_scr[MN] EN_POOL;
 uint16_t c_civ[128];
 uint16_t c_round[64];
+uint8_t c_wb[MN] EN_POOL;
 news_t c_news[NNEWS];
 uint32_t c_news_w;
 demo_t c_demo[16];
@@ -387,6 +388,41 @@ static void gen_terrain(void)
                         c_terr[j] |= F_TREE;     /* by the water: willows, reeds, the desert's palms */
                 }
         }
+}
+
+/* the water's bodies, and how big: a pond, a river or a lake, the sea (the queue: the open-lot list, free yet) */
+static void label_water(void)
+{
+    uint16_t *q = c_empty;
+    int i;
+    for (i = 0; i < MN; i++)
+        c_wb[i] = 0;
+    for (i = 0; i < MN; i++) {
+        int h = 0, t = 0, n = 0, sea = 0, k, cls;
+        if (TERR(i) != T_WATER || c_wb[i])
+            continue;
+        c_wb[i] = 255;
+        q[t++] = (uint16_t)i;
+        while (h < t) {                          /* the body, found */
+            static const int8_t D[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+            int j = q[h++], x = j % MW, y = j / MW, d;
+            n++;
+            sea |= (c_terr[j] & F_OCEAN) != 0;
+            for (d = 0; d < 4; d++) {
+                int xx = x + D[d][0], yy = y + D[d][1], jj;
+                if (!in_map(xx, yy))
+                    continue;
+                jj = yy * MW + xx;
+                if (TERR(jj) == T_WATER && !c_wb[jj] && t < MN) {
+                    c_wb[jj] = 255;
+                    q[t++] = (uint16_t)jj;
+                }
+            }
+        }
+        cls = sea ? 3 : n >= 120 ? 2 : 1;
+        for (k = 0; k < t; k++)
+            c_wb[q[k]] = (uint8_t)cls;
+    }
 }
 
 static void pick_center(void)
@@ -937,6 +973,20 @@ static int place(int i, int type, int L)
     s->size = 1;
     s->born = C.tick;
     set_foot(si);
+    if (type == BT_RES || type == BT_COM) {      /* by the water: now and then a dock */
+        static const int8_t D[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        int d;
+        for (d = 0; d < 4; d++) {
+            int x = s->x + D[d][0], y = s->y + D[d][1];
+            if (in_map(x, y) && TERR(y * MW + x) == T_WATER && !c_road[y * MW + x])
+                break;
+        }
+        if (d < 4 && rnd() < 0.35f) {
+            s->flags |= SF_DOCK;
+            s->pad = (uint8_t)(d + 1);
+            C.docks++;
+        }
+    }
     C.buildings++;
     C.dev++;
     add_jobs(type, cap_of(type, L, 1));
@@ -1106,7 +1156,9 @@ void city_demolish(int si, int cause)
     int dx, dy;
     if (!s->type || (s->flags & SF_DEAD))
         return;
-    s->flags = (uint8_t)((s->flags | SF_DEAD) & ~SF_BURN);
+    if (s->flags & SF_DOCK)
+        C.docks--;
+    s->flags = (uint8_t)((s->flags | SF_DEAD) & ~(SF_BURN | SF_DOCK));
     if (s->type == BT_CIV) {
         int k, m = 0;
         C.jobs_civ -= CIVIC[s->kind].jobs;
@@ -1565,6 +1617,7 @@ void city_new(uint32_t seed, int biome)
     C.next_green = 10;
     city_name(seed, C.biome, C.name);
     gen_terrain();
+    label_water();
     pick_center();
     gen_plan();
     C.minx = C.maxx = C.cx;

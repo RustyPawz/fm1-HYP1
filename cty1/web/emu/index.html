@@ -174,7 +174,7 @@ body.stream .ctl.knob.sv-turn > circle:first-child { stroke: #ff9a3c; stroke-wid
       <div>
         <h3>City <span>HOME</span></h3>
         <dl>
-          <dt>Speed</dt><dd>How fast it grows: ×¼ to ×64 (about a week a second at ×1).</dd><dt>Start as</dt><dd>A new city grows at once to a Town, Suburb, City or Huge city.</dd><dt>Biome</dt><dd>The land each switch-on founds a city on: Random, or Forest, Desert, Alpine, Isles, Plains, Beach, River. PRESETS changes it now.</dd><dt>Traffic</dt><dd>How many cars, 0–200%.</dd>
+          <dt>Speed</dt><dd>How fast it grows: ×¼ to ×64 (about a week a second at ×1).</dd><dt>Traffic</dt><dd>How many cars, 0–200%.</dd><dt>People</dt><dd>How many people, 0–200%.</dd><dt>Chats</dt><dd>Whether people who meet stop to talk in speech bubbles, each a chirp.</dd>
         </dl>
       </div>
       <div>
@@ -198,7 +198,7 @@ body.stream .ctl.knob.sv-turn > circle:first-child { stroke: #ff9a3c; stroke-wid
       <div>
         <h3>Weather <span>LFO again</span></h3>
         <dl>
-          <dt>Weather</dt><dd>Auto (by the season and the land), or one of six, each the biome's own: a thunderstorm, a dust storm in the desert, a blizzard in the mountains, a typhoon on the isles; mist, heat haze, ash haze; snow, frost, ash fall, sleet. Black keys 1–7 set it.</dd><dt>Change</dt><dd>How often Auto changes it.</dd><dt>Birds, People</dt><dd>How often flocks fly over (the echo shortens as they pass); how many people, who stop to talk in speech bubbles, each a chirp.</dd>
+          <dt>Weather</dt><dd>Auto (by the season and the land), or one of six, each the biome's own: a thunderstorm, a dust storm in the desert, a blizzard in the mountains, a typhoon on the isles; mist, heat haze, ash haze; snow, frost, ash fall, sleet. Black keys 1–7 set it.</dd><dt>Change</dt><dd>How often Auto changes it.</dd><dt>Birds</dt><dd>How often flocks fly over (the echo shortens as they pass).</dd><dt>Night</dt><dd>The night lights (windows, streetlights, headlights) on or off.</dd>
         </dl>
       </div>
       <div>
@@ -222,7 +222,7 @@ body.stream .ctl.knob.sv-turn > circle:first-child { stroke: #ff9a3c; stroke-wid
       <div>
         <h3>Events 2 <span>FX again</span></h3>
         <dl>
-          <dt>UFOs</dt><dd>Very rare: one comes for someone.</dd><dt>The biome's own</dt><dd>Wildfires in the forest, dust devils in the desert, avalanches in the mountains, eruptions on the isles, tornadoes on the plains (the siren first), tsunamis at the beach, floods in the river lands. Each its own look and sound, more in its weather.</dd><dt>Festivals, Blackouts</dt><dd>A crowd and fireworks round a plaza; a district's lights going out at night.</dd>
+          <dt>UFOs</dt><dd>Very rare: one comes for someone.</dd><dt>The biome's own</dt><dd>Wildfires in the forest, dust devils in the desert, avalanches in the mountains, eruptions on the isles, tornadoes on the plains (the siren first), tsunamis at the beach, floods in the river lands. Each its own look and sound, more in its weather.</dd><dt>Festivals, Blackouts</dt><dd>A crowd and fireworks round a plaza; the whole town's power out (likelier in a storm), every instrument winding down, then back one at a time.</dd>
         </dl>
       </div>
       <div>
@@ -256,11 +256,11 @@ body.stream .ctl.knob.sv-turn > circle:first-child { stroke: #ff9a3c; stroke-wid
     <h2>Buttons</h2>
     <ul>
       <li><b>Keys</b> play the lead, in the city's scale (lit). On Time, Weather and Events the black keys do the page's work.</li>
-      <li><b>PLAY</b> the music plays / rests (the city lives on). <b>REC</b> holds the growth. <b>EDIT</b> a new city on the same land.</li>
-      <li><b>SEL</b> rides along with a car (again: another). <b>ALGORITHM</b> looks around: the landmarks in turn. <b>PRESETS</b> the next biome: a new city there, with its music.</li>
+      <li><b>PLAY</b> the music plays / rests (the city lives on). <b>REC</b> holds the growth. <b>EDIT</b> a new city: new land, a biome by luck, from a town.</li>
+      <li><b>SEL</b> rides along with a car (again: another). <b>ALGORITHM</b> looks around: the landmarks in turn. <b>PRESETS</b> a new city too.</li>
       <li><b>SELECT</b> every page in turn; with <b>HOME</b> held, the tempo. <b>OCT−</b> / <b>OCT+</b> the lead's octave.</li>
       <li><b>SAVE</b> on the Setup pages saves your settings; elsewhere it grows the city again from its founding; hold it to put back the biome's music.</li>
-      <li>Hold a button for a second and a card says what it does (with a mouse: <kbd>Shift</kbd>-click to hold it). And there's a secret behind SEL + EDIT.</li>
+      <li>Hold a button for a second and a card says what it does (with a mouse: <kbd>Shift</kbd>-click to hold it). And there's a secret behind SEL + EDIT: take the fire truck, the police car or the ambulance out on calls (white keys 1–3 pick, then 1 and 2 turn at the next junction).</li>
     </ul>
   </div>
   <div>
@@ -274,7 +274,7 @@ body.stream .ctl.knob.sv-turn > circle:first-child { stroke: #ff9a3c; stroke-wid
   <div>
     <h2>The biomes</h2>
     <p>Every switch-on founds a new city on new land. Each biome looks, sounds and storms its own way; underneath they all play the same. <b>Forest</b>: deep woods, the Game Boy's wave and woodblocks, wildfires. <b>Desert</b>: sand and red mesas, cacti, the SID over a drone and a hand drum in Hijaz, dust storms and dust devils. <b>Alpine</b>: a valley under snowy peaks and pines, bells and long echoes in Lydian, blizzards and avalanches. <b>Volcano isles</b>: palms, turquoise shallows and a smoking volcano, a clave and a steel-drum wave, typhoons, ash and eruptions. <b>Plains</b>: golden grass and farms, boom-chick and pentatonic tunes, tornadoes. <b>Beach</b>: a sandy shore, a surf backbeat and a walking bass, sea fog and tsunamis. <b>River lands</b>: a wide river, ponds and reeds, shakers and long bass, floods.</p>
-    <p>Every town starts with a town hall (it grows grander with the town), a fire station, police and a hospital. Each land unlocks three specials as the city grows; the desert's last is a rocket launch site.</p>
+    <p>Every town starts with a town hall (it grows grander with the town), a fire station, police and a hospital. Each land unlocks three specials as the city grows (the desert's last is a rocket launch site), and each has its moment on its own clock, with its own sound; the town hall's bells ring the hours. Houses by the water get docks, and boats come out on it.</p>
     <p>What you hear is the firmware running at the FM-1's 44.1 kHz, not a recording. Running FM-1 firmware in the browser comes from <a href="https://www.groove-os.com/">Groove OS</a>'s emulator, by way of AMB-1.</p>
   </div>
 </section>
@@ -376,9 +376,9 @@ function hit(c, cls) {
   c.hit = d;
 }
 // what each control does, on hover (the Buttons list below says the same)
-const TIP = { SEL: "Ride along with a car (again: another)", FX: "Events page (again: Events 2, 3); black keys 1-11 call one", ENV: "Music page", ARP: "Sound page", LFO: "Time page (again: Weather)", EDIT: "A new city on the same land", GLO: "Setup page (again: Display, MIDI out); on the FM-1, SEL + GLO plays this emulator",
-  HOME: "City page: speed, start as, biome, traffic", SAVE: "On Setup: save; elsewhere: from its founding; hold: the biome's music back", SEQ: "Voices page (again: Voices 2)", PLAY: "Music plays / rests", REC: "Hold: the city stops growing",
-  "OCT-": "The lead an octave down", "OCT+": "The lead an octave up", SELECT: "Every page in turn (HOME held: the tempo)", ALGORITHM: "Look around: the landmarks", PRESETS: "The next biome: a new city there",
+const TIP = { SEL: "Ride along with a car (again: another)", FX: "Events page (again: Events 2, 3); black keys 1-11 call one", ENV: "Music page", ARP: "Sound page", LFO: "Time page (again: Weather)", EDIT: "A new city: new land, a biome by luck (SEL + EDIT: the secret)", GLO: "Setup page (again: Display, MIDI out); on the FM-1, SEL + GLO plays this emulator",
+  HOME: "City page: speed, traffic, people, chats", SAVE: "On Setup: save; elsewhere: from its founding; hold: the biome's music back", SEQ: "Voices page (again: Voices 2)", PLAY: "Music plays / rests", REC: "Hold: the city stops growing",
+  "OCT-": "The lead an octave down", "OCT+": "The lead an octave up", SELECT: "Every page in turn (HOME held: the tempo)", ALGORITHM: "Look around: the landmarks", PRESETS: "A new city",
   MASTER: "Volume" };
 for (const [n, c] of [...Object.entries(buttons), ...Object.entries(knobs)]) if (TIP[n]) c.g.setAttribute("aria-description", TIP[n]);
 for (const k of Object.values(knobs)) hit(k, "knob");

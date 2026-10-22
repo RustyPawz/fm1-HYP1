@@ -10,7 +10,7 @@
 #define EN_VERSION "DEV"
 #endif
 #define PROJ_MAGIC 0x31595443u           /* "CTY1" */
-#define PROJ_FORMAT 2u                   /* 2: no preset cities; a new city each power-on */
+#define PROJ_FORMAT 3u                   /* 3: no preset cities, no start stage or biome: a new town, random land, each power-on */
 
 typedef struct {
     uint32_t magic, format;

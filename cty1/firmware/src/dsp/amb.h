@@ -110,6 +110,9 @@ enum {
     E_LAUNCH,        /* a rocket lifts off: a rumble rising, a tone climbing */
     E_JET,           /* a plane takes off */
     E_HORN,          /* a ship's horn */
+    E_SPECIAL,       /* a biome's special has its moment: a = biome * 3 + which (0..20) */
+    E_CHIME,         /* the town hall's bells: a of them */
+    E_SIREN,         /* the game's siren: a = 0 off, 1 wail, 2 yelp, 3 hi-lo */
     E_NEV
 };
 void en_event(int type, int a, int b);

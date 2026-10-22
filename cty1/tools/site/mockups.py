@@ -198,7 +198,7 @@ SPECIAL_LABEL = ["BIODOME", "ROCKET LAUNCH", "OBSERVATORY", "CRUISE PORT", "AIRP
 WEATHER_LABEL = ["THUNDERSTORM", "DUST STORM", "BLIZZARD", "TYPHOON", "THUNDERSTORM", "TROPICAL STORM", "THUNDERSTORM"]
 SCREENS = ["splash", "splash_cty", "city", "music", "sound", "time", "weather", "voices", "voices2", "events", "events2", "events3",
            "setup", "display", "midiout", "help", "full", "ride", "bolt", "quake", "robbery", "crash", "ufo", "festival", "night",
-           "storm", "snow", "zones", "value", "whole", "game", "synced", "synced_setup",
+           "storm", "snow", "zones", "value", "whole", "game", "game_pick", "blackout", "synced", "synced_setup",
            *[f"b_{b}" for b in BIOMES], *[f"d_{b}" for b in BIOMES], *[f"w_{b}" for b in BIOMES], *[f"x_{b}" for b in BIOMES],
            "hall0", "hall1", "hall2", "hall3",
            "t_asphalt", "t_neon", "t_blueprint", "t_sunset", "t_terminal", "t_mono"]
@@ -245,8 +245,11 @@ def main():
             label=["CITY · HOME", "MUSIC · ENV", "SOUND · ARP", "TIME · LFO", "WEATHER · LFO TWICE", "VOICES · SEQ", "VOICES 2 · SEQ TWICE",
                    "EVENTS · FX", "EVENTS 2 · FX TWICE", "EVENTS 3 · FX X3", "SETUP · GLO", "DISPLAY · GLO TWICE", "MIDI OUT · GLO X3",
                    "HOLD A BUTTON: ITS CARD", "IDLE VIEW · A MINUTE UNTOUCHED", "RIDING ALONG · SEL"])
-    screens(["bolt", "quake", "robbery", "crash", "ufo", "festival", "night", "snow"], OUT / "cty-incidents.png", cols=4,
-            label=["LIGHTNING AND FIRE", "EARTHQUAKE", "ROBBERY", "CAR CRASH", "UFO", "FESTIVAL", "NIGHT", "SNOW"])
+    screens(["bolt", "quake", "robbery", "crash", "ufo", "festival", "blackout", "night"], OUT / "cty-incidents.png", cols=4,
+            label=["LIGHTNING AND FIRE", "EARTHQUAKE", "ROBBERY", "CAR CRASH", "UFO", "FESTIVAL", "BLACKOUT", "NIGHT"])
+    screens(["game_pick", "game"], OUT / "cty-game.png", label=["SEL + EDIT: PICK YOUR RIDE", "ON A CALL: FOLLOW THE ARROW"])
+    b, k = L["game"]
+    scene(device("game", b, k), OUT / "cty-device-game.png", "FIRST RESPONDER", "SEL + EDIT: TAKE THE CALLS YOURSELF", glow="#ffd02a")
     screens(["zones", "value", "whole", "ride"], OUT / "cty-views.png", cols=4, label=["ZONES", "LAND VALUE", "THE WHOLE CITY", "RIDING ALONG"])
     screens(["t_asphalt", "t_neon", "t_blueprint", "t_sunset", "t_terminal", "t_mono"], OUT / "cty-themes.png", cols=3,
             label=["ASPHALT", "NEON", "BLUEPRINT", "SUNSET", "TERMINAL", "MONO"])

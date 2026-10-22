@@ -6,20 +6,22 @@
  *   keys           the lead, snapped to the city's scale. On TIME black keys 1-4 jump to dawn, noon, dusk,
  *                  night; on WEATHER black keys 1-7 set the sky (auto, then the land's six); on EVENTS black keys
  *                  1-10 call lightning, a quake, a robbery, a crash, a UFO, birds, the land's disaster, a festival,
- *                  a blackout, meteors
+ *                  a blackout, meteors; black key 11 the biggest special's show
  *   PLAY           the music plays / rests (the city lives on)   REC   HOLD: the city stops growing
- *   EDIT           a new city on the same land (each power-on founds a new one anyway)
+ *   EDIT           a new city: new land, a new biome, from a town (as each power-on does)
+ *   SEL + EDIT     the secret: FIRST RESPONDER (game.c)
  *   SEL            ride along: the camera follows a car (again: another; ALGORITHM lets go)
  *   OCT- / OCT+    the lead an octave down / up
  *   SELECT         every page in turn (with HOME held: the tempo)
- *   ALGORITHM      look around: the camera to the next landmark      PRESETS  the next biome: a new city there
+ *   ALGORITHM      look around: the camera to the next landmark      PRESETS  a new city too
  *   HOME ENV ARP LFO SEQ FX GLO   the pages: CITY, MUSIC, SOUND, TIME (again: WEATHER), VOICES (again: VOICES 2),
  *                  EVENTS (again: EVENTS 2, 3), SETUP (again: DISPLAY, then MIDI OUT)
  *   KNOB 1-4       the page's four values
  *   SAVE           on the Setup pages: saves the settings; elsewhere: the city again from its founding;
  *                  held 1.5 s: the biome's music back
  * Untouched a while (Idle), the screen gives itself to the city: the camera rides with the cars, each car's
- * route sings the lead, and the incidents take the camera when they happen. */
+ * route sings the lead, and the incidents take the camera when they happen. Every city starts a town; the biome is
+ * the luck of the draw. */
 #include "../dsp/fastmath.h"
 /* the few string pieces (the device's libc has none) */
 static int s_len(const char *s) { int n = 0; while (s[n]) n++; return n; }
@@ -36,17 +38,17 @@ static const char *const VIEW_NAME[NVIEWS] = {"City", "Music", "Sound", "Time", 
 static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_ENV, B_ARP, B_LFO, B_LFO, B_SEQ, B_SEQ, B_FX, B_FX, B_FX, B_GLO, B_GLO, B_GLO};
 enum { K_LEDS = 200, K_CPU, K_TIME, K_NONE };
 static const char *const KNOB_LABEL[NVIEWS][4] = {
-    {"Speed", "Start as", "Biome", "Traffic"},    {"Tempo", "Density", "Swing", "City bed"},
+    {"Speed", "Traffic", "People", "Chats"},    {"Tempo", "Density", "Swing", "City bed"},
     {"Flavor", "Lead", "Echo", "Crush"},          {"Day", "Season", "Days each", "Clock"},
-    {"Weather", "Change", "Birds", "People"},     {"Bells", "Arps", "Bass", "Drums"},
+    {"Weather", "Change", "Birds", "Night"},     {"Bells", "Arps", "Bass", "Drums"},
     {"Pad", "Lead", "Effects", "Sirens"},         {"Lightning", "Quakes", "Robbery", "Crashes"},
     {"UFOs", "Regional", "Festivals", "Blackouts"}, {"Meteors", "Follow", "Disasters", "Idle"},
     {"Key", "Tune", "Sync", "Mood"},
     {"Theme", "Zoom", "Map", "Labels"},           {"Sends", "Channels", "Lights", "CPU"},
 };
 static const uint8_t VIEW_PAR[NVIEWS][4] = {
-    {P_SPEED, P_START, P_BIOME, P_TRAFFIC}, {P_TEMPO, P_DENSITY, P_SWING, P_BED}, {P_FLAVOR, P_LEAD, P_ECHO, P_CRUSH},
-    {P_DAYLEN, P_SEASON, P_SEASONDAYS, 0}, {P_WEATHER, P_WPACE, P_BIRDS, P_PEOPLE}, {P_VBELLS, P_VARPS, P_VBASS, P_VDRUMS},
+    {P_SPEED, P_TRAFFIC, P_PEOPLE, P_CHATS}, {P_TEMPO, P_DENSITY, P_SWING, P_BED}, {P_FLAVOR, P_LEAD, P_ECHO, P_CRUSH},
+    {P_DAYLEN, P_SEASON, P_SEASONDAYS, 0}, {P_WEATHER, P_WPACE, P_BIRDS, P_NIGHT}, {P_VBELLS, P_VARPS, P_VBASS, P_VDRUMS},
     {P_VPAD, P_VLEAD, P_VFX, P_VSIREN}, {P_LIGHTNING, P_QUAKES, P_ROBBERY, P_CRASH}, {P_UFO, P_REGION, P_FEST, P_BLACKOUT},
     {P_METEOR, P_FOLLOW, P_DISASTER, P_IDLE},
     {P_KEY, P_TUNE, P_SYNC, P_MOOD}, {P_THEME, P_ZOOM, P_MAP, P_LABELS}, {P_MIDI, P_MCH, 0, 0}};
@@ -522,9 +524,9 @@ static void button(int b)
     case B_SEL:
         ride_next();
         break;
-    case B_EDIT:                                 /* a new city, in the same biome */
-        found(C.biome, 0);
-        say_city("A NEW CITY");
+    case B_EDIT:
+        found(-1, 1);                            /* a new city: new land, a new biome, from a town */
+        say_city(0);
         break;
     case B_PLAY:
         if (en_playing) {
@@ -817,6 +819,7 @@ static void rm_tick(void)
 }
 
 static int game_on(void);
+#define G_TS 20                                  /* the game's zoom: closer than the city's own */
 static void game_input(uint32_t btn, uint32_t keys);
 static void game_pos(float *x, float *y);
 
@@ -925,6 +928,8 @@ static void cam_update(float dt)
         }
     if (!cam.ts || target < cam.ts || (ui.full && cam.ts != target && !fits_at(cam.ts)))
         cam.ts = target;
+    if (game_on())                               /* the secret game: close in */
+        cam.ts = target = G_TS;
     if (ui.full && !game_on()) {                 /* the idle view: ride with the cars, the incidents first */
         if (life_focus(&fx, &fy)) {
             tx = fx;
@@ -1090,7 +1095,7 @@ static void input(void)
         ui.act_t = ui.turn_t = plat_ms();
     }
     if ((e = plat_enc(EN_PRESET)) != 0) {
-        found(((int)C.biome + (int)e % NBIOME + NBIOME) % NBIOME, 1);   /* PRESETS: the biomes in turn */
+        found(-1, 1);                            /* PRESETS: a new city too */
         say_city(0);
         ui.act_t = ui.turn_t = plat_ms();
     }
@@ -2043,10 +2048,11 @@ static void ln(float x0, float y0, float x1, float y1, uint16_t c)
 {
     cv_line(rnd_i(SXf + x0 * SK), rnd_i(SYf + y0 * SK), rnd_i(SXf + x1 * SK), rnd_i(SYf + y1 * SK), c);
 }
-static void flag(float x, float y, uint16_t c)
+static void flag(float x, float y, uint16_t c)  /* fluttering in the wind */
 {
+    float w = 1.3f + 0.4f * fm_sinf((float)plat_ms() / 220.0f + x * 1.7f + y);
     P(x, y, 0.4f, 3.0f, H(0x5d6168));
-    P(x + 0.4f, y, 1.6f, 1.0f, c);
+    P(x + 0.4f, y, w, 1.0f, c);
 }
 /* the town hall: a 4 x 4 block by the crossroads, growing with the town (L 1..4) */
 static void sprite_hall(const st_t *st)
@@ -2076,7 +2082,10 @@ static void sprite_hall(const st_t *st)
             P(9.4f + (float)k * 2.5f, 14.4f, 1, 1.6f, H(0xc9c0a8));
         bevel(14, 1, 4, 5, H(0xd8c890));
         circ(16, 3.4f, 1.1f, H(0xf8f6ee));
-        ln(16, 3.4f, 16, 2.6f, H(0x2a2d33));
+        {                                        /* the clock keeps the city's time */
+            float a = phase() * FM_TWO_PI * 2.0f;
+            ln(16, 3.4f, 16 + fm_sinf(a) * 0.9f, 3.4f - fm_cosf(a) * 0.9f, H(0x2a2d33));
+        }
         for (k = 0; k < 4; k++) {
             P(3 + (float)k * 7.5f, 22, 4, 1.4f, k & 1 ? H(0xe8b931) : H(0xd9473f));
             P(3 + (float)k * 7.5f, 28, 4, 1.4f, k & 1 ? H(0xd9473f) : H(0xf2a0c0));
@@ -2428,6 +2437,134 @@ static void sprite_unlock(const st_t *st)
         break;
     }
     }
+    {                                            /* its moment (region.c specials_update, every so often): an animation to its sound */
+        float e = sp_ev(u), f;
+        if (e < 0.0f)
+            return;
+        f = e * 6.0f;                            /* seconds in */
+        switch (b * 3 + u) {
+        case 0:                                  /* the saw throws sawdust, a log rolls off */
+            for (k = 0; k < 5; k++) {
+                float q = f * 1.3f + (float)k * 0.2f;
+                q -= fm_floorf(q);
+                PA(5.0f + q * 5.0f, 4.0f - q * 3.0f + (float)(k & 1), 1.2f, 1.2f, H(0xe8d0a0), (uint32_t)(220.0f * (1.0f - q)));
+            }
+            if (f > 4.5f)
+                circ(9.0f + (f - 4.5f) * 3.0f, 9.0f, 1.0f, H(0xa07848));
+            break;
+        case 1:                                  /* the lamp up the tower flashes */
+            if ((int)(f * 4.0f) & 1)
+                circ(13.5f, 2.2f, 1.6f, H(0xffe680));
+            break;
+        case 2:                                  /* the dome blooms: flowers open through it */
+            for (k = 0; k < 12; k++) {
+                float a = (float)k * 0.5236f, r = 2.0f + (float)(k % 4) * 2.0f;
+                if (f * 2.0f > (float)k)
+                    circ(12 + fm_cosf(a) * r, 12 + fm_sinf(a) * r, 0.9f, k % 3 == 0 ? H(0xff6a8a) : k % 3 == 1 ? H(0xffd04a) : H(0xc88aff));
+            }
+            break;
+        case 3:                                  /* the panels turn: a glint sweeps across */
+            for (k = 0; k < 5; k++)
+                if ((int)(f * 2.0f) % 5 == k)
+                    P(1, 1.0f + (float)k * 3.0f, 14, 2.2f, H(0xd8eaff));
+            break;
+        case 4:                                  /* a splash in the pool, the rings spread */
+            circ(8, 10, 0.5f + fm_minf(f, 2.0f) * 1.2f, H(0x9ae0f0));
+            circ(8, 10, 0.3f + fm_minf(f, 2.0f) * 0.7f, H(0x3fb6d0));
+            if (f < 1.0f)
+                for (k = 0; k < 5; k++)
+                    dot(6.0f + (float)k, 9.0f - f * 3.0f + (float)(k & 1), H(0xf4fafc));
+            break;
+        case 6: {                                /* a skier comes down the slope, a trail behind */
+            float y = f * 2.5f;
+            for (k = 0; k < 4; k++)
+                dot(1.0f + fm_sinf((y - (float)k) * 1.5f) * 0.8f + 1.0f, y - (float)k, H(0xc9d6de));
+            dot(2.0f + fm_sinf(y * 1.5f) * 0.8f, y, H(0xd9473f));
+            break;
+        }
+        case 7: {                                /* a second gondola, its bell glinting */
+            float g = 1.0f - e;
+            P(4.5f + g * 11.0f - 0.8f, 11.0f - g * 11.0f, 1.8f, 1.6f, H(0x3f8fd0));
+            if ((int)(f * 3.0f) & 1)
+                dot(5, 8, H(0xffe680));
+            break;
+        }
+        case 8:                                  /* the shutter open, a beam to the stars */
+            for (k = 0; k < 3; k++)
+                PA(11.0f + (float)k * 0.4f, 0, 1.2f, 11, H(0xe8f0ff), 60u + 40u * (uint32_t)k);
+            for (k = 0; k < 4; k++)
+                if (((int)(f * 3.0f) + k) & 1)
+                    dot(3.0f + (float)k * 6.0f, 1.0f + (float)(k & 1) * 2.0f, H(0xffffff));
+            break;
+        case 9:                                  /* a boat heads out, gulls wheel over */
+            P(3.6f + f * 2.0f, 13, 3, 1.4f, H(0x3f8fd0));
+            for (k = 0; k < 3; k++) {
+                float a = f * 1.5f + (float)k * 2.1f;
+                dot(8 + fm_cosf(a) * 5.0f, 6 + fm_sinf(a) * 2.0f, H(0xf4f4f2));
+            }
+            break;
+        case 10: case 16:                        /* the music: notes rising */
+            for (k = 0; k < 4; k++) {
+                float q = f * 0.6f + (float)k * 0.25f;
+                q -= fm_floorf(q);
+                P(4.0f + (float)k * 2.5f, 12.0f - q * 10.0f, 0.8f, 0.8f, k & 1 ? H(0xff6a8a) : H(0xffe680));
+                P(4.6f + (float)k * 2.5f, 11.0f - q * 10.0f, 0.3f, 1.2f, k & 1 ? H(0xff6a8a) : H(0xffe680));
+            }
+            if (b * 3 + u == 16)                 /* and the ice-cream cart rolls along */
+                bevel(3.5f + fm_minf(f, 4.0f) * 1.5f, 13, 3, 2, H(0xf4b8d0));
+            break;
+        case 12:                                 /* the auger pours grain into a truck */
+            P(12.8f, 4, 0.8f, 6, H(0xe8c860));
+            for (k = 0; k < 4; k++) {
+                float q = f * 2.0f + (float)k * 0.25f;
+                q -= fm_floorf(q);
+                PA(12.0f + q * 3.0f, 8.0f - q * 3.0f, 1.2f, 1.2f, H(0xe8d8a0), (uint32_t)(160.0f * (1.0f - q)));
+            }
+            break;
+        case 13:                                 /* balloons let go */
+            for (k = 0; k < 4; k++) {
+                float y = 11.0f - f * 2.0f - (float)k;
+                if (y > -2.0f)
+                    circ(2.0f + (float)k * 3.0f + fm_sinf(f + (float)k) * 0.6f, y, 0.8f, k & 1 ? H(0xff6a8a) : H(0x3f8fd0));
+            }
+            break;
+        case 15:                                 /* the lamp blazes, its beam swinging round */
+            {
+                float a = f * 2.0f;
+                circ(6, 6, 1.4f, H(0xffffff));
+                ln(6, 6, 6 + fm_cosf(a) * 9.0f, 6 + fm_sinf(a) * 9.0f, H(0xfff2a0));
+                ln(6, 6, 6 - fm_cosf(a) * 9.0f, 6 - fm_sinf(a) * 9.0f, H(0xfff2a0));
+            }
+            break;
+        case 17:                                 /* a full coaster train, screaming round fast */
+            for (k = 0; k < 4; k++) {
+                float c2 = f * 4.0f - (float)k * 0.25f;
+                circ(18.0f + fm_cosf(c2) * 4.5f, 6.0f + fm_sinf(c2 * 2.0f) * 3.5f, 0.7f, k ? H(0xffd04a) : H(0x3f8fd0));
+            }
+            break;
+        case 18:                                 /* the race runs hard: spray off the wheel */
+            for (k = 0; k < 5; k++) {
+                float q = f * 2.0f + (float)k * 0.2f;
+                q -= fm_floorf(q);
+                PA(11.0f + q * 3.0f, 9.0f + q * 3.0f, 1, 1, H(0xf4fafc), (uint32_t)(220.0f * (1.0f - q)));
+            }
+            break;
+        case 19:                                 /* steam from the whistle, puff on puff */
+            for (k = 0; k < 4; k++) {
+                float q = f * 1.2f + (float)k * 0.25f;
+                q -= fm_floorf(q);
+                PA(8.6f + q * 2.0f, 1.0f - q * 4.0f, 2.0f + q * 2.0f, 2.0f + q * 2.0f, H(0xf4f4f2), (uint32_t)(220.0f * (1.0f - q)));
+            }
+            break;
+        case 20:                                 /* the floodgates open: the spillway bursts white */
+            for (k = 0; k < 4; k++)
+                P(3.0f + (float)k * 5.0f, 12, 3, 11, H(0xf4fafc));
+            for (k = 0; k < 6; k++)
+                PA(1.0f + (float)k * 4.0f, 20.0f + fm_sinf(f * 3.0f + (float)k) * 1.0f, 3, 2, H(0xffffff), 150u);
+            break;
+        default: break;                          /* the rocket, the ship, the plane: their show */
+        }
+    }
 }
 
 static void sprite_civ(const st_t *st)
@@ -2748,6 +2885,57 @@ static float st_height(const st_t *st)
     if (st->type == BT_COM)
         return HC[st->L] * (st->size > 1 && st->L == 5 ? 1.4f : 1.0f);
     return HI[st->L];
+}
+
+/* the boats: by kind, along their heading, a wake behind */
+static void draw_boats(int s)
+{
+    rect_t vr = view_rect(2.0f);
+    uint32_t now = plat_ms();
+    int b;
+    for (b = 0; b < NBOAT; b++) {
+        float cx, cy, L, W, hx, hy;
+        int k = boats[b].kind, j;
+        uint16_t hull;
+        if (!boats[b].on || !in_rect(&vr, boats[b].x, boats[b].y))
+            continue;
+        cx = (float)VOX + boats[b].x * (float)s;
+        cy = (float)VOY + boats[b].y * (float)s;
+        hx = (float)boats[b].dx;
+        hy = (float)boats[b].dy;
+        L = (k == BK_CARGO ? 1.7f : k == BK_BARGE ? 1.2f : k == BK_FERRY ? 1.0f : k == BK_ROW ? 0.35f : k == BK_CANOE ? 0.45f : 0.5f) * (float)s;
+        W = (k == BK_CARGO ? 0.5f : k == BK_FERRY ? 0.45f : k == BK_BARGE ? 0.4f : 0.22f) * (float)s;
+        if (W < 1.0f)
+            W = 1.0f;
+        for (j = 1; j < 6; j++)                  /* the wake */
+            px_mix((int)(cx - hx * (L * 0.5f + (float)j * 1.5f) + hy * (float)(j & 1) * (float)j * 0.4f),
+                   (int)(cy - hy * (L * 0.5f + (float)j * 1.5f) + hx * (float)(j & 1) * (float)j * 0.4f), H(0xe8f4fa),
+                   (uint32_t)(200 - j * 30) * (k == BK_MOTOR || k == BK_FERRY ? 1u : 1u));
+        hull = k == BK_ROW || k == BK_CANOE ? (k == BK_CANOE ? H(0xd9733f) : H(0x8a6a44)) : k == BK_BARGE ? H(0x4a4c52)
+             : k == BK_CARGO ? H(0x3a4a6a) : H(0xf4f4f2);
+        if (hx != 0.0f)
+            cv_rect((int)(cx - L * 0.5f), (int)(cy - W * 0.5f), (int)L + 1, (int)W + 1, hull);
+        else
+            cv_rect((int)(cx - W * 0.5f), (int)(cy - L * 0.5f), (int)W + 1, (int)L + 1, hull);
+        if (s >= 8) {                            /* what's aboard */
+            if (k == BK_CARGO || k == BK_BARGE) {
+                for (j = 0; j < 4; j++) {
+                    float o = (-0.3f + (float)j * 0.18f) * L;
+                    cv_rect((int)(cx + hx * o - W * 0.3f), (int)(cy + hy * o - W * 0.3f), (int)(W * 0.6f) + 1, (int)(W * 0.6f) + 1,
+                            CARCOL[(boats[b].col + j) % 10]);
+                }
+            } else if (k == BK_SAIL) {
+                float sw = fm_sinf((float)now / 700.0f + (float)b) * 0.3f;
+                ellipse_mix(cx + hy * (float)s * (0.25f + sw * 0.1f), cy - hx * (float)s * 0.25f, (float)s * 0.18f, (float)s * 0.3f, H(0xffffff), 240);
+            } else if (k == BK_FERRY) {
+                cv_rect((int)(cx - W * 0.3f), (int)(cy - W * 0.3f), (int)(W * 0.6f) + 1, (int)(W * 0.6f) + 1, H(0x3f8fd0));
+            } else if (k == BK_MOTOR) {
+                cv_rect((int)(cx + hx * L * 0.15f), (int)(cy + hy * L * 0.15f), 1, 1, H(0x5ad2ff));
+            } else {
+                cv_rect((int)cx, (int)cy, 1, 1, SHIRT[boats[b].col]);
+            }
+        }
+    }
 }
 
 /* ---------------------------------------------------------- the traffic --- */
@@ -3590,6 +3778,28 @@ static void draw_view(int r0, int bh)
             if (si && c_st[si].x == x && c_st[si].y == y && !(c_st[si].flags & SF_DEAD) && nvis < 1024)
                 vis_list[nvis++] = (uint16_t)si;
         }
+    draw_boats(s);
+    for (k = 0; k < nvis; k++) {                 /* the docks out into the water */
+        const st_t *st = &c_st[vis_list[k]];
+        static const int8_t D[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        int d, wx2, wy2, px, py;
+        if (!(st->flags & SF_DOCK) || st->pad < 1 || st->pad > 4)
+            continue;
+        d = st->pad - 1;
+        wx2 = st->x + D[d][0];
+        wy2 = st->y + D[d][1];
+        px = VOX + wx2 * s;
+        py = VOY + wy2 * s;
+        at(px, py, s);
+        if (D[d][0])                             /* the planks, a post, a little boat tied up */
+            P(D[d][0] > 0 ? 0 : 3, 3, 5, 2, H(0xa07848));
+        else
+            P(3, D[d][1] > 0 ? 0 : 3, 2, 5, H(0xa07848));
+        if (s >= 8) {
+            dot(D[d][0] ? (D[d][0] > 0 ? 4.4f : 3.0f) : 2.4f, D[d][1] ? (D[d][1] > 0 ? 4.4f : 3.0f) : 2.4f, H(0x6a4a2a));
+            P(D[d][0] ? 1.0f : 5.4f, D[d][0] ? 5.4f : 1.0f, D[d][0] ? 3.0f : 1.4f, D[d][0] ? 1.4f : 3.0f, CARCOL[(st->x + st->y) % 10]);
+        }
+    }
     for (k = 0; k < nvis; k++) {                 /* their shadows */
         const st_t *st = &c_st[vis_list[k]];
         int hp = (int)(st_height(st) * (float)s / 8.0f + 0.5f);
@@ -3627,6 +3837,13 @@ static void draw_view(int r0, int bh)
         }
     draw_region(s, x0, x1, y0, y1, 0);
     draw_night(s, vis_list, nvis);
+    if (blackout.on) {                           /* the power's out: the whole town a shade dimmer, day or night */
+        uint32_t el = plat_ms() - blackout.t0;
+        float k2 = el < 1500u ? (float)el / 1500.0f : el > 14000u ? fm_maxf(0.0f, 1.0f - (float)(el - 14000u) / 2000.0f) : 1.0f;
+        if (el > 14000u && ((el / 120u) & 1u) && el < 15000u)   /* the flicker coming back */
+            k2 *= 0.4f;
+        tint(H(0x0c1018), 0.22f * k2);
+    }
     draw_region(s, x0, x1, y0, y1, 1);
     draw_fires(s);
     {
@@ -3747,7 +3964,7 @@ static int help_lines(int b, const char *l[HELP_LINES])
     int n = 0;
 #define L(t) (l[n++] = (t))
     switch (b) {
-    case B_HOME: L("THE CITY: SPEED, START AS,"); L("BIOME, TRAFFIC"); L("+ SELECT: THE TEMPO"); break;
+    case B_HOME: L("THE CITY: SPEED,"); L("TRAFFIC, PEOPLE, CHATS"); L("+ SELECT: THE TEMPO"); break;
     case B_ENV: L("THE MUSIC: TEMPO,"); L("DENSITY, SWING, CITY BED"); break;
     case B_ARP: L("THE SOUND: FLAVOR (NES,"); L("GB, SID), LEAD, ECHO,"); L("CRUSH"); break;
     case B_LFO: L("TIME: THE DAY, SEASONS"); L("AGAIN: THE WEATHER"); L("BLACK KEYS: THE HOUR,"); L("THE SKY"); break;
@@ -3755,7 +3972,7 @@ static int help_lines(int b, const char *l[HELP_LINES])
     case B_SEL: L("RIDE ALONG: THE"); L("CAMERA FOLLOWS A CAR"); L("AGAIN: ANOTHER"); break;
     case B_FX: L("EVENTS: HOW OFTEN"); L("AGAIN: EVENTS 2, 3"); L("BLACK KEYS 1-11:"); L("CALL ONE NOW"); break;
     case B_GLO: L("SETUP: KEY, TUNE,"); L("SYNC, MOOD"); L("AGAIN: DISPLAY, MIDI OUT"); L("SEL + GLO: REMOTE"); break;
-    case B_EDIT: L("A NEW CITY,"); L("THE SAME BIOME"); L("(PRESETS: ANOTHER BIOME)"); break;
+    case B_EDIT: L("A NEW CITY: NEW LAND,"); L("A NEW BIOME, A TOWN"); L("SEL + EDIT: THE SECRET"); break;
     case B_REC: L("HOLD: THE CITY STOPS"); L("GROWING; LIFE AND"); L("THE MUSIC GO ON"); break;
     case B_OCTDN: L("THE LEAD AN"); L("OCTAVE DOWN"); L("WITH OCT+, 5 S: UPDATE MODE"); break;
     case B_OCTUP: L("THE LEAD AN"); L("OCTAVE UP"); L("WITH OCT-, 5 S: UPDATE MODE"); break;

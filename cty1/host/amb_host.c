@@ -369,6 +369,29 @@ static int expect(const char *what, const char *val)
         got = rg.on;
     else if (!strcmp(what, "festival"))
         got = fest.on;
+    else if (!strncmp(what, "shore", 5)) {        /* (debug) houses and shops within N of the water */
+        int k, n = atoi(what + 5), dx, dy;
+        got = 0;
+        for (k = 1; k < NST; k++) {
+            const st_t *t = &c_st[k];
+            int hit = 0;
+            if (!t->type || (t->flags & SF_DEAD) || (t->type != BT_RES && t->type != BT_COM))
+                continue;
+            for (dy = -n; dy <= n && !hit; dy++)
+                for (dx = -n; dx <= n && !hit; dx++)
+                    hit = in_map(t->x + dx, t->y + dy) && TERR((t->y + dy) * MW + t->x + dx) == T_WATER;
+            got += hit;
+        }
+    }
+    else if (!strcmp(what, "docks"))
+        got = C.docks;
+    else if (!strcmp(what, "boats")) {
+        int k;
+        got = 0;
+        for (k = 0; k < NBOAT; k++)
+            got += boats[k].on;
+    } else if (!strcmp(what, "moments"))          /* the specials' moments so far */
+        got = (int)sp_count;
     else if (!strcmp(what, "blackout"))
         got = blackout.on;
     else if (!strcmp(what, "meteors"))
@@ -440,8 +463,12 @@ static int expect(const char *what, const char *val)
         got = rm.on ? 1 + rm.link : 0;
     else if (!strcmp(what, "game"))               /* the secret game: on, people taken */
         got = gm.on;
-    else if (!strcmp(what, "taken"))
-        got = (int)gm.taken;
+    else if (!strcmp(what, "gtile"))              /* the game's vehicle: its tile (-1 none) */
+        got = game_car >= 0 && cars[game_car].on ? cars[game_car].path[1] : -1;
+    else if (!strcmp(what, "gscore"))
+        got = (int)gm.score;
+    else if (!strcmp(what, "calls"))
+        got = (int)gm.calls;
     else if (!strcmp(what, "full"))               /* the idle view */
         got = ui.full;
     else if (!strncmp(what, "par", 3))          /* parN: parameter N (amb.h P_*) */
@@ -610,7 +637,14 @@ int main(int argc, char **argv)
             printf("\n");
         } else if (!strcmp(cmd, "expect"))
             fails += expect(a, b);
-        else if (!strcmp(cmd, "entropy"))          /* entropy N: the next power-on's (and new city's) randomness */
+        else if (!strcmp(cmd, "set")) {           /* set P V: a parameter straight (the tests: Start as, Biome) */
+            int pp = atoi(a);
+            if (pp >= 0 && pp < P_NPARAMS) {
+                proj.par[pp] = (int16_t)atoi(b);
+                en_set(pp, proj.par[pp]);
+            }
+            run_ms(2);
+        } else if (!strcmp(cmd, "entropy"))          /* entropy N: the next power-on's (and new city's) randomness */
             host_entropy = (uint32_t)strtoul(a, 0, 0);
         else if (!strcmp(cmd, "splash"))           /* the boot cards for MS (then reboot) */
             ui_splash_ms = (uint32_t)strtoul(a, 0, 10);

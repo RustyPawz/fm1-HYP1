@@ -32,10 +32,13 @@ press SEL
 tap EDIT
 release SEL
 expect game 1
+wait 800
+shot scr_game_pick.png
+tapkey w0
+wait 6000
+tapkey w1
 wait 3000
-key w2 down
-wait 4000
-key w2 up
+expect game 1
 shot scr_game.png
 tap HOME
 expect game 0

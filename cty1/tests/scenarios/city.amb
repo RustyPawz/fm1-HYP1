@@ -46,42 +46,40 @@ tap REC
 expect hold 1
 tap REC
 expect hold 0
-# the biomes in turn, each a new city with its music (it starts in River lands: 6)
+# a new city on every turn of PRESETS (or EDIT), each in its biome with its music; the host can ask for a biome
+# (set 46 B+1: there's no knob for it, the biome is the luck of the draw)
 expect biome 6
+set 46 1
 spin PRESET 1
 expect biome 0
 expect stage 0
 expect par4 96
-spin PRESET 3
-expect biome 3
-expect par4 112
-spin PRESET -2
-expect biome 1
-expect par4 88
+set 46 4
 tap EDIT
 wait 200
+expect biome 3
+expect stage 0
+expect par4 112
+set 46 2
+spin PRESET -1
 expect biome 1
 expect par4 88
-tap HOME
-spin K2 2
-spin K3 2
-expect par46 2
-tap SAVE
-wait 3000
-expect stage 2
+set 46 0
 tap GLO
 tap SAVE
 expect store_writes 1
 expect dirty 0
-# a power-on: a new city, in the biome asked for (Desert), grown to a city
+# a power-on: a new city, always a town, in a biome of its own
 entropy 777
 reboot
 wait 3000
-expect biome 1
-expect stage 2
-shot city_startas.png
+expect stage 0
+expect par46 0
+shot city_newtown.png
+tap HOME
 spin K4 3
 press SAVE
 wait 1700
 release SAVE
-expect par4 88
+expect biome 6
+expect par4 104

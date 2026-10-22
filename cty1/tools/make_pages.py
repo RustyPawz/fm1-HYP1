@@ -124,7 +124,7 @@ a.kofi { display: inline-flex; align-items: center; gap: .4em; background: var(-
 <header class="site"><a class="home" href="./"><img class="panda" src="img/panda.png" width="64" height="50" alt="">CTY-1<span class="exp">Experimental</span></a>
   <nav><a href="emu/">Emulator</a><a href="install/">Install</a><a href="manual/">Manual</a><a href="__REPO__">Source</a><a class="yt" href="https://www.youtube.com/@RedtailWorks">YouTube</a><a href="https://www.redtail.works">RedtailWorks</a></nav></header>
 <div class="expnote"><b>Experimental.</b> CTY-1 is new: built and tested in the simulator and in the emulator here, not yet on a real FM-1. Install it at your own risk; HYP-1, or M-VAVE's own firmware, goes back on the same way.</div>
-<img class="hero" src="img/cty-hero.png" width="1600" height="1161" alt="An M-VAVE FM-1 running CTY-1: a pixel city seen from above, roads, a river and houses, the City page's Speed, Start as, Traffic and People below it.">
+<img class="hero" src="img/cty-hero.png" width="1600" height="1161" alt="An M-VAVE FM-1 running CTY-1: a pixel city seen from above, roads, a river and houses, the City page's Speed, Traffic, People and Chats below it.">
 <p class="lede"><b>CTY-1</b> turns the M-VAVE FM-1 into a small city that builds itself and plays a generative chiptune.
 Every time you switch it on it founds a new town on new land: forest, desert, alpine valley, volcano isles, plains, beach
 or river lands, each with its own look, weather, disaster and sound. Week by week it grows: homes,
@@ -141,14 +141,14 @@ on NES, Game Boy or SID voices.</p>
 <div class="grid">
   <div class="card"><h3>It grows</h3><p>From a <b>town</b> at a crossroads to a <b>suburb</b>, a <b>city</b> and a <b>huge city</b>: blocks grow larger outward, avenues get planted medians, roundabouts and cul-de-sacs, bridges cross the river and a causeway the bay, and a beltway opens round it.</p></div>
   <div class="card"><h3>Zones</h3><p>Homes, shops and offices, and factories try to keep to their own districts, with some mixing. Rent and jobs set the balance; old lots are redeveloped, farms give way at the edge. A school, a hospital, a fire station and the police open as it needs them.</p></div>
-  <div class="card"><h3>Life</h3><p>Cars drive real routes between homes and work; people walk, stroll the parks and stop to talk in speech bubbles. Day and night, four seasons, rain, storms, fog and snow, and birds overhead.</p></div>
-  <div class="card"><h3>Incidents</h3><p>Lightning (out of rain, storms and snow) starts a fire and the fire station sends a truck, lights flashing; left too long, a fire spreads. An earthquake shakes the screen and gates the music. A robbery brings the police, a crash an ambulance. Festivals with fireworks, blackouts, meteor showers. And, very rarely, a UFO.</p></div>
+  <div class="card"><h3>Life</h3><p>Cars drive real routes between homes and work; people walk, stroll the parks and stop to talk in speech bubbles. Houses by the water get docks, and boats come out: rowboats on the ponds, barges on the rivers, ferries and cargo ships at sea. Day and night, four seasons, rain, storms, fog and snow, and birds overhead.</p></div>
+  <div class="card"><h3>Incidents</h3><p>Lightning (out of rain, storms and snow) starts a fire and the fire station sends a truck, lights flashing; left too long, a fire spreads. An earthquake shakes the screen and gates the music. A robbery brings the police, a crash an ambulance. Festivals with fireworks and meteor showers. A blackout, likelier in a storm, puts the whole town in the dark and winds every instrument down, then brings them back one at a time. And, very rarely, a UFO.</p></div>
   <div class="card"><h3>The music</h3><p>The cars are the playheads: each road and building they pass is a rhythm and a bell. The bed of drums, bass and pad grows busier with the city; its mood picks the mode, the night closes the filter, rain and fog lengthen the echo, sirens wail in key.</p></div>
-  <div class="card"><h3>You play</h3><p>The keys play a lead in the city's scale. Call any incident or the weather from the black keys, ride along with a car, or leave it: after a minute it takes the whole screen and follows the traffic, the lights playing along.</p></div>
+  <div class="card"><h3>You play</h3><p>The keys play a lead in the city's scale. Call any incident or the weather from the black keys, ride along with a car, or leave it: after a minute it takes the whole screen and follows the traffic, the lights playing along. EDIT founds a new city whenever you like. And SEL + EDIT is a secret: take the fire truck, the police car or the ambulance out on calls yourself.</p></div>
 </div>
 <h2>Seven biomes</h2>
 <figure><img src="img/cty-biomes.png" width="2040" height="1112" alt="Seven CTY-1 cities, one in each biome: forest, desert, alpine, volcano isles, plains, beach and river lands."></figure>
-<p>Each switch-on founds a new city, in a biome of its own choosing (or the one you set). The same city grows in each, and the same
+<p>Each switch-on founds a new city, in a biome drawn by luck, always starting as a town (EDIT draws another without switching off). The same city grows in each, and the same
 events happen, but each looks, storms and sounds its own way: the desert's mesas, cacti and dust storms over a drone in Hijaz; the
 mountains' snowy peaks, blizzards and bells; the isles' palms, turquoise shallows and smoking volcano, with a clave and a steel-drum
 wave; the plains' golden grass and boom-chick; the beach's surf backbeat; the river lands' shakers and floods.</p>
@@ -161,8 +161,10 @@ wave; the plains' golden grass and boom-chick; the beach's surf backbeat; the ri
 <p>Each land unlocks three of its own as the town becomes a suburb, a city and a huge city: a lumber mill, a ranger tower and a biodome
 in the forest; a solar farm, an oasis resort and, last, a rocket launch site in the desert; a ski lodge, a cable car and an observatory up
 high; a fishing harbor, a beach resort and a cruise port on the isles; grain silos, a county fair and an airport on the plains; a
-lighthouse, a boardwalk pier and a theme park at the beach; a watermill, a riverboat dock and a hydro plant in the river lands. The last
-puts on a show: the rocket lifts off, the plane takes off, the cruise ship sails.</p>
+lighthouse, a boardwalk pier and a theme park at the beach; a watermill, a riverboat dock and a hydro plant in the river lands. Each has its
+moment on its own clock, with its own sound: the lumber mill's saw, the ranger tower's bell, the ski jumper's yodel, the lighthouse's
+foghorn, the coaster's screams, the riverboat's steam whistle. The last puts on a show every few minutes: the rocket lifts off, the
+plane takes off, the cruise ship sails, the others light up with fireworks. The town hall's bells ring the hours.</p>
 <div class="pair">
   <figure><img src="img/cty-device-launch.png" width="1600" height="1161" alt="The FM-1 as a rocket lifts off from the desert city's launch site on a column of smoke."><figcaption><b>Lift-off:</b> the desert's rocket counts down and climbs on its smoke, the music's rumble rising with it.</figcaption></figure>
   <figure><img src="img/cty-hall.png" width="2040" height="568" alt="The town hall at each stage: a brick hall, a portico and clock tower, a copper dome over a plaza, a capitol."><figcaption><b>The town hall</b> stands by the crossroads from the founding, with a fire station, police and a hospital, and grows grander with the town.</figcaption></figure>
@@ -176,7 +178,12 @@ puts on a show: the rocket lifts off, the plane takes off, the cruise ship sails
   <figure><img src="img/cty-device-night.png" width="1600" height="1161" alt="The FM-1 showing the city at night, its windows and streetlights lit."><figcaption><b>Night:</b> windows, streetlights and headlights; the music darkens to it.</figcaption></figure>
 </div>
 <h2>What happens</h2>
-<figure><img src="img/cty-incidents.png" width="2040" height="1112" alt="Eight CTY-1 screens: lightning and fire, an earthquake, a robbery, a car crash, a UFO, a festival, the night, snow."></figure>
+<figure><img src="img/cty-incidents.png" width="2040" height="1112" alt="Eight CTY-1 screens: lightning and fire, an earthquake, a robbery, a car crash, a UFO, a festival, a blackout, the night."></figure>
+<h2>A secret</h2>
+<div class="pair">
+  <figure><img src="img/cty-device-game.png" width="1600" height="1161" alt="The FM-1 playing First Responder: close over the roofs, a fire truck on the road, a yellow arrow pointing the way to a fire."><figcaption><b>First responder:</b> hold SEL and press EDIT. Pick the fire truck, the police car or the ambulance; it drives itself, white keys 1 and 2 turn it at the next junction.</figcaption></figure>
+  <figure><img src="img/cty-game.png" width="1032" height="568" alt="Two CTY-1 screens: picking a ride, then on a call with the arrow and the distance."><figcaption>One call after another: follow the arrow and get there before the building burns down, the robber gets away or the wreck is towed. Three missed and the shift's over.</figcaption></figure>
+</div>
 <h2>Ways to look</h2>
 <figure><img src="img/cty-views.png" width="2040" height="568" alt="Four CTY-1 screens: the zones, the land value, the whole city, riding along with a car."></figure>
 <figure><img src="img/cty-themes.png" width="1536" height="1112" alt="Six CTY-1 screens in its themes: Asphalt, Neon, Blueprint, Sunset, Terminal, Mono."></figure>
