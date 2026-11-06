@@ -5,7 +5,7 @@
 // bank protocol's frames go out and come back.
 //   node tests/host/voices_test.mjs build/emu/amb.wasm
 import fs from "fs";
-import { readRom, buildBank, bankOk, frame, unframe, le32, BANK_HDR, crc32 } from "../../web/voices/voices.js";
+import { readRom, buildBank, bankOk, frame, unframe, le32, BANK_HDR, crc32, sendBank } from "../../web/voices/voices.js";
 
 let fails = 0;
 const check = (ok, what) => { if (!ok) { console.log("FAIL " + what); fails++; } };
@@ -105,6 +105,38 @@ check(crc32(new TextEncoder().encode("123456789")) === 0xCBF43926, "CRC-32 of 12
   fs.writeFileSync("build/host/voices.bitv", bank);
   fs.writeFileSync("build/host/voices.frames", Uint8Array.from(frames.flat()));
   check(frames.every((f) => f.length <= 640), "every frame fits the FM-1's 640 bytes");
+}
+
+// sendBank (the Voices page's and the installer's) against a pretend FM-1 as bank.c answers: just installed, it
+// isn't there for the first tries (restarting); one DATA answer is lost on the way; the bank arrives whole
+{
+  const flash = new Uint8Array(bank.length).fill(0xFF);
+  let calls = 0, lost = 0, state = "idle";
+  const answer = (port, cmd, body) => setTimeout(() => port.onmidimessage && port.onmidimessage({ data: Uint8Array.from(frame(cmd, body)) }), 2);
+  const input = { name: "FM-1 MIDI", onmidimessage: null };
+  const output = {
+    name: "FM-1 MIDI",
+    send(msg) {
+      const m = unframe(msg);
+      if (!m) return;
+      const b = m.body, rd = (o) => (b[o] | b[o + 1] << 8 | b[o + 2] << 16 | b[o + 3] << 24) >>> 0;
+      if (m.cmd === 0x60) { state = rd(0) === bank.length ? "on" : "idle"; answer(input, 0x60, [state === "on" ? 0 : 1]); }
+      else if (m.cmd === 0x61 && state === "on") {
+        flash.set(b.slice(4), rd(0));
+        if (rd(0) === 8192 && !lost) { lost = 1; return; }   // this answer never arrives: the page asks again
+        answer(input, 0x61, [0, ...le32(rd(0))]);
+      } else if (m.cmd === 0x62 && state === "on") { const n = bankOk(flash); answer(input, 0x62, [n > 0 ? 0 : 5, Math.max(0, n)]); }
+    },
+  };
+  const access = () => { calls++; const ready = calls > 2; return Promise.resolve({ outputs: new Map(ready ? [["o", output]] : []), inputs: new Map(ready ? [["i", input]] : []) }); };
+  const said = [];
+  const n = await sendBank(access, bank, (t) => said.push(t), { waitMs: 10000 });
+  check(n === found.length, `sendBank: ${n} voices`);
+  check(calls === 3 && said.includes("Waiting for BIT-1 to start…"), `it waited for BIT-1: ${calls} tries`);
+  check(lost === 1 && flash.every((x, i) => x === bank[i]), "the bank arrives whole, a lost answer asked again");
+  let threw = "";
+  try { await sendBank(() => Promise.resolve({ outputs: new Map(), inputs: new Map() }), bank, () => {}, { waitMs: 0 }); } catch (e) { threw = e.message; }
+  check(/no FM-1/.test(threw), `no FM-1: "${threw}"`);
 }
 
 console.log(fails ? `voices: ${fails} FAILED` : "voices: all ok");

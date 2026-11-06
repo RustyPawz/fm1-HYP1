@@ -63,15 +63,16 @@
 <p>Play a GBA game's instruments on BIT-1. Choose a ROM of a game you own: this page finds the instruments of its
 sound engine, you listen and pick up to sixteen, and they become BIT-1's sounds <b>ROM 1</b> to <b>ROM 16</b>, after
 Noise sweep, on any track.</p>
-<div class="card note"><b>Your ROM stays here.</b> It's read by this page in your browser and nothing is uploaded:
-not the ROM, not the instruments. Use a ROM of a game you own. BIT-1 contains no game or audio from one; the
-bank you build is yours, on your computer and your FM-1.</div>
+<div class="card note"><b>Only a ROM of a game you own.</b> It's read by this page in your browser and nothing is
+uploaded: not the ROM, not the instruments. BIT-1 contains no game or audio from one. Read the
+<a href="#terms">terms of use</a> first: by choosing a ROM you agree to them.</div>
 <p class="small">Games on Nintendo's MP2K sound engine ("Sappy", most GBA games) work; a game with its own engine shows
 nothing to pick. Samples are the game's own, 8-bit as the GBA plays them; its Game Boy-style voices (square, wave,
 noise) play on BIT-1's own chip voices.</p>
 
 <h2>1 · The ROM</h2>
-<div class="row"><input type="file" id="rom" accept=".gba,.bin,.agb,application/octet-stream"> <span class="small">or a saved bank:</span> <input type="file" id="bankfile" accept=".bitv"></div>
+<p class="small"><label><input type="checkbox" id="agree"> I own this game and the ROM I'm choosing, and I agree to the <a href="#terms">terms of use</a>.</label></p>
+<div class="row"><input type="file" id="rom" disabled accept=".gba,.bin,.agb,application/octet-stream"> <span class="small">or a saved bank:</span> <input type="file" id="bankfile" accept=".bitv"></div>
 <div id="status"></div>
 
 <h2>2 · The instruments</h2>
@@ -92,6 +93,26 @@ noise) play on BIT-1's own chip voices.</p>
 <p class="small">The emulator takes the bank the next time you switch it on. Sending to the FM-1 needs Chrome or Edge,
 BIT-1 on the FM-1 and the FM-1 connected by USB (nothing else using its MIDI); it stops the music, writes the bank
 where M-VAVE keeps its user samples (they go), and checks it. Sending again replaces it.</p>
+<h2 id="terms">Terms of use: ROM voices</h2>
+<div class="card note">
+<p><b>You must own it.</b> Use ROM voices only with a ROM you made yourself from a game cartridge you own, or
+otherwise have the legal right to use, and only where that is lawful where you live. Downloading or sharing a
+ROM of a game you don't own may break copyright law. Banks you build contain a game's audio: keep them for your
+own use and don't share them.</p>
+<p><b>Nothing is provided.</b> BIT-1 does not include, host, link to or help you find any ROM, game, or audio from
+one. This page reads the file you choose in your browser; nothing is uploaded or collected.</p>
+<p><b>Your responsibility.</b> You alone are responsible for the ROMs you use, the sounds you take from them, and
+anything you make, record, perform, publish or share with them. RedtailWorks and BIT-1's contributors accept no
+responsibility or liability for how you use this feature, for any infringement of anyone's rights arising from
+your use, or for any loss, damage, claim or cost that follows. You use it entirely at your own risk.</p>
+<p><b>No warranty.</b> BIT-1, this page and the installer are free software, provided "as is" with no warranty of
+any kind, as set out in the GNU General Public License, version 3 (sections 15 and 16): no warranty that they
+work, are fit for a purpose, or won't harm your FM-1 or its data. Sending a bank erases what M-VAVE keeps in
+the same place (its user samples).</p>
+<p><b>Not affiliated.</b> Game names, sounds and trademarks belong to their owners. BIT-1 is not affiliated with,
+sponsored or endorsed by Nintendo, M-VAVE, or any game's developer or publisher.</p>
+<p class="small">By choosing a ROM, using a bank or sending one to an FM-1, you agree to these terms.</p>
+</div>
 </main>
 <script type="module" src="page.js"></script>
 </body>

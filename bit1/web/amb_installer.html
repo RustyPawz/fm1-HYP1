@@ -73,6 +73,17 @@
   <p class="small" data-t="back"></p>
   <p class="small"><a href="https://www.m-vave.com/download" target="_blank" rel="noopener" style="color:inherit">www.m-vave.com/download</a></p>
   </div>
+  <div class="card" id="voicescard">
+  <p><b>ROM voices (optional).</b> To have a GBA game's instruments on the FM-1 as soon as BIT-1 is on, pick them
+  first on the <a href="../voices/">Voices page</a> ("Use in the emulator" keeps them in this browser for here
+  too), or choose a bank you saved. After the install, this page waits for BIT-1 to start and sends them.</p>
+  <p class="small" id="voicesnow">No ROM voices chosen: BIT-1 installs without them (you can send some later).</p>
+  <p class="small"><label><input type="checkbox" id="voicessend" disabled> Send these ROM voices after installing (I own the game and
+    the ROM they came from, and agree to the <a href="../voices/#terms">terms</a>)</label>
+    · a saved bank: <input type="file" id="voicesfile" accept=".bitv"></p>
+  <p class="small" id="voicesterms">By sending ROM voices you confirm you own the game and the ROM they came from;
+  see the <a href="../voices/#terms">terms on the Voices page</a>.</p>
+  </div>
   <div class="card">
   <p><button id="go" disabled data-t="install"></button></p>
   <progress id="bar" max="100" value="0"></progress>
@@ -94,6 +105,7 @@
     <span data-t="license"></span> <a href="https://github.com/charlesvestal/fm1-amb" target="_blank" rel="noopener" style="color:inherit">github.com/charlesvestal/fm1-amb</a></p>
 </main>
 <script type="module">
+import { sendBank, bankOk } from "../voices/voices.js";
 /*LIB*/
 const $ = (id) => document.getElementById(id);
 const TEXT = {
@@ -254,7 +266,46 @@ async function run(img, product, isStock) {
   $("stockgo").disabled = !stock;
 }
 
-$("go").addEventListener("click", () => run(image, meta.product, false));
+/* ROM voices picked before the install (the Voices page keeps them in this browser, or a saved bank): sent
+   once BIT-1 has started after the install */
+let voices = null;
+function voicesShow(src) {
+  const n = voices ? bankOk(voices) : -1;
+  $("voicesnow").textContent = n > 0 ? `${n} ROM voice${n === 1 ? "" : "s"} chosen (${(voices.length / 1024).toFixed(0)} KB, ${src}).`
+                                     : "No ROM voices chosen: BIT-1 installs without them (you can send some later).";
+  $("voicessend").disabled = !(n > 0);
+  $("voicessend").checked = false;                 /* the terms: ticked by the user, never for them */
+  if (n <= 0) voices = null;
+}
+try {
+  const b64 = localStorage.getItem("bit1-voices");
+  if (b64) voices = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+} catch { /* nothing kept */ }
+voicesShow("from the Voices page");
+$("voicesfile").addEventListener("change", async (e) => {
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+  voices = new Uint8Array(await f.arrayBuffer());
+  if (bankOk(voices) <= 0) { voices = null; $("voicesnow").textContent = `${f.name} is not a BIT-1 bank.`; $("voicessend").disabled = true; $("voicessend").checked = false; return; }
+  voicesShow(f.name);
+});
+async function sendVoicesAfter() {
+  if (!voices || !$("voicessend").checked) return;
+  $("go").disabled = true;
+  try {
+    const n = await sendBank(() => navigator.requestMIDIAccess({ sysex: true }), voices, say, { waitMs: 60000 });
+    say(`Done: BIT-1 is installed, with ${n} ROM voices (sounds ROM 1 on, after Noise sweep).`);
+  } catch (err) {
+    say(`BIT-1 is installed, but the ROM voices weren't sent: ${err.message}. Send them from the Voices page.`);
+  } finally {
+    $("go").disabled = !image;
+  }
+}
+
+$("go").addEventListener("click", async () => {
+  await run(image, meta.product, false);
+  if (lastKey === "done") await sendVoicesAfter();
+});
 $("stockgo").addEventListener("click", () => { if (stock) run(stock.image, stock.product, true); });
 </script>
 </body>

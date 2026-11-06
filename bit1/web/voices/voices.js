@@ -167,3 +167,57 @@ export function unframe(msg) {            // a reply: { cmd, body } or null
 }
 export const le32 = (v) => [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255];
 export const BANK_CMD = { BEGIN: 0x60, DATA: 0x61, END: 0x62 };
+
+// sending a bank to the FM-1 (bank.c), shared by the Voices page and the installer. getAccess() gives a
+// MIDIAccess (asked again on each try: after an install the FM-1 restarts and its ports come back new);
+// say(text) tells the user. waitMs: how long to keep trying to reach BIT-1 (after an install it is still
+// starting). Resolves to the voices on the FM-1; throws with a message for the user.
+export async function sendBank(getAccess, bank, say, { waitMs = 0, tries = 3 } = {}) {
+  const t0 = Date.now(), pause = (ms) => new Promise((r) => setTimeout(r, ms));
+  const pick = (m) => [...m.values()].find((p) => /fm-?1|m-?vave/i.test(p.name)) || [...m.values()][0];
+  let out = null, inp = null, waiting = null;
+  const ask = (cmd, body, ms) => new Promise((res, rej) => {
+    const me = { cmd, res };                     // this question's own: an earlier one's timer can't end it
+    waiting = me;
+    out.send(frame(cmd, body));
+    setTimeout(() => { if (waiting === me) { waiting = null; rej(new Error("no answer")); } }, ms);
+  });
+  const crc = new DataView(bank.buffer, bank.byteOffset).getUint32(12, true);
+  let r = null;
+  for (;;) {                                     // reach BIT-1: BEGIN answered
+    const access = await getAccess();
+    out = pick(access.outputs);
+    inp = pick(access.inputs);
+    if (out && inp) {
+      inp.onmidimessage = (ev) => {
+        const m = unframe([...ev.data]);
+        if (m && waiting && m.cmd === waiting.cmd) { const w = waiting; waiting = null; w.res(m.body); }
+      };
+      say("Erasing the FM-1's bank…");
+      try { r = await ask(BANK_CMD.BEGIN, [...le32(bank.length), ...le32(crc)], 20000); break; }
+      catch { /* not BIT-1 yet (or not at all) */ }
+    }
+    if (Date.now() - t0 >= waitMs) {
+      if (inp) inp.onmidimessage = null;
+      throw new Error(out ? "the FM-1 didn't answer: is BIT-1 on it?" : "no FM-1 found: connect it by USB, with BIT-1 on it");
+    }
+    say("Waiting for BIT-1 to start…");
+    await pause(1500);
+  }
+  try {
+    if (r[0] !== 0) throw new Error(`the FM-1 refused the bank (${r[0]})`);
+    for (let at = 0; at < bank.length; at += 512) {
+      const body = [...le32(at), ...bank.subarray(at, Math.min(bank.length, at + 512))];
+      for (let k = 0; ; k++) {
+        try { r = await ask(BANK_CMD.DATA, body, 2000); if (r[0] === 0) break; throw new Error(`a write failed (${r[0]})`); }
+        catch (err) { if (k >= tries - 1) throw err; }
+      }
+      say(`Writing the ROM voices… ${Math.min(100, Math.round((at + 512) / bank.length * 100))}%`);
+    }
+    r = await ask(BANK_CMD.END, [], 10000);
+    if (r[0] !== 0) throw new Error(`the bank didn't check out on the FM-1 (${r[0]})`);
+    return r[1];
+  } finally {
+    inp.onmidimessage = null;
+  }
+}

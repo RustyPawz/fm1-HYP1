@@ -217,6 +217,31 @@ later. With no bank, the ROM sounds are silent.
 BIT-1 contains no game and no audio from one: the bank is built on your computer from your ROM, and stays
 there and on your FM-1.
 
+**Before installing.** To have ROM voices on the FM-1 from the start, pick them on the Voices page first ("Use
+in the emulator" keeps them in the browser), then install BIT-1 from the installer in the same browser: its
+**ROM voices** box shows them, and after the install it waits for BIT-1 to start and sends them. A bank you
+saved as a file works too (choose it in that box).
+
+#### Terms of use: ROM voices
+
+- **You must own it.** Use ROM voices only with a ROM you made yourself from a game cartridge you own, or
+  otherwise have the legal right to use, and only where that is lawful where you live. Downloading or sharing a
+  ROM of a game you don't own may break copyright law. Banks you build contain a game's audio: keep them for
+  your own use and don't share them.
+- **Nothing is provided.** BIT-1 does not include, host, link to or help you find any ROM, game, or audio from one.
+  The Voices page reads the file you choose in your browser; nothing is uploaded or collected.
+- **Your responsibility.** You alone are responsible for the ROMs you use, the sounds you take from them, and
+  anything you make, record, perform, publish or share with them. RedtailWorks and BIT-1's contributors accept
+  no responsibility or liability for how you use this feature, for any infringement of anyone's rights arising
+  from your use, or for any loss, damage, claim or cost that follows. You use it entirely at your own risk.
+- **No warranty.** BIT-1, the Voices page and the installer are free software, provided "as is" with no warranty of
+  any kind, as set out in the GNU General Public License, version 3 (sections 15 and 16). Sending a bank erases
+  what M-VAVE keeps in the same place (its user samples).
+- **Not affiliated.** Game names, sounds and trademarks belong to their owners. BIT-1 is not affiliated with,
+  sponsored or endorsed by Nintendo, M-VAVE, or any game's developer or publisher.
+
+By choosing a ROM, using a bank or sending one to an FM-1, you agree to these terms.
+
 ---
 
 ## 8. The effects

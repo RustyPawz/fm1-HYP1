@@ -47,6 +47,15 @@ Dungeon (Game Boy), Starfield (SID), Boss Rush (NES), Lullaby (Game Boy).
 **To your DAW:** MIDI clock in (USB or TRS) drives the rows, six ticks a row; MIDI out sends each track's notes
 on its own channel, and the clock when asked. Notes in play and write the cursor's track.
 
+## ROM voices: terms
+
+ROM voices are for a ROM of a game **you own**, used where that's lawful for you. BIT-1 includes, hosts and links
+to no ROM, game or game audio; the Voices page reads your file in your browser and uploads nothing. You alone are
+responsible for the ROMs you use and what you make or share with them; RedtailWorks and BIT-1's contributors accept
+no liability for it, and BIT-1 comes with no warranty (GPL-3.0, sections 15 and 16). Not affiliated with Nintendo,
+M-VAVE or any game's publisher. The full terms: [the manual](docs/MANUAL.md#terms-of-use-rom-voices) and the
+Voices page.
+
 ## The sound
 
 Every sound is synthesised as it plays, not sampled: no audio from any game or album is in this tree. The

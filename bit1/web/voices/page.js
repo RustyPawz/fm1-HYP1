@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // BIT-1's Voices page: the list, hearing a voice, and where the bank goes (the emulator, a file, the FM-1).
-import { BANK_MAX, BANK_HDR, NROM, readRom, envOf, pcmOf, roomOf, buildBank, bankOk, frame, unframe, le32, BANK_CMD } from "./voices.js";
+import { BANK_MAX, BANK_HDR, NROM, readRom, envOf, pcmOf, roomOf, buildBank, bankOk, sendBank } from "./voices.js";
 
 const BANK_KEY = "bit1-voices";
 const NOTE = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
@@ -8,6 +8,13 @@ const noteName = (n) => NOTE[n % 12] + (Math.floor(n / 12) - 1);
 const $ = (id) => document.getElementById(id);
 
 let rom = null, items = [], picked = [], fileBank = null, ac = null;
+// the terms first: the ROM can't be chosen until they're agreed (remembered in this browser)
+try { $("agree").checked = localStorage.getItem("bit1-voices-terms") === "1"; } catch { /* not kept */ }
+$("rom").disabled = !$("agree").checked;
+$("agree").onchange = () => {
+  $("rom").disabled = !$("agree").checked;
+  try { if ($("agree").checked) localStorage.setItem("bit1-voices-terms", "1"); else localStorage.removeItem("bit1-voices-terms"); } catch { /* not kept */ }
+};
 for (let k = 36; k <= 84; k++) $("note").add(new Option(noteName(k), k, false, k === 60));
 
 function describe(e) {
@@ -138,47 +145,19 @@ $("bankfile").onchange = async () => {
   show();
 };
 
-// to the FM-1 (bank.c): BEGIN (size, CRC), DATA (offset, up to 512 bytes) each answered, END
+// to the FM-1 (bank.c, voices.js sendBank)
 $("send").onclick = async () => {
   const say = (t) => { $("sendstatus").textContent = t; }, bank = bankNow();
   if (!bank) return;
   if (!navigator.requestMIDIAccess) { say("This browser has no Web MIDI: use Chrome or Edge."); return; }
-  let midi;
-  try { midi = await navigator.requestMIDIAccess({ sysex: true }); } catch { say("MIDI (with SysEx) wasn't allowed."); return; }
-  const pick = (m) => [...m.values()].find((p) => /fm-?1|m-?vave/i.test(p.name)) || [...m.values()][0];
-  const out = pick(midi.outputs), inp = pick(midi.inputs);
-  if (!out || !inp) { say("No FM-1 found: connect it by USB, with BIT-1 on it."); return; }
-  let waiting = null;
-  inp.onmidimessage = (ev) => {
-    const r = unframe([...ev.data]);
-    if (r && waiting && r.cmd === waiting.cmd) { const w = waiting; waiting = null; w.res(r.body); }
-  };
-  const ask = (cmd, body, ms) => new Promise((res, rej) => {
-    waiting = { cmd, res };
-    out.send(frame(cmd, body));
-    setTimeout(() => { if (waiting && waiting.cmd === cmd) { waiting = null; rej(new Error("no answer")); } }, ms);
-  });
   $("send").disabled = true;
   try {
-    say("Erasing the FM-1's bank…");
-    let r = await ask(BANK_CMD.BEGIN, [...le32(bank.length), ...le32(new DataView(bank.buffer).getUint32(12, true))], 20000);
-    if (r[0] !== 0) throw new Error(`the FM-1 refused (${r[0]})`);
-    for (let at = 0; at < bank.length; at += 512) {
-      const body = [...le32(at), ...bank.subarray(at, Math.min(bank.length, at + 512))];
-      for (let tries = 0; ; tries++) {
-        try { r = await ask(BANK_CMD.DATA, body, 2000); if (r[0] === 0) break; throw new Error(`a write failed (${r[0]})`); }
-        catch (err) { if (tries >= 2) throw err; }
-      }
-      say(`Writing… ${Math.min(100, Math.round((at + 512) / bank.length * 100))}%`);
-    }
-    r = await ask(BANK_CMD.END, [], 10000);
-    if (r[0] !== 0) throw new Error(`the bank didn't check out on the FM-1 (${r[0]})`);
-    say(`Done: ${r[1]} ROM voices on the FM-1 (sounds ROM 1 on, after Noise sweep).`);
+    const n = await sendBank(() => navigator.requestMIDIAccess({ sysex: true }), bank, say);
+    say(`Done: ${n} ROM voices on the FM-1 (sounds ROM 1 on, after Noise sweep).`);
   } catch (err) {
-    say("Not sent: " + err.message + ". Try again; the FM-1 keeps no half bank.");
+    say("Not sent: " + (err.name === "SecurityError" || err.name === "NotAllowedError" ? "MIDI (with SysEx) wasn't allowed" : err.message) + ". Try again; the FM-1 keeps no half bank.");
   } finally {
     $("send").disabled = false;
-    inp.onmidimessage = null;
   }
 };
 show();
