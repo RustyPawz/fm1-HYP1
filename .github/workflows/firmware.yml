@@ -2,8 +2,8 @@
 # HYP-1 on GitHub: every push to the default branch builds the firmware with JieLi's toolchain (Linux
 # x86-64, as GitHub's runners are), runs the tests, and publishes the site to this repository's GitHub
 # Pages: the web installer with this build in it, the browser emulator, and the .fwsc to download.
-# LOF-1 (lof1/), ECO-1 (eco1/), GRAV-1 (grav1/), CTY-1 (cty1/) and EVOL-1 (evol1/), experimental, versions 0.x, are built
-# alongside, their pages under lof/, eco/, grav/, cty/ and evol/, and a dropdown on every page switches between them. The root is a front
+# LOF-1 (lof1/), ECO-1 (eco1/), GRAV-1 (grav1/), CTY-1 (cty1/) and BIT-1 (bit1/), experimental, versions 0.x, are built
+# alongside, their pages under lof/, eco/, grav/, cty/ and bit/, and a dropdown on every page switches between them. The root is a front
 # page for them all (tools/site/hub.py); HYP-1's own landing is under hyp/.
 #
 # Once, in the repository's Settings > Pages: Source = "GitHub Actions". Then the installer is at
@@ -74,7 +74,7 @@ jobs:
           echo "EV=0.$((N / 100 % 100)).$((N % 100))" >> "$GITHUB_ENV"     # ECO-1: likewise
           echo "GV=0.$((N / 100 % 100)).$((N % 100))" >> "$GITHUB_ENV"     # GRAV-1: likewise
           echo "CV=0.$((N / 100 % 100)).$((N % 100))" >> "$GITHUB_ENV"     # CTY-1: likewise
-          echo "VV=0.$((N / 100 % 100)).$((N % 100))" >> "$GITHUB_ENV"     # EVOL-1: likewise
+          echo "BV=0.$((N / 100 % 100)).$((N % 100))" >> "$GITHUB_ENV"     # BIT-1: likewise
       - name: Build the firmware
         run: |
           set -o pipefail
@@ -197,20 +197,20 @@ jobs:
           python3 tools/gen_manual_figures.py
           EN_VERSION="$CV" sh web/emu/build_clang.sh
           REPO_URL="https://github.com/$GITHUB_REPOSITORY/tree/main/cty1" python3 tools/make_pages.py "build/amb-$CV.fwsc" "$CV" ../build/pages/cty
-      # EVOL-1, experimental, in evol1/: the same, its pages under evol/
-      - name: EVOL-1 (experimental) — build
-        id: evol
+      # BIT-1, experimental, in bit1/: the same, its pages under bit/
+      - name: BIT-1 (experimental) — build
+        id: bit
         continue-on-error: true
         run: |
           set -o pipefail
-          cd evol1
-          sh build.sh --release "$VV" 2>&1 | tee build.log || {
-            echo "::warning title=EVOL-1 build failed::$(tail -60 build.log | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
+          cd bit1
+          sh build.sh --release "$BV" 2>&1 | tee build.log || {
+            echo "::warning title=BIT-1 build failed::$(tail -60 build.log | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
             exit 1
           }
-          grep -E "^\s+ok\s" build.log | sed 's/^\s*ok\s*/::notice title=EVOL-1 check::/' || true
+          grep -E "^\s+ok\s" build.log | sed 's/^\s*ok\s*/::notice title=BIT-1 check::/' || true
           sh tests/run_tests.sh 2>&1 | tee tests.log || {
-            echo "::warning title=EVOL-1 tests failed::$(grep -A12 FAIL tests.log | head -60 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
+            echo "::warning title=BIT-1 tests failed::$(grep -A12 FAIL tests.log | head -60 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
             exit 1
           }
           mkdir -p build/site_shots
@@ -218,8 +218,8 @@ jobs:
           python3 tools/site/mockups.py
           python3 tools/site/panda.py
           python3 tools/gen_manual_figures.py
-          EN_VERSION="$VV" sh web/emu/build_clang.sh
-          REPO_URL="https://github.com/$GITHUB_REPOSITORY/tree/main/evol1" python3 tools/make_pages.py "build/amb-$VV.fwsc" "$VV" ../build/pages/evol
+          EN_VERSION="$BV" sh web/emu/build_clang.sh
+          REPO_URL="https://github.com/$GITHUB_REPOSITORY/tree/main/bit1" python3 tools/make_pages.py "build/amb-$BV.fwsc" "$BV" ../build/pages/bit
       - name: The front page, all the firmwares (HYP-1's landing moves to hyp/)
         run: REPO_URL="https://github.com/$GITHUB_REPOSITORY" python3 tools/site/hub.py build/pages
       - name: OPEN-1's page (open1/ in the repository; open1/README.md says how to post an update)
@@ -253,10 +253,10 @@ jobs:
           name: cty1-firmware-${{ env.CV }}
           path: cty1/build/amb-${{ env.CV }}.fwsc
       - uses: actions/upload-artifact@v4
-        if: steps.evol.outcome == 'success'
+        if: steps.bit.outcome == 'success'
         with:
-          name: evol1-firmware-${{ env.VV }}
-          path: evol1/build/amb-${{ env.VV }}.fwsc
+          name: bit1-firmware-${{ env.BV }}
+          path: bit1/build/amb-${{ env.BV }}.fwsc
       - uses: actions/upload-pages-artifact@v3
         with:
           path: build/pages

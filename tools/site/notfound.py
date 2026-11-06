@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 PRODUCTS = [("", "hyp1", "HYP-1", "hyp/"), ("lof/", "lof1", "LOF-1", "lof/"), ("eco/", "eco1", "ECO-1", "eco/"),
-            ("grav/", "grav1", "GRAV-1", "grav/"), ("cty/", "cty1", "CTY-1", "cty/"), ("evol/", "evol1", "EVOL-1", "evol/")]
+            ("grav/", "grav1", "GRAV-1", "grav/"), ("cty/", "cty1", "CTY-1", "cty/"), ("bit/", "bit1", "BIT-1", "bit/")]
 
 PAGE = """<!doctype html>
 <html lang="en">
@@ -62,8 +62,13 @@ li a:hover { border-color: var(--orange); }
   add(ROOT, "All the firmwares (the front page)");
   Object.keys(LATEST).forEach(function (k) { add(ROOT + LATEST[k][2], LATEST[k][1]); });
   add(ROOT + "open1/", "OPEN-1, the next idea");
+  /* EVOL-1's pages became BIT-1's: evol/<anything> -> bit/<the same> (an old download then lands on BIT-1's) */
+  if (/^evol(\\/|$)/i.test(rel)) {
+    location.replace(ROOT + "bit/" + rel.replace(/^evol\\/?/i, "").replace(/evol1-[^\\/]*\\.fwsc$/i, "bit1-latest.fwsc"));
+    return;
+  }
   /* an old download: <folder>firmware/<anything>.fwsc -> that firmware's current file */
-  var m = rel.match(/^((?:lof|eco|grav|cty|evol)\\/)?firmware\\/[^\\/]+\\.fwsc$/i);
+  var m = rel.match(/^((?:lof|eco|grav|cty|bit)\\/)?firmware\\/[^\\/]+\\.fwsc$/i);
   if (m) {
     var f = LATEST[m[1] || ""];
     if (f) {

@@ -1,0 +1,245 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-only
+"""Make the BIT-1 site: HYP-1's site has it under bit/ (the HYP-1 workflow runs this, then
+tools/site/switcher.py adds the firmware dropdown to every page):
+
+  index.html                  what BIT-1 is, and the ways in: try, install, manual, download, source
+  img/                        screenshots (docs/img)
+  emu/                        BIT-1 in the browser (build/emu, from web/emu/build_clang.sh)
+  install/index.html          the web installer (web/amb_installer.html, with fm1pkg.js, fm1ota.js and
+                              the package's metadata inlined; Chrome or Edge, Web MIDI)
+  manual/index.html, img/     the manual (tools/manual_html.py, from docs/MANUAL.md)
+  firmware/bit1-VERSION.fwsc   the package the installer writes; also the download
+
+  tools/make_pages.py build/amb-1.0.1.fwsc 1.0.1 OUT_DIR
+
+The package must be a release build (./build.sh --release X.Y): its identity, FM-1_7XXYYZZ, is what
+the installer checks the download against and what the FM-1 reports after the install."""
+import html
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+SRC = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(SRC / "web"))
+from make_site import product_of, strip_module  # noqa: E402  (Felucca's: the package format)
+
+REPO = os.environ.get("REPO_URL", "https://github.com/RustyPawz/fm1-HYP1/tree/main/bit1")
+
+LANDING = """<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BIT-1</title>
+<meta name="description" content="BIT-1: a generative 8-bit tracker for the M-VAVE FM-1. Six tracks, twenty-four chip voices, sixteen effects, five songs. By RedtailWorks.">
+<meta name="theme-color" content="#06060a">
+<link rel="icon" type="image/png" href="img/favicon.png">
+<meta property="og:title" content="BIT-1: a generative 8-bit tracker for the M-VAVE FM-1">
+<meta property="og:image" content="img/bit-hero.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600;700&display=swap">
+<style>
+/* the Arcade theme: black, a hot red and yellow, a cold blue; and the red panda's rust and cream for
+ * RedtailWorks (the same on every page: landing, installer, manual) */
+:root { --ground: #06060a; --card: #16141e; --card-2: #1e1b28; --ink: #f4f2fa; --muted: #a6a2b6; --rule: #34303f;
+        --purple: #d83030; --purple-2: #ff4040; --orange: #ffc828; --rust: #c85420; --cream: #f6ecde; --ice: #50c8ff; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--ground); color: var(--ink); margin: 0; padding-inline: 16px; padding-block: 28px 64px;
+       font: 400 18px/1.6 "Barlow Semi Condensed", "Helvetica Neue", Arial, sans-serif; }
+main { max-width: 1040px; margin: 0 auto; }
+h1, h2, h3, .ways strong, .tag { font-family: "Barlow Semi Condensed", "Helvetica Neue", Arial, sans-serif; }
+header.site { display: flex; flex-wrap: wrap; align-items: baseline; gap: .4rem 1.4rem; margin: 0 0 1.2rem; }
+header.site { align-items: center; }
+header.site .home { font: 700 1.4rem "Barlow Semi Condensed", sans-serif; letter-spacing: .06em; color: var(--ink); text-decoration: none;
+                    display: inline-flex; align-items: center; gap: .6rem; }
+img.panda { image-rendering: pixelated; display: block; height: auto; }
+header.site nav a.yt, footer a.yt { color: var(--orange); }
+header.site nav { margin-left: auto; display: flex; flex-wrap: wrap; gap: .3rem 1.1rem; font-size: 1rem; }
+img.hero { width: 100%; height: auto; display: block; border-radius: 14px; margin: 0 0 1.6rem; }
+.lede { font-size: 1.3rem; line-height: 1.5; max-width: 44rem; margin: 0 0 1.8rem; }
+.lede b { color: var(--purple-2); font-weight: 600; }
+h2 { font-size: 1.5rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin: 3rem 0 1rem;
+     display: flex; align-items: center; gap: .7rem; }
+h2::before { content: ""; width: 34px; height: 5px; background: linear-gradient(90deg, var(--orange) 0 62%, var(--purple) 62%); }
+h3 { font-size: 1.1rem; font-weight: 600; letter-spacing: .03em; margin: 0 0 .3rem; color: var(--purple-2); }
+.ways { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin: 0 0 1rem; }
+.ways a { display: block; text-decoration: none; color: var(--ink); background: var(--card); border: 1px solid var(--rule);
+          border-radius: 10px; padding: 14px 16px; transition: border-color .15s, background .15s; }
+.ways a:first-child { background: linear-gradient(135deg, #4a1212, #16141e); border-color: var(--purple); }
+.ways a:nth-child(2) { border-color: var(--orange); }
+.ways a:nth-child(5) { border-color: var(--rust); }
+.ways a:hover, .ways a:focus-visible { border-color: var(--purple-2); background: var(--card-2); outline: none; }
+.ways strong { font-weight: 700; font-size: 1.1rem; letter-spacing: .05em; text-transform: uppercase; display: block; }
+.ways span { color: var(--muted); font-size: .98rem; }
+.ways em.v { font-style: normal; text-transform: none; letter-spacing: 0; color: var(--orange); }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 14px; }
+.card { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 16px 18px; }
+.card p { margin: 0; color: var(--muted); }
+.card p b { color: var(--ink); font-weight: 600; }
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; margin: 0 0 1rem; }
+figure { margin: 0; }
+figure img { width: 100%; height: auto; display: block; border-radius: 10px; border: 1px solid var(--rule); }
+figcaption { color: var(--muted); font-size: .95rem; margin-top: .4rem; }
+.shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.shots img { image-rendering: pixelated; }
+table { border-collapse: collapse; width: 100%; font-size: 1rem; }
+th, td { text-align: left; vertical-align: top; padding: .5rem .8rem .5rem 0; border-bottom: 1px solid var(--rule); }
+th { font: 600 .85rem "Barlow Semi Condensed", sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+td:first-child { font-family: "Barlow Semi Condensed", sans-serif; font-weight: 600; white-space: nowrap; color: var(--purple-2); }
+kbd { font: 600 .85em "Barlow Semi Condensed", sans-serif; background: var(--card-2); border: 1px solid var(--rule); border-radius: 4px; padding: 0 .35em; color: var(--orange); }
+p.small, .credits { color: var(--muted); font-size: .95rem; }
+a { color: var(--ink); text-decoration-color: var(--purple); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+a:hover { color: var(--purple-2); }
+code { font-size: .9em; background: var(--card-2); padding: .05em .35em; border-radius: 4px; }
+footer { margin-top: 3.5rem; padding-top: 1.2rem; border-top: 1px solid var(--rule); display: flex; flex-wrap: wrap; gap: .6rem 1.6rem; align-items: center; }
+footer .rw { font: 700 1.05rem "Barlow Semi Condensed", sans-serif; letter-spacing: .08em; text-decoration: none; display: inline-flex; align-items: center; gap: .55rem; }
+footer .rw span:nth-child(2) { color: var(--purple-2); } footer .rw span:last-child { color: var(--orange); }
+.video { margin: 0 0 1.8rem; }
+.video .frame { position: relative; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; border: 1px solid var(--rule); background: #000; }
+.video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.video figcaption { display: flex; flex-wrap: wrap; gap: .3rem 1rem; justify-content: space-between; }
+.video figcaption a { color: var(--orange); }
+footer .ver { font-family: "Barlow Semi Condensed", sans-serif; color: var(--muted); font-size: .9rem; }
+a.kofi { display: inline-flex; align-items: center; gap: .4em; background: var(--rust, #c85420); color: #fff8f0 !important; text-decoration: none; border-radius: 999px; padding: .15em .8em; font-weight: 600; } a.kofi:hover { background: var(--orange, #e8873a); color: #120d03 !important; }
+.support { display: flex; flex-wrap: wrap; align-items: center; gap: .8rem 1.4rem; background: var(--card); border: 1px solid var(--rust);
+           border-radius: 10px; padding: 16px 18px; margin: 2.4rem 0 0; }
+.support p { margin: 0; color: var(--muted); flex: 1 1 22rem; }
+.support p b { color: var(--ink); font-weight: 600; }
+.support a.kofi { font-size: 1.05rem; padding: .5em 1.2em; }
+.exp { font: 700 .72rem "Barlow Semi Condensed", sans-serif; letter-spacing: .12em; text-transform: uppercase; color: #1a0f05;
+       background: #e8873a; border-radius: 999px; padding: .15em .7em; margin-left: .2rem; }
+.expnote { background: #2a1d10; border: 1px solid #e8873a; border-radius: 10px; padding: 12px 16px; margin: 0 0 1.4rem; color: #f3dcc4; }
+.expnote b { color: #ffb070; }
+@media (max-width: 560px) { .lede { font-size: 1.15rem; } h2 { font-size: 1.25rem; } }
+</style>
+</head>
+<body>
+<main>
+<header class="site"><a class="home" href="./"><img class="panda" src="img/panda.png" width="64" height="50" alt="">BIT-1<span class="exp">Experimental</span></a>
+  <nav><a href="emu/">Emulator</a><a href="install/">Install</a><a href="manual/">Manual</a><a href="__REPO__">Source</a><a class="yt" href="https://www.youtube.com/@RedtailWorks">YouTube</a><a href="https://www.redtail.works">RedtailWorks</a></nav></header>
+<div class="expnote"><b>Experimental.</b> BIT-1 is new: built and tested in the simulator and in the emulator here, not yet on a real FM-1. Install it at your own risk; HYP-1, or M-VAVE's own firmware, goes back on the same way.</div>
+<img class="hero" src="img/bit-hero.png" width="1600" height="1161" alt="An M-VAVE FM-1 running BIT-1: a tracker's grid of six tracks, notes and effects, the row playing lit in yellow, the cell's Note, Effect, Value and Pattern below it.">
+<p class="lede"><b>BIT-1</b> turns the M-VAVE FM-1 into a <b>generative 8-bit tracker</b>. Six tracks of sixteen rows,
+a note and an effect a cell, played by chip voices: an NES-style pulse and stepped triangle, Game Boy-style 4-bit
+waves, an LFSR noise, SID-style saws and pulses through a resonant filter, and a ring bell, their volume in sixteen
+steps and their arpeggios at frame rate. <b>Follow</b> writes the other tracks from a melody you write: bass, chords,
+an arp, a harmony, a counter-line and drums that answer it, a new take whenever you like. Or switch it off and write
+every note yourself. Evolve lets each pattern drift a little every pass; Grow writes one in eight chip styles.</p>
+<nav class="ways" aria-label="Get BIT-1">
+  <a href="emu/"><strong>Try it in the browser</strong><span>The same code the FM-1 runs, with sound. Mouse, touch or keyboard; eight channels and MIDI to your DAW.</span></a>
+  <a href="install/"><strong>Install <em class="v">v__VERSION__</em></strong><span>From Chrome or Edge, with the FM-1 connected by USB. Experimental: at your own risk.</span></a>
+  <a href="manual/"><strong>Manual</strong><span>Every control, every page, every sound and effect, on one page.</span></a>
+  <a href="firmware/__PKG__"><strong>Download <em class="v">__PKG__</em></strong><span>For the command-line installer: <code>python3 tools/fm1_install.py __PKG__</code></span></a>
+</nav>
+<h2>The tracker</h2>
+<div class="grid">
+  <div class="card"><h3>Patterns</h3><p>Sixteen patterns of sixteen rows (a bar of sixteenths), six tracks a row. The keys write notes as the cursor steps down (<b>REC</b>); playing, they go into the row that's playing. Knobs set the cell's <b>note</b>, <b>effect</b> and <b>value</b>.</p></div>
+  <div class="card"><h3>The song</h3><p>An order list of up to 32 positions, each playing a pattern; loop the song or one pattern. <b>EDIT</b> on the Song page makes a fresh copy to vary. Five songs, each saved in its own place on the FM-1.</p></div>
+  <div class="card"><h3>The sounds</h3><p>Twenty-four chip voices, synthesised: the <b>NES</b>, <b>GB</b> and <b>SID</b> kits, <b>Tri bass</b>, <b>Wave bass</b>, <b>Octave bass</b>, <b>Square</b>, <b>Duty lead</b>, <b>SID lead</b>, <b>Chip arp</b>, <b>Wave pad</b>, <b>Ring bell</b>, <b>Laser</b>, <b>Power-up</b>, <b>Metal</b> and more. Each track shapes its own with Tone, Decay, Vibrato, Arp and Crush.</p></div>
+  <div class="card"><h3>Sixteen effects</h3><p><b>G</b>lide, chance (<b>?</b>), <b>R</b>atchet, <b>D</b>elay, <b>T</b>one, <b>V</b>olume, <b>B</b>end (a drop over the row), <b>E</b>cho throw, chord (<b>A</b>), <b>M</b>utate, <b>L</b>ength, crush (<b>X</b>), <b>S</b>tutter (30&ndash;60 ms crushed repeats), s<b>W</b>ell and <b>J</b>ump.</p></div>
+  <div class="card"><h3>Follow the lead</h3><p>Write a melody on one track and name it the <b>Lead</b>. Give the others a role (<b>Bass</b>, <b>Chords</b>, <b>Arp</b>, <b>Harmony</b>, <b>Counter</b>, <b>Drums</b>, or <b>Auto</b>) and each plays a take written from the chords heard in your lead. <b>Change</b> how often a pass brings a new take; <b>SEL + EDIT</b> writes the takes in to edit by hand.</p></div>
+  <div class="card"><h3>Evolve and Grow</h3><p><b>Evolve</b> lets a track's notes drift a degree or two in the scale on each pass, and lean back home. <b>Grow</b> writes a pattern in one of eight chip styles: Driver, Hold, Ostinato, Melody, Triplet, Arp run, Bleeps, Sparse.</p></div>
+  <div class="card"><h3>Space</h3><p>A ping-pong echo in time with the tempo, Dattorro's plate, Lo-fi (a darker top and fewer bits, twelve down to five), and the kick ducking everything else if you ask it to.</p></div>
+</div>
+<h2>Five songs</h2>
+<figure><img src="img/bit-songs.png" width="2544" height="700" alt="Five BIT-1 screens: Overworld, Dungeon, Starfield, Boss Rush and Lullaby, each playing."></figure>
+<p>Each one chip's: <b>Overworld</b> (NES, 140 BPM, C major), <b>Dungeon</b> (Game Boy, 108, A aeolian),
+<b>Starfield</b> (SID, 126, D lydian), <b>Boss Rush</b> (NES, 168, E phrygian) and <b>Lullaby</b> (Game Boy, 84, F major).
+Each is eight patterns layered from an intro to an outro. Change anything and SAVE keeps it; hold SAVE on the Setup
+page to have the song back as it came.</p>
+<div class="pair">
+  <figure><img src="img/bit-device-rec.png" width="1600" height="1161" alt="The FM-1 writing: REC lit, a figure going into track 4."><figcaption><b>Writing:</b> REC on, the keys write into the cursor's track and the cursor steps down. A kit's eight drums are the white keys.</figcaption></figure>
+  <figure><img src="img/bit-device-follow.png" width="1600" height="1161" alt="The FM-1 on the Follow page: track 4 the lead, the others' takes in their colours."><figcaption><b>Follow:</b> the lead on track 4; the drums, the bass, the chords and a harmony written from it, a new take on EDIT.</figcaption></figure>
+</div>
+<div class="pair">
+  <figure><img src="img/bit-device-song.png" width="1600" height="1161" alt="The FM-1 on the Song page: the order list."><figcaption><b>The song:</b> the order list, the position playing lit.</figcaption></figure>
+  <figure><img src="img/bit-device-mutes.png" width="1600" height="1161" alt="The FM-1 with FX held: the six tracks' mutes."><figcaption><b>Mutes:</b> hold FX; black keys 1&ndash;6 mute, white keys 1&ndash;6 solo.</figcaption></figure>
+</div>
+<h2>Themes</h2>
+<figure><img src="img/bit-themes.png" width="2544" height="700" alt="Five BIT-1 screens in its themes: Arcade, Pocket, Home, Neon, Mono."></figure>
+<p>Five screen themes on the Device page: Arcade (black, a hot red and yellow), Pocket (a handheld's four greens), Home (a home computer's blues), Neon and Mono. The tracks keep their colours under every theme.</p>
+<h2>To your DAW</h2>
+<div class="pair">
+  <figure><img src="img/bit-device-clock.png" width="1600" height="1161" alt="The FM-1 on MIDI clock: EXT and the tempo in the header, the Setup page with Sync on Clock."><figcaption><b>MIDI clock in:</b> START plays from the top, STOP stops, and the rows follow the clock, six ticks a row.</figcaption></figure>
+  <figure><img src="img/bit-device-sound.png" width="1600" height="1161" alt="The FM-1 on the Sound page: the six tracks' levels."><figcaption><b>MIDI out:</b> each track's notes on its own channel (a kit's drums as notes 36&ndash;43), and the clock when asked. Notes in play and write the cursor's track.</figcaption></figure>
+</div>
+<h2>Screens</h2>
+<div class="shots">
+  <figure><img src="img/bit-screen-splash.png" width="480" height="480" alt="The boot screen: a pixel red panda on the RedtailWorks name"><figcaption>Switching on</figcaption></figure>
+  <figure><img src="img/bit-screen-splash-bit.png" width="480" height="480" alt="The second boot screen: BIT-1 in big pixel letters, red over yellow, and A GENERATIVE 8-BIT TRACKER under it"><figcaption>&hellip;then BIT-1</figcaption></figure>
+  <figure><img src="img/bit-screen-pattern.png" width="480" height="480" alt="The Pattern page"><figcaption>Pattern</figcaption></figure>
+  <figure><img src="img/bit-screen-song.png" width="480" height="480" alt="The Song page"><figcaption>Song</figcaption></figure>
+  <figure><img src="img/bit-screen-sound.png" width="480" height="480" alt="The Sound page"><figcaption>Sound</figcaption></figure>
+  <figure><img src="img/bit-screen-move.png" width="480" height="480" alt="The Move page"><figcaption>Move</figcaption></figure>
+  <figure><img src="img/bit-screen-grow.png" width="480" height="480" alt="The Grow page"><figcaption>Grow</figcaption></figure>
+  <figure><img src="img/bit-screen-help.png" width="480" height="480" alt="REC's help card"><figcaption>Help cards</figcaption></figure>
+</div>
+<h2>Credits</h2>
+<p class="credits">BIT-1 is a fork of <a href="https://github.com/charlesvestal/fm1-amb">AMB-1</a> by Charles Vestal, by way of HYP-1, GRAV-1, CTY-1 and EVOL-1. Its sounds are synthesised; no audio from any game or album is in it.
+Tracker ideas after <a href="https://github.com/Guizmoh/Kawa-Tracker-Fm1">KAWA</a> by Omnipotard (GPL-3.0).
+The platform (USB, update loader, storage, installer) is <a href="https://github.com/hugelton/Felucca">Felucca</a> by Leo Kuroshita (@kurogedelic), Hügelton Instruments.
+Screen font: Barlow Semi Condensed (SIL OFL). GPL-3.0.
+M-VAVE and FM-1 are trademarks of their owners; BIT-1 is not affiliated with M-VAVE.</p>
+<p class="small">To go back to the official firmware, use the installer's "Back to the stock firmware", or
+M-VAVE's updater, M-UPGRADE. Installing firmware is at your own risk.</p>
+<footer><a class="rw" href="https://www.redtail.works"><img class="panda" src="img/panda.png" width="48" height="38" alt=""><span>REDTAIL</span><span>WORKS</span></a>
+  <span class="small">BIT-1 is a RedtailWorks project &middot; <a href="https://www.redtail.works">www.redtail.works</a> &middot; <a class="yt" href="https://www.youtube.com/@RedtailWorks">YouTube</a> &middot; <a href="__REPO__">source</a></span><span class="ver">version __VERSION__</span></footer>
+</main>
+</body>
+</html>
+"""
+
+
+def main(pkg, version, out):
+    pkg, out = Path(pkg), Path(out)
+    raw = pkg.read_bytes()
+    product = product_of(raw)
+    if not re.fullmatch(r"FM-1_7\d{6}", product):
+        raise SystemExit(f"{pkg}: identity {product!r}: make a release build (./build.sh --release X.Y)")
+    if b"FELUCCA-LOADER-1" not in raw:
+        raise SystemExit(f"{pkg}: no update loader in it")
+    name = f"bit1-{re.sub(r'[^A-Za-z0-9.-]', '-', version)}.fwsc"
+    if out.exists():
+        shutil.rmtree(out)
+    for d in ("install", "manual", "firmware"):
+        (out / d).mkdir(parents=True)
+    shutil.copy(pkg, out / "firmware" / name)
+    # the installer
+    page = (SRC / "web" / "amb_installer.html").read_text(encoding="utf-8")
+    lib = strip_module((SRC / "web" / "fm1pkg.js").read_text(encoding="utf-8")) + "\n" + \
+        strip_module((SRC / "web" / "fm1ota.js").read_text(encoding="utf-8"))
+    meta = json.dumps({"version": version, "product": product, "pkg": "../firmware/" + name})
+    for mark in ("/*LIB*/", "/*META*/"):
+        if page.count(mark) != 1:
+            raise SystemExit(f"amb_installer.html must contain {mark} once")
+    page = page.replace("https://github.com/charlesvestal/fm1-amb", REPO).replace("github.com/charlesvestal/fm1-amb", REPO[8:])
+    (out / "install" / "index.html").write_text(page.replace("/*LIB*/", lib).replace("/*META*/", meta), encoding="utf-8")
+    # the manual (a complete page; its images beside it)
+    subprocess.run([sys.executable, str(SRC / "tools" / "manual_html.py"), str(SRC / "docs" / "MANUAL.md"),
+                    str(out / "manual" / "index.html")], check=True, capture_output=True)
+    man = out / "manual" / "index.html"                 # the build's own version, wherever the manual names one
+    man.write_text(re.sub(r"BIT-1 version \d+\.\d+\.\d+", "BIT-1 version " + html.escape(version), man.read_text(encoding="utf-8")),
+                   encoding="utf-8")
+    shutil.copytree(SRC / "docs" / "img", out / "manual" / "img")
+    # the landing page and its screenshots
+    shutil.copytree(SRC / "docs" / "img", out / "img")
+    (out / "index.html").write_text(LANDING.replace("__VERSION__", html.escape(version)).replace("__PKG__", name)
+                                    .replace("__REPO__", REPO), encoding="utf-8")
+    emu = SRC / "build" / "emu"
+    if not (emu / "amb.wasm").exists():
+        raise SystemExit("no build/emu/amb.wasm: run web/emu/build_clang.sh")
+    shutil.copytree(emu, out / "emu")
+    (out / ".nojekyll").write_text("")
+    print(f"site: {out}: index.html, install/ ({product}), manual/, emu/, firmware/{name} ({len(raw)} B)")
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 4:
+        sys.exit(__doc__)
+    main(*sys.argv[1:4])

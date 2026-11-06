@@ -1,0 +1,405 @@
+# BIT-1's renders: the simulator's screens and lights (tools/site/mockups.py runs this). 'echo @name' then
+# 'leds' names the lights that go with a shot.
+splash 3200
+reboot
+wait 900
+shot splash.png
+wait 1500
+shot splash_bit.png
+wait 1200
+# into the song: past the intro, everything playing
+wait 24000
+tap HOME
+spin ALGO 2
+spin SELECT 4
+wait 600
+shot pattern.png
+echo @pattern
+leds
+tap SEQ
+wait 600
+shot song.png
+echo @song
+leds
+tap ENV
+wait 600
+shot sound.png
+echo @sound
+leds
+tap ENV
+wait 600
+shot move.png
+echo @move
+leds
+tap ENV
+wait 600
+shot sends.png
+echo @sends
+leds
+tap LFO
+wait 600
+shot space.png
+echo @space
+leds
+tap LFO
+wait 600
+shot groove.png
+echo @groove
+leds
+tap ARP
+spin ALGO 2
+wait 600
+shot grow.png
+echo @grow
+leds
+tap ARP
+wait 600
+shot follow.png
+echo @follow
+leds
+tap GLO
+wait 600
+shot setup.png
+echo @setup
+leds
+tap GLO
+wait 600
+shot device.png
+echo @device
+leds
+tap HOME
+wait 300
+press FX
+wait 600
+tapkey b1
+wait 300
+shot mutes.png
+echo @mutes
+leds
+tapkey b1
+release FX
+wait 300
+press REC
+wait 1100
+shot help.png
+release REC
+wait 300
+# writing: REC on, the cursor on track 4, a figure going in
+tap PLAY
+wait 300
+tap REC
+spin ALGO 1
+spin SELECT -8
+tapkey 9
+tapkey 10
+spin SELECT 1
+tapkey 9
+spin K2 1
+spin K3 4
+wait 600
+shot rec.png
+echo @rec
+leds
+tap REC
+tap PLAY
+wait 6000
+shot playing.png
+echo @playing
+leds
+wait 200
+shot s_overworld.png
+# changes unsaved (the REC above): the first turn warns, the second opens the next song (playing on from its top)
+spin PRESET 1
+spin PRESET 1
+wait 30000
+shot s_dungeon.png
+spin PRESET 1
+wait 30000
+shot s_starfield.png
+spin PRESET 1
+wait 30000
+shot s_boss.png
+spin PRESET 1
+wait 30000
+shot s_lullaby.png
+spin PRESET 1
+wait 25000
+wait 600
+shot t_arcade.png
+tap GLO
+tap GLO
+spin K1 1
+tap HOME
+wait 600
+shot t_pocket.png
+tap GLO
+tap GLO
+spin K1 1
+tap HOME
+wait 600
+shot t_home.png
+tap GLO
+tap GLO
+spin K1 1
+tap HOME
+wait 600
+shot t_neon.png
+tap GLO
+tap GLO
+spin K1 1
+tap HOME
+wait 600
+shot t_mono.png
+tap GLO
+tap GLO
+spin K1 -4
+tap HOME
+# on MIDI clock: EXT and the tempo top right
+tap PLAY
+wait 300
+midi FA 0 0
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 20
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+shot synced.png
+echo @synced
+leds
+tap GLO
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+midi F8 0 0
+wait 21
+shot synced_setup.png

@@ -1,0 +1,38 @@
+# BIT-1's Follow: the first song's lead is track 4 and four tracks follow it. ARP twice for the page; a
+# following track won't take a written note; EDIT a new take; SEL + EDIT writes the takes into their cells
+tap ARP
+tap ARP
+expect view 8
+expect par12 4
+expect par26 1
+expect par38 1
+expect par50 3
+# playing (from power-on): the followers play their takes
+wait 5000
+expect playing 1
+expect notes >30
+shot follow_playing.png
+tap PLAY
+wait 300
+expect playing 0
+# REC on, track 1 follows: a key writes nothing there
+tap REC
+tapkey w0
+expect cell0.0.0 0
+tap REC
+# EDIT: a new take
+tap EDIT
+expect par14 1
+expect dirty 1
+# SEL + EDIT: the takes written in (the drums' kick on the one), the tracks back to their own
+press SEL
+tap EDIT
+release SEL
+expect par26 0
+expect par38 0
+expect par50 0
+expect cell0.0.0 36
+shot follow_written.png
+# the lead off: the page still shows, nothing follows
+spin K1 -4
+expect par12 0

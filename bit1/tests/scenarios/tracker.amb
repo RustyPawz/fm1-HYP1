@@ -1,0 +1,181 @@
+# BIT-1, the tracker: the cursor, writing notes with REC, effects, a kit's drums, the pages, the song's
+# order list, GROW, mutes, a track's sound, playing, saving, a reboot, the songs, and a song back as it came
+wait 500
+expect playing 1
+expect song 0
+expect view 0
+expect follow 1
+tap PLAY
+wait 200
+expect playing 0
+# the plain tracker: the first song's Follow off (its lead, track 4, and the tracks that follow it)
+tap ARP
+tap ARP
+spin K1 -4
+expect par12 0
+tap HOME
+expect view 0
+shot pattern.png
+# the cursor: SELECT the row, ALGORITHM the track
+spin SELECT 3
+expect row 3
+spin ALGO 2
+expect trk 2
+# REC: the keys write (F3 = 53 on key 0), the cursor steps down
+tap REC
+expect rec 1
+tapkey 0
+expect cell0.3.2 53
+expect row 4
+tapkey w2
+expect cell0.4.2 57
+expect row 5
+expect dirty 1
+# EDIT clears the cell (and steps on); SEL + EDIT writes a note-off
+spin SELECT -1
+tap EDIT
+expect cell0.4.2 0
+expect row 5
+press SEL
+tap EDIT
+release SEL
+expect cell0.5.2 1
+expect follow 1
+# the effect and its value: Ratchet 2
+spin SELECT -3
+expect row 3
+spin K2 3
+spin K3 2
+expect fx 0x32
+# a kit: the white keys are its drums (36 + the drum)
+spin ALGO -2
+expect trk 0
+tapkey w5
+expect cell0.3.0 41
+shot rec.png
+tap REC
+expect rec 0
+# the keys' octave
+tap OCT+
+expect oct 1
+tap OCT-
+expect oct 0
+# the pages
+tap SEQ
+expect view 1
+tap ENV
+expect view 2
+tap ENV
+expect view 3
+tap ENV
+expect view 4
+tap ENV
+expect view 2
+tap LFO
+expect view 5
+tap LFO
+expect view 6
+tap ARP
+expect view 7
+tap ARP
+expect view 8
+tap GLO
+expect view 9
+tap GLO
+expect view 10
+# SONG: EDIT puts a fresh copy of the position's pattern (the first no position plays: 9) at the position
+tap SEQ
+expect view 1
+tap EDIT
+expect order0 8
+expect cell8.3.2 53
+shot song.png
+# GROW: Ostinato on track 5 (the lead) into pattern 9
+tap ARP
+spin ALGO 4
+expect trk 4
+spin K1 2
+tap EDIT
+shot grow.png
+# mutes: FX held, black key 1 mutes track 1, white key 3 solos track 3 (and again un-solos)
+press FX
+wait 500
+expect fxwin 1
+tapkey b0
+expect mutes 1
+tapkey w2
+expect mutes 59
+shot mutes.png
+tapkey w2
+expect mutes 0
+release FX
+wait 100
+expect fxwin 0
+tap FX
+expect mutes 16
+tap FX
+expect mutes 0
+# a track's sound: ENV, KNOB 1 (track 5: Duty lead, 10, to SID lead, 11)
+tap ENV
+expect view 2
+expect par63 10
+spin K1 1
+expect par63 11
+shot sound.png
+# play: from the top
+tap HOME
+tap PLAY
+wait 6000
+expect playing 1
+expect notes >8
+expect rows >40
+shot playing.png
+tap PLAY
+wait 300
+expect playing 0
+# SAVE: the song and the device's settings (two objects); a reboot keeps them
+tap SAVE
+expect dirty 0
+expect store_writes 2
+reboot
+wait 500
+expect song 0
+expect order0 8
+expect cell0.3.2 53
+expect cell0.3.0 41
+expect par63 11
+# PRESETS: the next song (nothing unsaved: at once)
+spin PRESET 1
+wait 100
+expect song 1
+expect dirty 0
+# changes unsaved: the first turn warns, a second drops them
+spin SELECT 1
+tap REC
+tapkey 2
+expect dirty 1
+spin PRESET 1
+wait 100
+expect song 1
+spin PRESET 1
+wait 100
+expect song 2
+tap REC
+# back to song 1: as saved (with our pattern)
+spin PRESET -1
+wait 100
+spin PRESET -1
+wait 100
+expect song 0
+expect order0 8
+# hold SAVE on SETUP: the song as it came (unsaved until SAVE)
+tap GLO
+press SAVE
+wait 1700
+release SAVE
+expect order0 0
+expect dirty 1
+reboot
+wait 300
+expect order0 8
+expect peak_db_max -0.3

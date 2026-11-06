@@ -51,11 +51,11 @@ FIRMWARES = [
      "A city grows and plays",
      "Each power-on a new town on new land (forest, desert, alpine, volcano isles, plains, beach or river) grows to a huge "
      "city: every car, building, storm and disaster is a note, each land its own sound."),
-    ("evol", "EVOL-1", "#ff3aa8", "Experimental", "evol/img/evol-device.png",
-     "the FM-1 running EVOL-1: a tracker's grid of six tracks of notes and effects, the row playing lit orange",
-     "A tracker in the sound of Evol",
-     "Six tracks of sixteen rows, a note and an effect a cell, played by the sounds of RedtailWorks' album Evol: "
-     "sine kicks, the Eb drone stack, pumping pads, FM bells, glitches. Evolve lets each pattern drift."),
+    ("bit", "BIT-1", "#ff4040", "Experimental", "bit/img/bit-device.png",
+     "the FM-1 running BIT-1: a tracker's grid of six tracks of notes and effects, the row playing lit yellow",
+     "A generative 8-bit tracker",
+     "Six tracks of sixteen rows on chip voices: NES-style pulses and triangle, Game Boy waves, LFSR noise, SID "
+     "saws and pulses. Write a lead and Follow writes the bass, chords, harmony and drums from it, or turn it off."),
 ]
 
 PAGE = """<!doctype html>
@@ -64,7 +64,7 @@ PAGE = """<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FM-1 firmware by RedtailWorks</title>
-<meta name="description" content="Six free, open-source firmwares for the M-VAVE FM-1: HYP-1, LOF-1, ECO-1, GRAV-1, CTY-1 and EVOL-1. By RedtailWorks.">
+<meta name="description" content="Six free, open-source firmwares for the M-VAVE FM-1: HYP-1, LOF-1, ECO-1, GRAV-1, CTY-1 and BIT-1. By RedtailWorks.">
 <meta name="theme-color" content="#141318">
 <link rel="icon" type="image/png" href="img/favicon.png">
 <meta property="og:title" content="Six firmwares for the M-VAVE FM-1, by RedtailWorks">

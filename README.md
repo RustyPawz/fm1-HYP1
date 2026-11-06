@@ -14,7 +14,7 @@ by Charles Vestal. Current version: **1.5.0** (each push to `main` builds the ne
 
 *Five minutes played live on piece 01: [watch on YouTube](https://www.youtube.com/watch?v=0UvGnZE2_VI).*
 
-- **All the firmwares** (HYP-1, LOF-1, ECO-1, GRAV-1, CTY-1, EVOL-1) on one page, with the pack's video: <https://rustypawz.github.io/fm1-HYP1/>
+- **All the firmwares** (HYP-1, LOF-1, ECO-1, GRAV-1, CTY-1, BIT-1) on one page, with the pack's video: <https://rustypawz.github.io/fm1-HYP1/>
 - **OPEN-1**, the next idea: an open-firmware synth under $200, with its goals, specs, mailing list and build log: <https://rustypawz.github.io/fm1-HYP1/open1/>
 - **Try it in your browser** (no FM-1 needed): <https://rustypawz.github.io/fm1-HYP1/emu/>
 - **Install it** (Chrome or Edge, with the FM-1 plugged in): <https://rustypawz.github.io/fm1-HYP1/install/>
@@ -59,16 +59,19 @@ worlds wake in the tides, and dust clouds, asteroids and comets drift through. T
 themes, MIDI clock in and MIDI out. Experimental and numbered 0.x, built by the same workflow, and on the site
 under [`grav/`](https://rustypawz.github.io/fm1-HYP1/grav/).
 
-## And EVOL-1 (experimental)
+## And BIT-1 (experimental)
 
-[`evol1/`](evol1/) holds **EVOL-1**, a RedtailWorks firmware for the FM-1 built round the sound of *Evol*,
-RedtailWorks' album: a tracker. Six tracks of sixteen rows, a note and one of sixteen effects a cell (glide,
-chance, ratchet, bend, chord, stutter, jump...), sixteen patterns chained into a song, five songs saved on the
-FM-1. The tracks play twenty-four sounds modelled on measurements of the album: its sine kicks, the Eb harmonic
-drone over D, pads pumping at the tempo, FM bells on fourths and fifths, a gliding phrygian lead, a throat,
-glitches and noise, through a ping-pong echo and a long dark plate. Evolve lets each pattern drift on every
-pass; Grow writes one in the album's ways. MIDI clock in, notes in and out. Experimental and numbered 0.x,
-built by the same workflow, and on the site under [`evol/`](https://rustypawz.github.io/fm1-HYP1/evol/).
+[`bit1/`](bit1/) holds **BIT-1**, a RedtailWorks firmware for the FM-1: a generative 8-bit tracker. Six tracks of
+sixteen rows, a note and one of sixteen effects a cell (glide, chance, ratchet, bend, chord, stutter, jump...),
+sixteen patterns chained into a song, five songs saved on the FM-1. The tracks play twenty-four chip voices: an
+NES-style pulse (12.5, 25 or 50%) and stepped triangle, Game Boy-style 4-bit waves, an LFSR noise (long or
+metal), SID-style saws and pulses through a resonant filter, and three kits, their volume in sixteen steps and
+their arpeggios in the scale at frame rate. Follow writes the other tracks from a melody you write (bass,
+chords, an arp, a harmony, a counter-line, drums), a new take when you like, or switch it off for a plain
+tracker; Grow writes a pattern in one of eight chip styles; Evolve lets each one drift on every pass. MIDI clock in, notes in and out. It took EVOL-1's place in this repository; tracker
+ideas from [KAWA](https://github.com/Guizmoh/Kawa-Tracker-Fm1) by Omnipotard are on the way
+([`bit1/docs/PLAN.md`](bit1/docs/PLAN.md)). Experimental and numbered 0.x, built by the same workflow, and on
+the site under [`bit/`](https://rustypawz.github.io/fm1-HYP1/bit/).
 
 ## What it does
 
