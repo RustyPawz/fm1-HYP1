@@ -119,10 +119,17 @@ The **knob strip** at the bottom names the page (and the cursor's track and soun
 
 ## 5. Writing a pattern
 
-A **pattern** is sixteen rows, a bar of sixteenths, for six tracks. Each cell holds:
+A **pattern** is up to sixteen rows, a bar of sixteenths, for six tracks. Each cell holds, after KAWA's:
 
 - a **note** (C1 to B8), a kit's **drum**, a **note-off** (the track's notes let go), or nothing;
-- one **effect**: a letter and a value, 0 to F (see 8).
+- a **volume**, 0 to F, or none (the note as loud as the track plays it);
+- two **effects**, each a letter and a value, 0 to F (see 8).
+
+On the Pattern page the knobs are the cell's **Note**, **Effect** and **Value** and the position's **Pattern**.
+Hold **SEL** and they become its **Volume**, **Effect 2** and **Value 2**, and the pattern's **Rows** (1 to 16:
+a pattern of 12 is a bar of 3/4, of 7 a bar of seven). Let go of SEL after a turn and it does nothing else. In
+the grid, a volume is a bar beside the note, as tall as it's loud; a second effect behind the first is a dot
+(alone, it shows in the first's place); rows past the pattern's end are dim.
 
 A note on a track holds until the next note or a note-off on that track (a drum rings out on its own). A
 sound given the note it is still holding keeps holding it, so a held note can sit through pattern after pattern.
@@ -143,15 +150,19 @@ track: play along and it's recorded, a row at a time.
 
 ![The Song page](img/bit-device-song.png)
 
-The **Song** page (SEQ) is the order list: up to 32 positions, each playing one of the sixteen patterns.
-SELECT moves along it; **KNOB 2** sets the position's pattern (KNOB 4 on Pattern does too). **Length** sets how
+The **Song** page (SEQ) is the order list: up to 32 positions, each playing one of the sixteen patterns, one
+to sixteen times (KAWA's chain). SELECT moves along it; **KNOB 2** sets the position's pattern (KNOB 4 on
+Pattern does too), and with **SEL** held, how many times it plays (×1 to ×16, shown under it). **Length** sets how
 many positions play, and **Loop** on Groove plays the song through (Song) or round the pattern playing
 (Pattern).
 
 **EDIT** on Song copies the position's pattern into the first pattern no position plays, and the position
 plays the copy: a quick way to make a variation. **SEL + EDIT** clears the position's pattern.
 
-A **J** effect jumps to a position after its row.
+A **J** effect jumps to a position after its row; an **H** hops to a row of the same pattern.
+
+Songs are saved packed: only the cells in use take room. The Song page shows how full the song would be
+(a song as it comes is a quarter or less); at 100% SAVE says **SONG FULL** and keeps the last one saved.
 
 ---
 
@@ -188,18 +199,19 @@ kit's Tone tunes it.
 
 ## 8. The effects
 
-One effect a cell: a letter (KNOB 2) and a value 0–F (KNOB 3).
+Two effects a cell: a letter (KNOB 2) and a value 0–F (KNOB 3), and with SEL held, the second (KNOB 2 and 3).
+Both play; where the two are the same letter, the first's value wins.
 
 | | Effect | Value |
 | --- | --- | --- |
 | G | Glide from the track's last note | how slow (20 ms to half a second) |
 | ? | Chance: the note plays or not | value + 1 in 16 |
-| R | Ratchet: the row split into hits | value + 1 hits |
+| R | Ratchet (KAWA's roll): the row split into hits | value + 1 hits |
 | D | Delay: the note late | value sixteenths of a row |
 | T | Tone: this note's filter | 7 as set; lower darker, higher brighter |
-| V | Volume | 0 silent to F full |
+| V | Vibrato: this note's, on top of the track's | how deep |
 | B | Bend: a drop over the row | semitones (0: an octave) |
-| E | Echo throw: this note into the echo | how much |
+| H | Hop: after this row, on to a row of the pattern (once a pass: a fill, a repeat) | the row |
 | A | Chord (in the scale): fifth, triad, sus4, seventh, add9, octave, fourths, triad + octave | 0–7; 8–F the same, spread wider |
 | M | Mutate: another note in the scale | up to value degrees away |
 | L | Length: let go early | value + 1 sixteenths of a row |
@@ -230,6 +242,17 @@ key and mode (Setup).
 | Arp run | Sixteenths up and down the chord; sixteenth hats |
 | Bleeps | Short notes, crushed; on a kit, its own sounds |
 | Sparse | A note, maybe two, out of near silence |
+
+Then six tools, after KAWA's MAGIC, that work on what's there:
+
+| Tool | What it does |
+| --- | --- |
+| Euclid | Density's hits, spread as evenly as they go over the pattern's rows (a kit: kicks) |
+| Vary | A few notes a step up or down the scale; on a kit, a drum or two moved over a row |
+| Rolls | Ratchets at the ends of beats (the beat's last note again, where it's empty) |
+| Accents | The beats at full volume, the rest softer as Density says |
+| Shift | Everything a row on, round the pattern |
+| Up a step | Every note a step up the scale; on a kit, each drum the next |
 
 **Density** and **Range** shape it; **Seed** picks one of a hundred. **EDIT** grows the cursor's track; **SEL +
 EDIT** every track. Each grow moves the seed on, so EDIT again gives another.
@@ -270,12 +293,12 @@ plays its own cells again: BIT-1 is a plain tracker.
 ### Pattern (HOME)
 
 The grid (see 4 and 5). **Note**, **Effect**, **Value**: the cursor's cell. **Pattern**: the pattern this
-position plays.
+position plays. SEL held: **Volume**, **Effect 2**, **Value 2**, and **Rows** (the pattern's length).
 
 ### Song (SEQ)
 
-**Position**, **Pattern** (the position's), **Length** (positions that play), **Follow** (the screen follows
-the song). EDIT: a fresh copy; SEL + EDIT: clear.
+**Position**, **Pattern** (the position's; SEL held: its **Repeat**, ×1 to ×16), **Length** (positions that
+play), **Follow** (the screen follows the song). EDIT: a fresh copy; SEL + EDIT: clear.
 
 ### Sound (ENV)
 

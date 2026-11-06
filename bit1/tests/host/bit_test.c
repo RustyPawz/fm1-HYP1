@@ -11,13 +11,13 @@
 static int fails;
 #define CHECK(c, ...) do { if (!(c)) { printf("FAIL %s:%d: ", __FILE__, __LINE__); printf(__VA_ARGS__); printf("\n"); fails++; } } while (0)
 
-static uint32_t midi_n, midi_notes[16], midi_clock, midi_start, midi_stop;
+static uint32_t midi_n, midi_notes[16], midi_vel[16], midi_clock, midi_start, midi_stop;
 void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2)
 {
     (void)d1;
     midi_n++;
     if ((st & 0xF0u) == 0x90u && d2)
-        midi_notes[st & 15u]++;
+        midi_notes[st & 15u]++, midi_vel[st & 15u] = d2;
     if (st == 0xF8u)
         midi_clock++;
     if (st == 0xFAu)
@@ -90,12 +90,20 @@ int main(void)
     en_init();
 
     /* the songs as they come */
-    CHECK(sizeof(en_song_t) <= 3840u, "a song is %u bytes: more than its flash object", (unsigned)sizeof(en_song_t));
     for (i = 0; i < EN_NSONG; i++) {
         static en_song_t s0, s1;
+        static uint8_t pk[3840];
+        int n;
         en_song_recipe(i, &s0);
         en_song_recipe(i, &s1);
         CHECK(en_song_valid(&s0), "song %d as it comes is not valid", i);
+        /* saved packed: it fits its flash object (with room to write in), and comes back the same */
+        n = en_song_pack(&s0, pk, (int)sizeof pk);
+        CHECK(n > 0 && n == en_song_size(&s0) && n < 3000, "song %d packs to %d bytes", i, n);
+        CHECK(n > 0 && en_song_unpack(pk, n, &s1) == 0 && !memcmp(&s0, &s1, sizeof s0), "song %d unpacked is not the same", i);
+        CHECK(n > 0 && en_song_unpack(pk, n - 1, &s1) != 0, "song %d: a short pack passes", i);
+        printf("  %-16s packs to %d bytes\n", s0.name, n);
+        en_song_recipe(i, &s1);
         CHECK(!memcmp(&s0, &s1, sizeof s0), "song %d is not the same twice", i);
         CHECK(!strcmp(s0.name, en_song_title(i)), "song %d's name", i);
         s0.par[P_TEMPO] = 999;
@@ -132,8 +140,8 @@ int main(void)
         for (s = 0; s < EN_NGROW; s++)
             for (t = 0; t < EN_NTRK; t++) {
                 int notes = 0;
+                h = g;                           /* the same from the same seed (a tool on the same cells) */
                 en_grow(&g, 9, t, s, 70, 60, 1234u);
-                h = g;
                 en_grow(&h, 9, t, s, 70, 60, 1234u);
                 CHECK(!memcmp(g.cell[9], h.cell[9], sizeof g.cell[9]), "grow style %d track %d not repeatable", s, t);
                 for (r = 0; r < EN_NROW; r++) {
@@ -244,6 +252,92 @@ int main(void)
     CHECK(midi_notes[1] > 4, "unmuted, it played %u", midi_notes[1]);
     en_stop();
     run(0.1);
+
+    /* KAWA's cell: a song too full to pack is refused; the volume column; the second effect */
+    {
+        static en_song_t d;
+        static uint8_t pk[3840];
+        en_song_recipe(0, &d);
+        for (p = 0; p < EN_NPAT; p++)
+            for (r = 0; r < EN_NROW; r++)
+                for (t = 0; t < EN_NTRK; t++)
+                    d.cell[p][r][t].note = 60, d.cell[p][r][t].vol = 9, d.cell[p][r][t].fx2 = FX_GLIDE << 4 | 1;
+        CHECK(en_song_pack(&d, pk, (int)sizeof pk) < 0 && en_song_size(&d) > 3840, "a full song packs: %d", en_song_size(&d));
+    }
+    blank();
+    set(P_TEMPO, 120);
+    en_song.cell[0][0][1].note = 50, en_song.cell[0][0][1].vol = 16;   /* F: full */
+    en_song.cell[0][8][1].note = 50, en_song.cell[0][8][1].vol = 2;    /* 1: near silent */
+    midi_reset();
+    en_play(0, 0);
+    run(0.5);
+    CHECK(midi_vel[1] > 110, "volume F: velocity %u", midi_vel[1]);
+    run(0.6);
+    CHECK(midi_vel[1] < 20, "volume 1: velocity %u", midi_vel[1]);
+    en_stop();
+    run(0.1);
+    blank();
+    set(P_TEMPO, 120);
+    for (r = 0; r < EN_NROW; r++)                /* Chance 0 as the second effect, a glide the first */
+        en_song.cell[0][r][2].note = 50, en_song.cell[0][r][2].fx = FX_GLIDE << 4 | 1, en_song.cell[0][r][2].fx2 = FX_CHANCE << 4;
+    midi_reset();
+    en_play(0, 0);
+    run(16.0);
+    CHECK(midi_notes[2] >= 1 && midi_notes[2] <= 22, "Chance 0 second: %u of 128", midi_notes[2]);
+    en_stop();
+    run(0.1);
+
+    /* a pattern's length (KAWA's END), a position's repeats, and Hop (H: on to a row, once a pass) */
+    blank();
+    set(P_TEMPO, 120);
+    en_song.len[0] = 6;                          /* six rows: 0.75 s a pass at 120 */
+    {
+        uint32_t p0;
+        en_play(0, 0);
+        run(0.05);
+        p0 = en_passes;
+        run(3.0);
+        CHECK(en_passes - p0 == 4, "six rows: %u passes in 3 s, wanted 4", en_passes - p0);
+        en_stop();
+        run(0.1);
+    }
+    en_song.len[0] = 16;
+    en_song.order[0] = EN_ORD(0, 3), en_song.order[1] = EN_ORD(1, 1);   /* pattern 1 three times, then 2 */
+    en_song.par[P_LEN] = 2;
+    set(P_LEN, 2);
+    en_play(0, 0);
+    run(5.9);                                    /* two passes of 2 s and most of a third: still position 1 */
+    CHECK(en_pos == 0, "x3: at position %d after 5.9 s", en_pos);
+    run(0.3);
+    CHECK(en_pos == 1, "x3: at position %d after 6.2 s", en_pos);
+    en_stop();
+    run(0.1);
+    en_song.order[0] = EN_ORD(0, 1);
+    en_song.cell[0][7][5].fx2 = FX_HOP << 4 | 0; /* row 7: back to row 0, once */
+    {
+        uint32_t r0;
+        en_play(0, 0);
+        run(0.05);
+        r0 = en_rows;
+        run(4.95);                               /* 40 rows: a pass of 16 + 8 again is 24, then the next */
+        CHECK(en_pos == 1 || en_rows - r0 >= 38, "hop: %u rows", en_rows - r0);
+        CHECK(en_passes > 0, "hop: no pass");
+        en_stop();
+        run(0.1);
+    }
+    {
+        uint32_t p0;
+        en_song.par[P_LEN] = 1;
+        set(P_LEN, 1);
+        en_play(0, 0);
+        run(0.05);
+        p0 = en_passes;
+        run(6.0);                                /* 48 rows: a pass is 24 rows with the hop, so 2 */
+        CHECK(en_passes - p0 == 2, "hop once a pass: %u passes in 6 s, wanted 2", en_passes - p0);
+        en_stop();
+        run(0.1);
+    }
+    en_song.cell[0][7][5].fx2 = 0;
 
     /* effects: Chance 0 plays about one in sixteen; Ratchet 3 plays four; Chord 1 a triad */
     blank();

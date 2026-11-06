@@ -23,7 +23,7 @@ typedef struct {
 } project_t;
 
 extern project_t proj;
-_Static_assert(sizeof(en_song_t) <= PLAT_STORE_MAX, "a song must fit its flash object");
+/* a song is saved packed (en_song_pack): SAVE says so when one won't fit its flash object */
 _Static_assert(EN_NSONG == PLAT_NSONG, "a flash object a song");
 
 int par_get(int p);                      /* any parameter: the song's or the device's */

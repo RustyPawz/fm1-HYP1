@@ -17,12 +17,17 @@ which leaves a plain tracker.
 - Per-track sound pages: shape, sweep, vibrato, tone, crush, detune, arp speed, glide; ADSR.
 - New factory songs, themes and splash; the bank and the songs written from scratch.
 
-## Phase 2: KAWA's tracker features
-- Cell: note, volume, two effects (KAWA's set: ARP chords, GLI, VIB, ROL, BND, CHN, DLY, CUT, PIT, SHP, CRU,
-  VSL, PAN, OFS, HOP, END).
-- Patterns of 1 to 32 rows, 64-step links; chain with ×1 to ×16 repeats; grooves (ticks per row).
-- Per-track tables: 16 steps of pitch, volume, trick, value.
-- One-shot tools (MAGIC-like): amount, die (seed), scope; undo of ten steps.
+## Phase 2: KAWA's tracker features (done in part)
+- Done: a cell is a note, a volume (0-F, or none) and two effects (SEL held turns the Pattern knobs to them).
+  The fifteen effects keep BIT-1's, with KAWA's VIB (V, in Volume's place now there's a column) and HOP (H,
+  once a pass, in Echo's place); ROL is R, CHN ?, DLY D, CUT L, BND B, CRU X, ARP chords A.
+- Done: each pattern's rows, 1 to 16 (KAWA's END); each position played x1 to x16 (the order byte's high
+  nibble); the six MAGIC tools on Grow (Euclid, Vary, Rolls, Accents, Shift, Up a step).
+- Done: songs saved packed (a bitmap of the cells used, 2 or 4 bytes each): 600-1200 bytes as they come, of
+  3840; the Song page shows how full; SAVE refuses one that won't fit (SONG FULL). The song and its load buffer
+  live in the pool (6 KB each), not the 96 KB of RAM.
+- Not yet: 32-row patterns and 64-step links (the cells would double), grooves beyond Swing, per-track tables
+  (16 steps of pitch, volume, trick), KAWA's PIT, SHP, VSL, PAN as effects, undo.
 
 ## Phase 3: follow the lead (done)
 - The lead: one track (Follow page, Lead; Off is a plain tracker). Each other track a Role: Off, Auto (by its

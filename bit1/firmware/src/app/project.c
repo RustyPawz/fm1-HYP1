@@ -54,14 +54,18 @@ static int project_valid(void)
     return 1;
 }
 
-static en_song_t song_buf;              /* a song read from flash, checked before it goes in */
+#ifdef EN_HOST
+#define PJ_POOL
+#else
+#define PJ_POOL __attribute__((section(".pool")))
+#endif
+static en_song_t song_buf PJ_POOL;      /* a song read from flash, checked before it goes in (6 KB: in the pool) */
+static uint8_t song_pk[PLAT_STORE_MAX] PJ_POOL __attribute__((aligned(4)));   /* a song as saved: packed */
 
 static int song_load(int i, en_song_t *s)       /* 0: song i from flash */
 {
-    int n;
-    memset(s, 0, sizeof *s);
-    n = plat_store_load(OBJ_SONG0 + (uint32_t)i, s, sizeof *s);
-    return n == (int)sizeof *s && en_song_valid(s) ? 0 : -1;
+    int n = plat_store_load(OBJ_SONG0 + (uint32_t)i, song_pk, sizeof song_pk);
+    return n > 0 && en_song_unpack(song_pk, n, s) == 0 ? 0 : -1;
 }
 
 int song_saved(int i) { return i >= 0 && i < EN_NSONG && song_load(i, &song_buf) == 0; }
@@ -101,9 +105,12 @@ int project_load(void)
     return 0;
 }
 
-int project_save(void)
+int project_save(void)                           /* 0 saved; -2 the song too big to pack; else the flash's */
 {
-    int rc = plat_store_save(OBJ_SONG0 + proj.song, &en_song, sizeof en_song);
+    int n = en_song_pack(&en_song, song_pk, (int)sizeof song_pk), rc;
+    if (n < 0)
+        return -2;
+    rc = plat_store_save(OBJ_SONG0 + proj.song, song_pk, (uint32_t)n);
     if (rc == 0)
         rc = plat_store_save(OBJ_PROJ, &proj, sizeof proj);
     return rc;

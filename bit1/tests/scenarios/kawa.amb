@@ -1,0 +1,56 @@
+# BIT-1's cells after KAWA's: SEL held turns the Pattern page's knobs to the cell's volume, second effect and
+# value, and the pattern's rows; SEL held on Song, the position's repeats. SEL let go after a turn does nothing.
+wait 500
+tap PLAY
+wait 200
+expect playing 0
+expect follow 1
+# Follow off (the first song's), so track 1 takes what's written
+tap ARP
+tap ARP
+spin K1 -4
+expect par12 0
+tap HOME
+expect view 0
+spin SELECT 2
+expect row 2
+# SEL held: Volume (K1) to 9, Effect 2 (K2) to Vibrato, Value 2 (K3) to 5
+press SEL
+spin K1 10
+expect vol 10
+spin K2 6
+spin K3 5
+expect fx2 101
+wait 200
+shot cell_shift.png
+release SEL
+expect follow 1
+# the rows: SEL + K4, sixteen down to twelve
+press SEL
+spin K4 -4
+expect len 12
+release SEL
+expect follow 1
+wait 200
+shot rows.png
+# the Song page: SEL + K2, the position's repeats
+tap SEQ
+expect view 1
+press SEL
+spin K2 2
+expect rep 3
+wait 200
+shot repeats.png
+release SEL
+# SAVE packs the song; a reboot brings it back
+tap SAVE
+expect dirty 0
+expect packed <3840
+reboot
+wait 500
+expect rep 3
+tap HOME
+spin SELECT 2
+expect vol 10
+expect fx2 101
+expect len 12

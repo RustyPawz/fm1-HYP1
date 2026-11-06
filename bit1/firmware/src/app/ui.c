@@ -16,7 +16,9 @@
  *   HOME           PATTERN    SEQ SONG    ENV SOUND (again: MOVE, SENDS)    LFO SPACE (again: GROOVE)
  *   ARP            GROW (again: FOLLOW)       GLO SETUP (again: DEVICE)
  *   FX             the cursor's track muted / not; held: black keys 1-6 mute, white keys 1-6 solo
- *   KNOB 1-4       the page's four values (on PATTERN: the cell's note, effect and value, and the pattern)
+ *   KNOB 1-4       the page's four values (on PATTERN: the cell's note, effect and value, and the pattern; with
+ *                  SEL held, its volume, second effect and value, and the pattern's rows. On SONG, SEL held: the
+ *                  position's repeats)
  *   SAVE           saves the song (and the device's settings); held 1.5 s on SETUP: the song as it came */
 #include "../dsp/fastmath.h"
 
@@ -25,7 +27,8 @@ static const char *const VIEW_NAME[NVIEWS] = {"Pattern", "Song", "Sound", "Move"
                                               "Follow", "Setup", "Device"};
 static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_SEQ, B_ENV, B_ENV, B_ENV, B_LFO, B_LFO, B_ARP, B_ARP, B_GLO, B_GLO};
 #define GRID_VIEW(v) ((v) == V_PATTERN || (v) == V_GROW || (v) == V_FOLLOW)   /* the pages that show the grid */
-enum { K_NOTE = 200, K_FX, K_VAL, K_PAT, K_POS, K_FOLLOW, K_STYLE, K_DENS, K_RANGE, K_SEED, K_NONE };
+enum { K_NOTE = 200, K_FX, K_VAL, K_PAT, K_POS, K_FOLLOW, K_STYLE, K_DENS, K_RANGE, K_SEED, K_VOL, K_FX2, K_VAL2, K_LEN,
+       K_REP, K_NONE };
 static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Note", "Effect", "Value", "Pattern"},
     {"Position", "Pattern", "Length", "Follow"},
@@ -45,6 +48,7 @@ static const char *const SHORT[EN_NSOUND] = {"NES", "GB", "SID", "TRI", "PBAS", 
 
 static struct {
     uint8_t view, trk, row, pos, rec, follow, mutes, fxwin;
+    uint8_t shift;                     /* SEL held: the second set of knobs (Pattern, Song) */
     uint8_t style, dens, range, seed;
     uint32_t btn, keys, btn_used;
     uint32_t enc_t[NE];
@@ -131,7 +135,7 @@ static void mark_dirty(void) { ui.dirty = 1; }
 int ui_dirty(void) { return ui.dirty != 0; }
 
 /* ------------------------------------------------------------ the song --- */
-static int pat_shown(void) { return en_song.order[ui.pos % EN_NORD] % EN_NPAT; }
+static int pat_shown(void) { return EN_ORD_PAT(en_song.order[ui.pos % EN_NORD]); }
 static en_cell_t *cur_cell(void) { return &en_song.cell[pat_shown()][ui.row & 15][ui.trk % EN_NTRK]; }
 static int trk_sound(int t) { return par_get(P_T(t, TP_SOUND)); }
 static int trk_kit(int t) { return en_sound_is_kit(trk_sound(t)); }
@@ -170,8 +174,11 @@ static int view_knob(int v, int i)
     static const uint8_t TRKP[3][4] = {{TP_SOUND, TP_TONE, TP_DECAY, TP_LEVEL}, {TP_VIB, TP_ARP, TP_EVOLVE, TP_PAN},
                                        {TP_ECHO, TP_VERB, TP_CRUSH, 0}};
     switch (v) {
-    case V_PATTERN: return K_NOTE + i;
-    case V_SONG: return i == 0 ? K_POS : i == 1 ? K_PAT : i == 2 ? P_LEN : K_FOLLOW;
+    case V_PATTERN:
+        if (ui.shift)                            /* SEL held: the cell's volume and second effect, the rows */
+            return i == 0 ? K_VOL : i == 1 ? K_FX2 : i == 2 ? K_VAL2 : K_LEN;
+        return K_NOTE + i;
+    case V_SONG: return i == 0 ? K_POS : i == 1 ? (ui.shift ? K_REP : K_PAT) : i == 2 ? P_LEN : K_FOLLOW;
     case V_SOUND: case V_MOVE: case V_SENDS:
         if (v == V_SENDS && i == 3)
             return P_ARP_T;
@@ -196,6 +203,11 @@ static int knob_get(int k)
     case K_DENS: return ui.dens;
     case K_RANGE: return ui.range;
     case K_SEED: return ui.seed;
+    case K_VOL: return cur_cell()->vol;
+    case K_FX2: return cur_cell()->fx2 >> 4;
+    case K_VAL2: return cur_cell()->fx2 & 15;
+    case K_LEN: return en_pat_len(&en_song, pat_shown());
+    case K_REP: return EN_ORD_REP(en_song.order[ui.pos % EN_NORD]);
     default: return 0;
     }
 }
@@ -215,6 +227,9 @@ static void knob_range(int k, int *lo, int *hi)
     case K_STYLE: *hi = EN_NGROW - 1; break;
     case K_DENS: case K_RANGE: *hi = 100; break;
     case K_SEED: *hi = 99; break;
+    case K_VOL: *hi = 16; break;
+    case K_FX2: case K_VAL2: *hi = 15; break;
+    case K_LEN: case K_REP: *lo = 1, *hi = 16; break;
     default: *hi = 0; break;
     }
 }
@@ -232,13 +247,26 @@ static void knob_text(int k, char *b)
         if (!b[0])
             b[0] = '-', b[1] = '-', b[2] = 0;
         break;
-    case K_FX: {
+    case K_FX: case K_FX2: {
         const char *n = EN_FX_NAME[v & 15];
         while ((*b++ = *n++))
             ;
         break;
     }
-    case K_VAL: b[0] = HEX[v & 15], b[1] = 0; break;
+    case K_VAL: case K_VAL2: b[0] = HEX[v & 15], b[1] = 0; break;
+    case K_VOL:
+        if (!v)
+            b[0] = '-', b[1] = '-', b[2] = 0;
+        else
+            b[0] = HEX[EN_VOL(v) & 15], b[1] = 0;
+        break;
+    case K_LEN:
+        itoa_u((uint32_t)v, b);
+        while (*b)
+            b++;
+        b[0] = ' ', b[1] = 'r', b[2] = 'o', b[3] = 'w', b[4] = 's', b[5] = 0;
+        break;
+    case K_REP: b[0] = 'x', itoa_u((uint32_t)v, b + 1); break;
     case K_PAT: b[0] = 'P', two((uint32_t)v + 1u, b + 1); break;
     case K_POS:
         two((uint32_t)v + 1u, b);
@@ -292,7 +320,15 @@ static void knob_set(int k, int v)
     case K_NOTE: cur_cell()->note = (uint8_t)v; touch_cell(); break;
     case K_FX: cur_cell()->fx = (uint8_t)(v << 4 | (cur_cell()->fx & 15)); touch_cell(); break;
     case K_VAL: cur_cell()->fx = (uint8_t)((cur_cell()->fx & 0xF0) | v); touch_cell(); break;
-    case K_PAT: en_song.order[ui.pos % EN_NORD] = (uint8_t)v; mark_dirty(); break;
+    case K_PAT:
+        en_song.order[ui.pos % EN_NORD] = EN_ORD(v, EN_ORD_REP(en_song.order[ui.pos % EN_NORD]));
+        mark_dirty();
+        break;
+    case K_VOL: cur_cell()->vol = (uint8_t)v; touch_cell(); break;
+    case K_FX2: cur_cell()->fx2 = (uint8_t)(v << 4 | (cur_cell()->fx2 & 15)); touch_cell(); break;
+    case K_VAL2: cur_cell()->fx2 = (uint8_t)((cur_cell()->fx2 & 0xF0) | v); touch_cell(); break;
+    case K_LEN: en_song.len[pat_shown()] = (uint8_t)v; mark_dirty(); break;
+    case K_REP: en_song.order[ui.pos % EN_NORD] = EN_ORD(pat_shown(), v); mark_dirty(); break;
     case K_POS: ui.pos = (uint8_t)v; ui.follow = 0; break;
     case K_FOLLOW: ui.follow = (uint8_t)v; break;
     case K_STYLE: ui.style = (uint8_t)v; break;
@@ -391,7 +427,7 @@ static void song_clone(void)
     int i, from = pat_shown(), to = -1;
     char t[12] = "INTO P";
     for (i = 0; i < song_len(); i++)
-        used[en_song.order[i] % EN_NPAT] = 1;
+        used[EN_ORD_PAT(en_song.order[i])] = 1;
     for (i = 0; i < EN_NPAT && to < 0; i++)
         if (!used[i])
             to = i;
@@ -400,7 +436,8 @@ static void song_clone(void)
         return;
     }
     memcpy(en_song.cell[to], en_song.cell[from], sizeof en_song.cell[0]);
-    en_song.order[ui.pos] = (uint8_t)to;
+    en_song.order[ui.pos] = EN_ORD(to, EN_ORD_REP(en_song.order[ui.pos]));
+    en_song.len[to] = en_song.len[from];
     two((uint32_t)to + 1u, t + 6);
     say("COPIED", t);
     mark_dirty();
@@ -438,7 +475,7 @@ static void follow_write(void)
     char b[12] = "TRACKS: ";
     uint32_t wrote = 0;
     for (i = 0; i < song_len(); i++) {
-        int pat = en_song.order[i] % EN_NPAT;
+        int pat = EN_ORD_PAT(en_song.order[i]);
         en_cell_t o[EN_NROW];
         if (done[pat])
             continue;
@@ -544,11 +581,14 @@ static void button(int b, int shift)
         break;
     }
     case B_SAVE:
-        if (project_save() == 0) {
-            ui.dirty = 0;
-            say("SAVED", en_song.name);
-        } else {
-            say("NOT SAVED", "FLASH ERROR");
+        {
+            int rc = project_save();
+            if (rc == 0) {
+                ui.dirty = 0;
+                say("SAVED", en_song.name);
+            } else {
+                say("NOT SAVED", rc == -2 ? "SONG FULL" : "FLASH ERROR");
+            }
         }
         break;
     default: break;
@@ -942,8 +982,11 @@ static void input(void)
         say("AS IT CAME", "(SAVE TO KEEP)");
         mark_dirty();
     }
+    ui.shift = (uint8_t)(shift && (ui.view == V_PATTERN || ui.view == V_SONG));
     for (i = 0; i < 4; i++)
         if ((e = plat_enc(EN_K1 + (int)i)) != 0) {
+            if (ui.shift)                        /* a knob turned under SEL: SEL's let go does nothing */
+                ui.btn_used |= 1u << B_SEL;
             turn(EN_K1 + (int)i, view_knob(ui.view, (int)i), e);
             ui.touched = (int8_t)i;
             ui.touch_until = plat_ms() + 1200u;
@@ -1168,7 +1211,7 @@ static void draw_grid(void)
 {
     static const char HEX[] = "0123456789ABCDEF";
     const int pat = pat_shown(), playing_here = en_playing && en_pat_now == pat && (ui.follow || en_pos == ui.pos);
-    const int lead = par_get(P_LEAD) - 1;
+    const int lead = par_get(P_LEAD) - 1, plen = en_pat_len(&en_song, pat);
     int top = (int)ui.row - 4, i, t;
     static en_cell_t takes[EN_NTRK][EN_NROW];   /* what a following track plays here: its take, not its cells */
     uint8_t fol[EN_NTRK];
@@ -1214,13 +1257,13 @@ static void draw_grid(void)
         else if (r % 4 == 0)
             cv_rect(0, y, 240, G_ROWH, mix(K_BG, K_PANEL, 7));
         two((uint32_t)r, num);
-        cv_text(1, y - 2, &FONT_XS, num, r % 4 == 0 ? K_ACC : K_DIM);
+        cv_text(1, y - 2, &FONT_XS, num, r >= plen ? K_LINE : r % 4 == 0 ? K_ACC : K_DIM);
         for (t = 0; t < EN_NTRK; t++) {
             const en_cell_t *c = fol[t] ? &takes[t][r] : &en_song.cell[pat][r][t];
             int32_t x = G_X0 + t * G_CW + 2;
             int fx = c->fx >> 4, muted = ui.mutes >> t & 1u;
             char n[6];
-            uint16_t col = muted ? K_DIM : fol[t] ? mix(K_DIM, TRK_C[t], 9) : K_TEXT;
+            uint16_t col = muted || r >= plen ? K_DIM : fol[t] ? mix(K_DIM, TRK_C[t], 9) : K_TEXT;
             if (r == ui.row && t == ui.trk) {
                 cv_round(x - 2, y, G_CW - 1, G_ROWH, 2, ui.rec ? K_HOT : K_ACC);
                 col = K_BG;
@@ -1235,7 +1278,19 @@ static void draw_grid(void)
                 note_text(c->note, trk_kit(t), trk_sound(t), n);
                 cv_text(x, y - 2, &FONT_XS, n, col == K_TEXT ? (trk_kit(t) ? mix(K_TEXT, TRK_C[t], 8) : K_TEXT) : col);   /* a take: in its track's colour */
             }
-            if (fx) {
+            if (c->vol) {                        /* the volume: a bar beside the note, as tall as it's loud */
+                int32_t hgt = 1 + EN_VOL(c->vol) * 9 / 15;
+                cv_rect(x + 18, y + 11 - hgt, 1, hgt, r == ui.row && t == ui.trk ? K_BG : K_COLD);
+            }
+            if (c->fx2 && fx)                    /* a second effect behind the first: a dot */
+                cv_rect(x + 33, y + 2, 2, 2, r == ui.row && t == ui.trk ? K_BG : K_HOT);
+            if (!fx && c->fx2) {                 /* only the second: shown in the first's place */
+                fx = c->fx2 >> 4;
+                {
+                    char e[3] = {EN_FX_CHAR[fx], HEX[c->fx2 & 15], 0};
+                    cv_text(x + 21, y - 2, &FONT_XS, e, r == ui.row && t == ui.trk ? K_BG : muted ? K_DIM : K_COLD);
+                }
+            } else if (fx) {
                 char e[3] = {EN_FX_CHAR[fx], HEX[c->fx & 15], 0};
                 cv_text(x + 21, y - 2, &FONT_XS, e, r == ui.row && t == ui.trk ? K_BG : muted ? K_DIM : K_COLD);
             } else {
@@ -1256,9 +1311,15 @@ static void draw_song(void)
     caps(t, en_song.name, sizeof t);
     cv_text(4, -1, &FONT_B, t, K_TEXT);
     {
-        char u[16] = "LOOP: ";
+        char u[16] = "LOOP: ", m[12];
+        int pc = en_song_size(&en_song) * 100 / (int)PLAT_STORE_MAX, k = 0;
         caps(u + 6, par_get(P_LOOP) ? "Pattern" : "Song", 10);
-        cv_text(236 - text_w(&FONT_XS, u), 1, &FONT_XS, u, K_DIM);
+        cv_text(236 - text_w(&FONT_XS, u), -3, &FONT_XS, u, K_DIM);
+        itoa_u((uint32_t)pc, m);                 /* how much of its flash the song would take */
+        while (m[k])
+            k++;
+        m[k++] = '%', m[k++] = ' ', m[k++] = 'F', m[k++] = 'U', m[k++] = 'L', m[k++] = 'L', m[k] = 0;
+        cv_text(236 - text_w(&FONT_XS, m), 9, &FONT_XS, m, pc > 100 ? K_HOT : pc > 85 ? K_ACC : K_DIM);
     }
     for (i = 0; i < EN_NORD; i++) {
         int32_t x = 4 + (i % 8) * 29, y = 22 + (i / 8) * 30;
@@ -1270,10 +1331,15 @@ static void draw_song(void)
             cv_rect(x + 11, y + 12, 4, 1, K_LINE);
             continue;
         }
-        two((uint32_t)en_song.order[i] % EN_NPAT + 1u, p);
-        text_c(x + 13, y + 4, &FONT_S, p, play || cur ? K_BG : K_TEXT);
+        two((uint32_t)EN_ORD_PAT(en_song.order[i]) + 1u, p);
+        text_c(x + 13, y + 2, &FONT_S, p, play || cur ? K_BG : K_TEXT);
+        if (EN_ORD_REP(en_song.order[i]) > 1) {  /* its repeats */
+            char q[4] = {'x', 0, 0, 0};
+            itoa_u((uint32_t)EN_ORD_REP(en_song.order[i]), q + 1);
+            text_c(x + 13, y + 13, &FONT_XS, q, play || cur ? K_BG : K_COLD);
+        }
         if (play) {
-            int32_t w = (int32_t)en_row * 22 / (EN_NROW - 1);
+            int32_t w = (int32_t)en_row * 22 / (en_pat_len(&en_song, EN_ORD_PAT(en_song.order[i])) > 1 ? en_pat_len(&en_song, EN_ORD_PAT(en_song.order[i])) - 1 : 1);
             cv_rect(x + 2, y + 22, w + 1, 2, K_BG);
         }
     }
@@ -1405,7 +1471,8 @@ static void draw_main(void)
         const en_cell_t *c = &en_song.cell[pat_shown()][0][0];
         uint32_t k;
         for (k = 0; k < (uint32_t)(EN_NROW * EN_NTRK); k++)
-            h = hash(h, (uint32_t)c[k].note | (uint32_t)c[k].fx << 8);
+            h = hash(h, (uint32_t)c[k].note | (uint32_t)c[k].fx << 8 | (uint32_t)c[k].vol << 16 | (uint32_t)c[k].fx2 << 24);
+        h = hash(h, (uint32_t)en_pat_len(&en_song, pat_shown()));
         h = hash(h, (uint32_t)par_get(P_LEAD) | (uint32_t)par_get(P_TAKE) << 4 | (uint32_t)par_get(P_FDENS) << 12 |
                         (uint32_t)par_get(P_ROOT) << 20 | (uint32_t)par_get(P_MODE) << 24);
         for (t = 0; t < EN_NTRK; t++)
@@ -1414,6 +1481,7 @@ static void draw_main(void)
         uint32_t k;
         for (k = 0; k < EN_NORD; k++)
             h = hash(h, en_song.order[k]);
+        h = hash(h, (uint32_t)en_song_size(&en_song));
     }
     if (h == ui.sig[1])
         return;
@@ -1430,7 +1498,8 @@ static void draw_main(void)
 /* the knob strip: a rule with the page's name (and the track's), a cell a knob */
 static void draw_knobs(void)
 {
-    uint32_t h = hash(2166136261u, ui.view | (uint32_t)ui.touched << 8 | (uint32_t)ui.trk << 12 | (uint32_t)par_get(P_THEME) << 20), i;
+    uint32_t h = hash(2166136261u, ui.view | (uint32_t)ui.touched << 8 | (uint32_t)ui.trk << 12 | (uint32_t)par_get(P_THEME) << 20 |
+                                       (uint32_t)ui.shift << 28), i;
     int now_touch = plat_ms() < ui.touch_until;
     for (i = 0; i < 4; i++)
         h = hash(h, (uint32_t)knob_get(view_knob(ui.view, (int)i)) | (uint32_t)trk_sound(ui.trk) << 16);
@@ -1470,7 +1539,11 @@ static void draw_knobs(void)
             cv_round(x + 3, 12, 54, 56, 6, K_PANEL);
         knob_range(k, &lo, &hi);
         v = knob_get(k);
-        caps(t, KNOB_LABEL[ui.view][i], sizeof t);
+        {
+            static const char *const SHIFTED[4] = {"Volume", "Effect 2", "Value 2", "Rows"};
+            caps(t, ui.shift && ui.view == V_PATTERN ? SHIFTED[i] : ui.shift && ui.view == V_SONG && i == 1 ? "Repeat"
+                                                                                                             : KNOB_LABEL[ui.view][i], sizeof t);
+        }
         {
             const felucca_font_t *f = text_w(&FONT_S, t) <= 57 ? &FONT_S : &FONT_XS;
             text_c(cx, f == &FONT_S ? 12 : 13, f, t, hot ? K_TEXT : K_DIM);

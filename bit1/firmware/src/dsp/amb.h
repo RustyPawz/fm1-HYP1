@@ -37,15 +37,17 @@
 #define NOTE_OFF 1
 #define NOTE_LO 12
 #define NOTE_HI 119
-/* its effect: command << 4 | value */
-enum { FX_NONE, FX_GLIDE, FX_CHANCE, FX_RATCHET, FX_DELAY, FX_TONE, FX_VOLUME, FX_BEND, FX_ECHO, FX_CHORD,
+/* its effects (two a cell, after KAWA's): command << 4 | value */
+enum { FX_NONE, FX_GLIDE, FX_CHANCE, FX_RATCHET, FX_DELAY, FX_TONE, FX_VIB, FX_BEND, FX_HOP, FX_CHORD,
        FX_MUTATE, FX_LENGTH, FX_CRUSH, FX_STUTTER, FX_SWELL, FX_JUMP };
 extern const char EN_FX_CHAR[EN_NFX + 1];      /* the letter the grid shows ('.' none) */
 extern const char *const EN_FX_NAME[EN_NFX];
 
+/* a cell: its note, its volume (0 as the track plays it, 1..16 the levels 0..F), and two effects */
 typedef struct {
-    uint8_t note, fx;
+    uint8_t note, vol, fx, fx2;
 } en_cell_t;
+#define EN_VOL(v) ((v) - 1)                    /* a volume's level, 0..15 (when v > 0) */
 
 /* modes: pools relative to the root (bit i: root + i semitones) */
 enum { MODE_AEOLIAN, MODE_PHRYGIAN, MODE_DORIAN, MODE_MIXOLYDIAN, MODE_MAJOR, MODE_LYDIAN, MODE_PENT_MIN,
@@ -90,17 +92,28 @@ void en_param_text(int i, int v, char *buf);   /* the value as the screen shows 
 
 /* the song, as saved (one flash object, PLAT_STORE_MAX at most) */
 #define EN_SONG_MAGIC 0x53544942u              /* "BITS" */
-#define EN_SONG_FORMAT 2u
+#define EN_SONG_FORMAT 3u
+/* the order list: each position a pattern (low nibble) played 1..16 times (high nibble + 1) */
+#define EN_ORD_PAT(o) ((o) & 15)
+#define EN_ORD_REP(o) (((o) >> 4) + 1)
+#define EN_ORD(pat, rep) ((uint8_t)(((pat) & 15) | (((rep) - 1) & 15) << 4))
 typedef struct {
     uint32_t magic;
     uint16_t format, rsv;
     char name[16];
     int16_t par[P_NSONG];
     uint8_t order[EN_NORD];
+    uint8_t len[EN_NPAT];                      /* each pattern's rows, 1..16 (KAWA's END) */
     en_cell_t cell[EN_NPAT][EN_NROW][EN_NTRK];
 } en_song_t;
 extern en_song_t en_song;                      /* the song playing (and being edited) */
 int en_song_valid(const en_song_t *s);         /* 1: every value in range */
+/* a song as saved: its cells packed (a bitmap of the cells used, then each used cell's note and effect, and its
+ * volume and second effect when it has them). The size, or -1 when it won't fit in max bytes. */
+int en_song_pack(const en_song_t *s, uint8_t *buf, int max);
+int en_song_unpack(const uint8_t *buf, int n, en_song_t *s);   /* 0: a valid song */
+int en_pat_len(const en_song_t *s, int pat);  /* its rows, 1..16 */
+int en_song_size(const en_song_t *s);         /* its packed size, in bytes */
 void en_song_recipe(int i, en_song_t *s);      /* song i as it comes */
 const char *en_song_title(int i);
 
@@ -156,8 +169,13 @@ extern volatile uint32_t en_ev_w;
 int en_scale(uint32_t pool, int *steps);       /* the pool's pitch classes (relative), ascending; count */
 int en_snap(int note, int root, uint32_t pool);   /* a note moved to the nearest in the scale (below on a tie) */
 /* GROW: write one track of one pattern in one of eight chip styles, from a seed; density and range 0..100.
- * Notes in the song's scale; a kit's track gets drums (36 KIK, 37 SNR, 38 HAT, 39 OHT, 40 TOM, 41-43 the kit's). */
-#define EN_NGROW 8
+ * Notes in the song's scale; a kit's track gets drums (36 KIK, 37 SNR, 38 HAT, 39 OHT, 40 TOM, 41-43 the kit's).
+ * Then KAWA's MAGIC tools, on what's there: Euclid (density's hits, as evenly as they go), Vary (a few notes a
+ * step in the scale, a few moved), Rolls (ratchets at the ends of beats), Accents (the beats loud, the rest
+ * softer), Shift (on a row), Up (a step up the scale). */
+#define EN_NGROW 14
+enum { G_DRIVER, G_HOLD, G_OSTINATO, G_MELODY, G_TRIPLET, G_ARPRUN, G_BLEEPS, G_SPARSE,
+       G_EUCLID, G_VARY, G_ROLLS, G_ACCENTS, G_SHIFT, G_UP };
 extern const char *const EN_GROW_NAME[EN_NGROW];
 void en_grow(en_song_t *s, int pat, int track, int style, int density, int range, uint32_t seed);
 /* FOLLOW: with a lead (P_LEAD), each track given a role plays a take written from the lead's notes in the same

@@ -174,7 +174,7 @@ body.stream .ctl.knob.sv-turn > circle:first-child { stroke: #ff9a3c; stroke-wid
       <div>
         <h3>Pattern <span>HOME</span></h3>
         <dl>
-          <dt>The grid</dt><dd>Sixteen rows (a bar of sixteenths), six tracks. A cell is a note (a kit's: its drum, KIK, SNR, HAT...) or a note-off (the bars), and one effect: a letter and a value 0–F. <b>SELECT</b> the row (with SEL: four), <b>ALGORITHM</b> the track. The row playing glows yellow.</dd>
+          <dt>The grid</dt><dd>Sixteen rows (a bar of sixteenths), six tracks. A cell is a note (a kit's: its drum, KIK, SNR, HAT...) or a note-off (the bars), a volume (0–F, a bar beside the note) and two effects, each a letter and a value 0–F (KAWA's cell). Hold <b>SEL</b> and the knobs are the cell's Volume, Effect 2 and Value 2, and the pattern's Rows (1–16). Rows past a pattern's end are dim. <b>SELECT</b> the row (with SEL: four), <b>ALGORITHM</b> the track. The row playing glows yellow.</dd>
           <dt>Note, Effect, Value</dt><dd>The cursor's cell. Note goes from empty to off to the notes (a kit: its eight drums).</dd>
           <dt>Pattern</dt><dd>Which of the sixteen patterns this position of the song plays.</dd>
         </dl>
@@ -268,9 +268,10 @@ body.stream .ctl.knob.sv-turn > circle:first-child { stroke: #ff9a3c; stroke-wid
   <div>
     <h2>The effects</h2>
     <ul>
-      <li><b>G</b> Glide from the last note · <b>?</b> Chance (value+1 in 16) · <b>R</b> Ratchet (value+1 hits) · <b>D</b> Delay (value/16 of a row) · <b>T</b> Tone · <b>V</b> Volume</li>
-      <li><b>B</b> Bend: a drop of value semitones over the row · <b>E</b> Echo throw · <b>A</b> Chord (fifth, triad, sus4, seventh, add9, octave, fourths, triad + octave; 8–F spread wider) · <b>M</b> Mutate (± value degrees)</li>
+      <li><b>G</b> Glide from the last note · <b>?</b> Chance (value+1 in 16) · <b>R</b> Ratchet (value+1 hits) · <b>D</b> Delay (value/16 of a row) · <b>T</b> Tone · <b>V</b> Vibrato (this note's)</li>
+      <li><b>B</b> Bend: a drop of value semitones over the row · <b>H</b> Hop to a row of the pattern (once a pass) · <b>A</b> Chord (fifth, triad, sus4, seventh, add9, octave, fourths, triad + octave; 8–F spread wider) · <b>M</b> Mutate (± value degrees)</li>
       <li><b>L</b> Length · <b>X</b> Crush · <b>S</b> Stutter (30–60 ms crushed repeats) · <b>W</b> Swell · <b>J</b> Jump to a position after this row</li>
+      <li>Two a cell; both play. The volume column sets a note's loudness, 0–F.</li>
       <li>A sound given the note it is still holding keeps holding it, so a held note can sit through pattern after pattern.</li>
     </ul>
   </div>

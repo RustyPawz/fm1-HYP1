@@ -1,8 +1,8 @@
 # BIT-1 for the M-VAVE FM-1 (experimental)
 
-BIT-1 turns the M-VAVE FM-1 into a generative 8-bit tracker. Six tracks of sixteen rows, a note and an effect
-a cell, patterns chained into a song, played by chip voices: an NES-style pulse and stepped triangle, Game
-Boy-style 4-bit waves, an LFSR noise, long or metal, SID-style saws and pulses through a resonant filter, and a
+BIT-1 turns the M-VAVE FM-1 into a generative 8-bit tracker. Six tracks of up to sixteen rows, a note, a
+volume and two effects a cell (after KAWA's), patterns chained into a song, each played up to sixteen times.
+The tracks play chip voices: an NES-style pulse and stepped triangle, Game Boy-style 4-bit waves, an LFSR noise, long or metal, SID-style saws and pulses through a resonant filter, and a
 two-op FM ring bell, with sixteen steps of volume and arpeggios at frame rate, through a ping-pong echo, a
 plate and Lo-fi. Follow writes the other tracks from a melody you write (bass, chords, an arp, a harmony, a
 counter-line, drums, each a new take when you like), or none of it. Evolve lets each pattern drift a little on
@@ -35,8 +35,9 @@ every pass; Grow writes one in eight chip styles. A RedtailWorks project, alongs
 | OCT− / OCT+ | The keys' octave (SEL: the cell a semitone) |
 | SAVE | Save the song; held on Setup: the song as it came |
 
-**Sixteen effects:** Glide, Chance, Ratchet, Delay, Tone, Volume, Bend, Echo throw, Chord, Mutate, Length,
-Crush, Stutter, Swell, Jump. **Twenty-four sounds:** three kits (NES, GB, SID), Tri bass, Pulse bass, SID bass,
+**Fifteen effects, two a cell:** Glide, Chance, Ratchet, Delay, Tone, Vibrato, Bend, Hop (to a row, once a
+pass), Chord, Mutate, Length, Crush, Stutter, Swell, Jump. **Grow's tools** after KAWA's MAGIC: Euclid, Vary,
+Rolls, Accents, Shift, Up a step. **Twenty-four sounds:** three kits (NES, GB, SID), Tri bass, Pulse bass, SID bass,
 Wave bass, Octave bass, Square, Thin lead, Duty lead, SID lead, Wave lead, Chip arp, Wave pad, SID pad, Organ,
 Ring bell, Blip, Laser, Power-up, Pickup, Metal, Noise sweep. **Five songs,** each one chip's: Overworld (NES),
 Dungeon (Game Boy), Starfield (SID), Boss Rush (NES), Lullaby (Game Boy).

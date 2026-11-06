@@ -402,6 +402,16 @@ static int expect(const char *what, const char *val)
         got = cur_cell()->note;
     else if (!strcmp(what, "fx"))
         got = cur_cell()->fx;
+    else if (!strcmp(what, "vol"))                /* its volume (0 none, 1..16), its second effect byte */
+        got = cur_cell()->vol;
+    else if (!strcmp(what, "fx2"))
+        got = cur_cell()->fx2;
+    else if (!strcmp(what, "len"))                /* the pattern on screen's rows; the position's repeats */
+        got = en_pat_len(&en_song, pat_shown());
+    else if (!strcmp(what, "rep"))
+        got = EN_ORD_REP(en_song.order[ui.pos % EN_NORD]);
+    else if (!strcmp(what, "packed"))             /* the song's packed size, bytes */
+        got = en_song_size(&en_song);
     else if (!strncmp(what, "cell", 4)) {         /* cellP.R.T: a cell's note */
         int p = 0, r = 0, t = 0;
         sscanf(what + 4, "%d.%d.%d", &p, &r, &t);

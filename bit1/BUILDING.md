@@ -62,7 +62,7 @@ tests/run_tests.sh
 Runs, on the build machine: the maths library against libm; the instrument (`tests/host/bit_test.c`: the
 songs as they come, the scale, GROW, the tracker's timing, loop, jump, note-offs, mutes, the effects, Evolve,
 MIDI out and clock in, a key into a track, every sound and Arp, Follow (the chords heard, every role's take, live takes), the levels); flash storage (seven objects, the project, the panel and five songs, clear of the sample slots); Felucca's update-path tests against `build/amb.fwsc`; and the whole app in the simulator
-(`tests/scenarios/*.amb`: the tracker, Follow, MIDI clock), with its screenshots and audio in `build/scenarios/`.
+(`tests/scenarios/*.amb`: the tracker, Follow, KAWA's cell, MIDI clock), with its screenshots and audio in `build/scenarios/`.
 
 `host/build_host.sh` builds the simulator alone; `build/host/amb_host SCRIPT OUTDIR` runs one
 script (the command list is at the top of `host/amb_host.c`).

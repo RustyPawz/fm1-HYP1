@@ -18,16 +18,17 @@ const char *const EN_NOTE_NAME[12] = {"C", "C#", "D", "Eb", "E", "F", "F#", "G",
 const char *const EN_MODE_NAME[EN_NMODES] = {"Aeolian", "Phrygian", "Dorian", "Mixolydian", "Major", "Lydian",
                                              "Pent min", "Chromatic"};
 const uint16_t EN_MODE_POOL[EN_NMODES] = {0x5ADu, 0x5ABu, 0x6ADu, 0x6B5u, 0xAB5u, 0xAD5u, 0x4A9u, 0xFFFu};
-const char EN_FX_CHAR[EN_NFX + 1] = ".G?RDTVBEAMLXSWJ";
-const char *const EN_FX_NAME[EN_NFX] = {"None", "Glide", "Chance", "Ratchet", "Delay", "Tone", "Volume", "Bend",
-                                        "Echo", "Chord", "Mutate", "Length", "Crush", "Stutter", "Swell", "Jump"};
+const char EN_FX_CHAR[EN_NFX + 1] = ".G?RDTVBHAMLXSWJ";
+const char *const EN_FX_NAME[EN_NFX] = {"None", "Glide", "Chance", "Ratchet", "Delay", "Tone", "Vibrato", "Bend",
+                                        "Hop", "Chord", "Mutate", "Length", "Crush", "Stutter", "Swell", "Jump"};
 const char *const EN_SOUND_NAME[EN_NSOUND] = {
     "NES kit", "GB kit", "SID kit",
     "Tri bass", "Pulse bass", "SID bass", "Wave bass", "Octave bass",
     "Square", "Thin lead", "Duty lead", "SID lead", "Wave lead",
     "Chip arp", "Wave pad", "SID pad", "Organ", "Ring bell",
     "Blip", "Laser", "Power-up", "Pickup", "Metal", "Noise sweep"};
-const char *const EN_GROW_NAME[EN_NGROW] = {"Driver", "Hold", "Ostinato", "Melody", "Triplet", "Arp run", "Bleeps", "Sparse"};
+const char *const EN_GROW_NAME[EN_NGROW] = {"Driver", "Hold", "Ostinato", "Melody", "Triplet", "Arp run", "Bleeps", "Sparse",
+                                            "Euclid", "Vary", "Rolls", "Accents", "Shift", "Up a step"};
 const char *const EN_ARP_NAME[EN_NARP] = {"Off", "Triad", "Down", "Up-down", "Seventh", "Octave", "Power", "Trill"};
 const char *const EN_ROLE_NAME[EN_NROLE] = {"Off", "Auto", "Bass", "Chords", "Arp", "Harmony", "Counter", "Drums"};
 static const char *const THEME_NAME[EN_NTHEMES] = {"Arcade", "Pocket", "Home", "Neon", "Mono"};
@@ -188,7 +189,7 @@ void en_mute(int on) { post(C_MUTE, on, 0); }
 void en_track_mute(uint32_t m) { post(C_TMUTE, (int)(m & 0x3Fu), 0); }
 
 /* -------------------------------------------------------------- state --- */
-en_song_t en_song;
+en_song_t en_song EN_POOL;
 volatile uint8_t en_playing, en_ext, en_pos, en_row, en_pat_now;
 volatile float en_bpm = 96.0f;
 volatile uint8_t en_bus_on;
@@ -508,7 +509,7 @@ static int voice_alloc(void)                    /* a free voice; else the oldest
 }
 
 typedef struct {
-    float vel, tone, glide, bend, crush, echo, swell;   /* the cell's effect, as a voice takes it */
+    float vel, tone, glide, bend, crush, vib, swell;    /* the cell's effects, as a voice takes them */
     int32_t gate;                               /* samples held; -1 until the next note */
 } hit_t;
 
@@ -565,7 +566,7 @@ static void voice_start(int t, int nn, int32_t wait, const hit_t *h)
     v->crush = fm_clampf(s->crush + h->crush + T->crush, 0.0f, 0.95f);
     v->chold = 0.0f;
     v->cph = 1.0f;
-    v->send_e = s->echo + h->echo;
+    v->send_e = s->echo;
     v->send_r = s->verb;
     /* the chip's pulse: its duty in steps, Tone moving it */
     v->duty = s->pw;
@@ -575,7 +576,7 @@ static void voice_start(int t, int nn, int32_t wait, const hit_t *h)
         v->duty = DUTY[d < 1 ? 1 : d > 3 ? 3 : d];
     }
     v->pwph = 0.0f;
-    v->vdep = kit ? 0.0f : s->vib + T->vib;
+    v->vdep = kit ? 0.0f : s->vib + T->vib + h->vib;
     v->vph = 0.0f, v->vt = 0.0f;
     /* the arpeggio: the track's shape, else the sound's */
     a = kit ? 0 : T->arp ? T->arp : s->arp;
@@ -1067,7 +1068,8 @@ static void apply(int p, int v)
 }
 
 /* ------------------------------------------------------------ the tracker --- */
-static int seq_pos, seq_row, jump_to = -1;
+static int seq_pos, seq_row, seq_rep, jump_to = -1, hop_to = -1;
+static uint32_t hop_used;                       /* the rows whose Hop has gone this pass */
 static float row_frac, beat_ph, clk_acc;
 static int32_t duck_at = -1;
 static int8_t duck_trk = -1;
@@ -1143,15 +1145,29 @@ static float row_samples(void) { return 15.0f / fm_maxf(en_bpm, 20.0f) * EN_SR; 
 static const int8_t CHORD[8][4] = {{0, 4, 99, 99}, {0, 2, 4, 99}, {0, 3, 4, 99}, {0, 2, 4, 6},
                                    {0, 4, 8, 99}, {0, 7, 99, 99}, {0, 3, 6, 99}, {0, 2, 4, 7}};
 
+/* a cell's effect: its value + 1 when either of its two has the command (the first wins), else 0 */
+static int fxv(const en_cell_t *c, int cmd)
+{
+    if ((c->fx >> 4) == cmd)
+        return (c->fx & 15) + 1;
+    if ((c->fx2 >> 4) == cmd)
+        return (c->fx2 & 15) + 1;
+    return 0;
+}
+
 static void play_cell(int t, const en_cell_t *c, int32_t at, int row)
 {
     track_t *T = &tk[t];
-    const int snd = par[P_T(t, TP_SOUND)], kit = en_sound_is_kit(snd), fx = c->fx >> 4, v = c->fx & 15;
+    const int snd = par[P_T(t, TP_SOUND)], kit = en_sound_is_kit(snd);
     const float rl = row_samples();
-    int note = c->note, k;
+    int note = c->note, k, v;
     hit_t h;
-    if (fx == FX_JUMP)
-        jump_to = v;
+    if ((v = fxv(c, FX_JUMP)))
+        jump_to = v - 1;
+    if ((v = fxv(c, FX_HOP)) && !(hop_used >> row & 1u)) {   /* H: on to a row of this pattern, once a pass */
+        hop_used |= 1u << row;
+        hop_to = v - 1;
+    }
     if (note == NOTE_EMPTY) {                    /* Evolve's ghosts: a drum where the kit's drift has grown one */
         if (kit && T->drift[row] >= 2 && T->last >= NOTE_LO && frand() < 0.5f) {
             note = T->last;
@@ -1163,15 +1179,15 @@ static void play_cell(int t, const en_cell_t *c, int32_t at, int row)
         track_release(t, at);
         return;
     } else {
-        h.vel = 0.8f;
+        h.vel = c->vol ? 0.04f + (float)EN_VOL(c->vol) * (0.96f / 15.0f) : 0.8f;   /* the volume column */
     }
-    if (fx == FX_CHANCE && frand() >= (float)(v + 1) * (1.0f / 16.0f))
+    if ((v = fxv(c, FX_CHANCE)) && frand() >= (float)v * (1.0f / 16.0f))
         return;
-    if (fx == FX_DELAY)
-        at += (int32_t)(rl * (float)v * (1.0f / 16.0f));
+    if ((v = fxv(c, FX_DELAY)))
+        at += (int32_t)(rl * (float)(v - 1) * (1.0f / 16.0f));
     if (!kit) {
-        if (fx == FX_MUTATE && v)
-            note = deg_shift(note, irand(2 * v + 1) - v);
+        if ((v = fxv(c, FX_MUTATE)) > 1)
+            note = deg_shift(note, irand(2 * (v - 1) + 1) - (v - 1));
         if (T->drift[row]) {
             note = deg_shift(note, T->drift[row]);
             en_evolved++;
@@ -1179,26 +1195,30 @@ static void play_cell(int t, const en_cell_t *c, int32_t at, int row)
     } else if (T->drift[row] < 0 && c->note >= NOTE_LO && frand() < 0.5f) {
         return;                                  /* Evolve drops a drum */
     }
-    h.tone = 1.0f, h.glide = 0.0f, h.bend = 0.0f, h.crush = 0.0f, h.echo = 0.0f, h.swell = 0.0f, h.gate = -1;
-    switch (fx) {
-    case FX_GLIDE: h.glide = 0.02f + 0.03f * (float)v; break;
-    case FX_TONE: h.tone = fm_exp2f((float)(v - 7) * 0.5f); break;
-    case FX_VOLUME: h.vel = (float)v * (1.0f / 15.0f); break;
-    case FX_BEND: h.bend = v ? (float)v : 12.0f; break;
-    case FX_ECHO: h.echo = 0.4f + (float)v * 0.2f; break;
-    case FX_CRUSH: h.crush = (float)v * (0.9f / 15.0f); break;
-    case FX_SWELL: h.swell = (float)(v + 1) * 0.25f * rl * (1.0f / EN_SR); break;
-    case FX_LENGTH: h.gate = (int32_t)fm_maxf(rl * (float)(v + 1) * (1.0f / 16.0f), 64.0f); break;
-    default: break;
-    }
-    /* a pad or a drone given the note it holds: it holds on (no breath in again) */
-    if (!kit && fx == FX_NONE && sound_of(snd, note)->att >= 0.1f && track_holding(t, note)) {
+    h.tone = 1.0f, h.glide = 0.0f, h.bend = 0.0f, h.crush = 0.0f, h.vib = 0.0f, h.swell = 0.0f, h.gate = -1;
+    if ((v = fxv(c, FX_GLIDE)))
+        h.glide = 0.02f + 0.03f * (float)(v - 1);
+    if ((v = fxv(c, FX_TONE)))
+        h.tone = fm_exp2f((float)(v - 8) * 0.5f);
+    if ((v = fxv(c, FX_VIB)))                    /* V: vibrato, a fifteenth of a semitone a step */
+        h.vib = (float)(v - 1) * (1.0f / 15.0f) + 0.05f;
+    if ((v = fxv(c, FX_BEND)))
+        h.bend = v > 1 ? (float)(v - 1) : 12.0f;
+    if ((v = fxv(c, FX_CRUSH)))
+        h.crush = (float)(v - 1) * (0.9f / 15.0f);
+    if ((v = fxv(c, FX_SWELL)))
+        h.swell = (float)v * 0.25f * rl * (1.0f / EN_SR);
+    if ((v = fxv(c, FX_LENGTH)))
+        h.gate = (int32_t)fm_maxf(rl * (float)v * (1.0f / 16.0f), 64.0f);
+    /* a pad or a drone given the note it holds, and nothing else: it holds on (no breath in again) */
+    if (!kit && !c->fx && !c->fx2 && sound_of(snd, note)->att >= 0.1f && track_holding(t, note)) {
         en_trk_glow[t] = fm_maxf(en_trk_glow[t], 0.5f);
         return;
     }
     track_midi_off(t);
     T->group++;
-    if (fx == FX_CHORD && !kit) {
+    if ((v = fxv(c, FX_CHORD)) && !kit) {
+        v--;
         for (k = 0; k < 4; k++) {
             int d = CHORD[v & 7][k];
             if (d == 99)
@@ -1209,13 +1229,15 @@ static void play_cell(int t, const en_cell_t *c, int32_t at, int row)
                 h.vel *= 0.8f;
             voice_start(t, deg_shift(note, d), at, &h);
         }
-    } else if (fx == FX_RATCHET || fx == FX_STUTTER) {
+    } else if (fxv(c, FX_RATCHET) || fxv(c, FX_STUTTER)) {
+        const int stut = !fxv(c, FX_RATCHET);
         int cnt;
         float gap;
-        if (fx == FX_RATCHET) {
+        v = stut ? fxv(c, FX_STUTTER) - 1 : fxv(c, FX_RATCHET) - 1;
+        if (!stut) {                             /* R: KAWA's ROL, 2 to 16 in the row */
             cnt = v < 1 ? 2 : v + 1;
             gap = rl / (float)cnt;
-        } else {                                 /* the album's glitches: 30-60 ms repeats, crushed, falling away */
+        } else {                                 /* S: 30-60 ms repeats, crushed, falling away */
             gap = (0.03f + 0.002f * (float)v) * EN_SR;
             cnt = (int)fm_clampf(rl * 1.5f / gap, 3.0f, 14.0f);
             h.crush = fm_maxf(h.crush, 0.45f);
@@ -1224,7 +1246,7 @@ static void play_cell(int t, const en_cell_t *c, int32_t at, int row)
         for (k = 0; k < cnt; k++) {
             voice_start(t, note, at + (int32_t)(gap * (float)k), &h);
             T->group++;
-            h.vel *= fx == FX_STUTTER ? 0.82f : 0.94f;
+            h.vel *= stut ? 0.82f : 0.94f;
         }
     } else {
         voice_start(t, note, at, &h);
@@ -1296,11 +1318,14 @@ static const en_cell_t *cell_of(int t, int pat)
 
 static void row_fire(int32_t at)
 {
-    int t, pat;
+    int t, pat, plen;
     int32_t sw = 0;
     if (seq_pos >= song_len())
         seq_pos = 0;
-    pat = en_song.order[seq_pos] % EN_NPAT;
+    pat = EN_ORD_PAT(en_song.order[seq_pos]);
+    plen = en_pat_len(&en_song, pat);
+    if (seq_row >= plen)
+        seq_row = 0;
     en_pos = (uint8_t)seq_pos;
     en_row = (uint8_t)seq_row;
     en_pat_now = (uint8_t)pat;
@@ -1314,20 +1339,29 @@ static void row_fire(int32_t at)
     en_rows++;
     if (jump_to >= 0) {                          /* J: on to an order position */
         seq_pos = jump_to < song_len() ? jump_to : 0;
-        seq_row = 0;
+        seq_row = 0, seq_rep = 0, hop_used = 0, hop_to = -1;
         event(EV_JUMP, seq_pos);
         jump_to = -1;
         en_passes++;
         evolve_pass();
         return;
     }
-    if (++seq_row >= EN_NROW) {
+    if (hop_to >= 0) {                           /* H: on to a row of this pattern (each Hop once a pass) */
+        seq_row = hop_to < plen ? hop_to : 0;
+        hop_to = -1;
+        return;
+    }
+    if (++seq_row >= plen) {                     /* the pattern's end (its length: KAWA's END) */
         seq_row = 0;
+        hop_used = 0;
         en_passes++;
         evolve_pass();
-        if (par[P_LOOP] != LOOP_PATTERN && ++seq_pos >= song_len()) {
-            seq_pos = 0;
-            event(EV_LOOP, 0);
+        if (par[P_LOOP] != LOOP_PATTERN && ++seq_rep >= EN_ORD_REP(en_song.order[seq_pos])) {
+            seq_rep = 0;                         /* its repeats done: the next position */
+            if (++seq_pos >= song_len()) {
+                seq_pos = 0;
+                event(EV_LOOP, 0);
+            }
         }
     }
 }
@@ -1345,7 +1379,7 @@ static void play_start(int pos, int row)
     seq_row = row < 0 || row >= EN_NROW ? 0 : row;
     row_frac = 0.9999f;                          /* the first row now */
     clk_acc = 0.0f;
-    jump_to = -1;
+    jump_to = -1, hop_to = -1, hop_used = 0, seq_rep = 0;
     {
         int t;
         for (t = 0; t < EN_NTRK; t++)            /* the takes written afresh */
@@ -1647,7 +1681,12 @@ static void g_put(en_song_t *s, int pat, int row, int t, int note, int fx, int v
 {
     en_cell_t *c = &s->cell[pat][row & 15][t];
     c->note = (uint8_t)note;
+    c->vol = 0, c->fx2 = 0;
     c->fx = (uint8_t)(fx << 4 | (v & 15));
+}
+static void g_vol(en_song_t *s, int pat, int row, int t, int level)   /* a cell's volume, 0..15 */
+{
+    s->cell[pat][row & 15][t].vol = (uint8_t)(level + 1);
 }
 enum { D_KIK = 36, D_SNR, D_HAT, D_OHT, D_TOM, D_X1, D_X2, D_X3 };
 
@@ -1666,15 +1705,19 @@ static void grow_kit(en_song_t *s, int pat, int t, int style, int density)
             g_put(s, pat, r, t, D_SNR, 0, 0);
         else if (HATS[style] >> r & 1u) {
             if (style == 5)                      /* the sixteenths: accents on the beat */
-                g_put(s, pat, r, t, D_HAT, (r & 3) ? FX_VOLUME : 0, 6 + g_irand(4));
+            {
+                g_put(s, pat, r, t, D_HAT, 0, 0);
+                if (r & 3)
+                    g_vol(s, pat, r, t, 6 + g_irand(4));
+            }
             else if (style == 3 && r == 14 && g_chance(density))
                 g_put(s, pat, r, t, D_OHT, 0, 0);
             else
                 g_put(s, pat, r, t, D_HAT, 0, 0);
         } else if (style == 0 && (r & 1) && g_chance(density / 3))
-            g_put(s, pat, r, t, D_HAT, FX_VOLUME, 5);
+            g_put(s, pat, r, t, D_HAT, 0, 0), g_vol(s, pat, r, t, 5);
         else if (style == 2 && (r == 7 || r == 15) && g_chance(density))
-            g_put(s, pat, r, t, D_SNR, FX_VOLUME, 5);     /* the ghosts */
+            g_put(s, pat, r, t, D_SNR, 0, 0), g_vol(s, pat, r, t, 5);     /* the ghosts */
         else if (style == 6 && g_chance(density / 2))
             g_put(s, pat, r, t, D_X1 + g_irand(3), g_chance(40) ? FX_RATCHET : FX_CHANCE, 2 + g_irand(10));
         else if (style == 7 && r >= 12 && g_chance(density / 2))
@@ -1687,6 +1730,92 @@ static void grow_kit(en_song_t *s, int pat, int t, int style, int density)
     if (style == 1 || style == 7)                /* the slow kits: a crash or the kit's own on the one, now and then */
         if (g_chance(density / 2))
             g_put(s, pat, 0, t, D_X2, 0, 0);
+}
+
+/* ------------------------------------------------------------ the tools --- */
+/* KAWA's MAGIC, on the cells already there (Euclid writes afresh) */
+static void put_fx(en_cell_t *c, int cmd, int v)  /* into the first free of the two */
+{
+    if (!c->fx)
+        c->fx = (uint8_t)(cmd << 4 | (v & 15));
+    else if (!c->fx2)
+        c->fx2 = (uint8_t)(cmd << 4 | (v & 15));
+}
+static int g_euclid(int k, int n, int r) { return k > 0 && (r * k) % n < k; }
+
+static void grow_tool(en_song_t *s, int pat, int t, int tool, int density, int range, int base)
+{
+    const int root = s->par[P_ROOT], kit = en_sound_is_kit(s->par[P_T(t, TP_SOUND)]), len = en_pat_len(s, pat);
+    const uint32_t p = EN_MODE_POOL[(unsigned)s->par[P_MODE] < EN_NMODES ? s->par[P_MODE] : 0];
+    en_cell_t col[EN_NROW];
+    int r;
+    for (r = 0; r < EN_NROW; r++)
+        col[r] = s->cell[pat][r][t];
+    switch (tool) {
+    case G_EUCLID: {                             /* density's hits over the pattern, as evenly as they go */
+        int k = 1 + density * (len - 1) / 100, rot = g_irand(len);
+        for (r = 0; r < EN_NROW; r++) {
+            en_cell_t *c = &s->cell[pat][r][t];
+            c->note = 0, c->vol = 0, c->fx = 0, c->fx2 = 0;
+            if (r < len && g_euclid(k, len, (r + rot) % len))
+                c->note = (uint8_t)(kit ? 36 : deg_move(base, root, p, g_chance(range / 2) ? 4 : 0));
+        }
+        return;
+    }
+    case G_VARY:                                 /* a few notes a step in the scale, a drum or two moved over */
+        for (r = 0; r < len; r++) {
+            en_cell_t *c = &s->cell[pat][r][t];
+            if (c->note < NOTE_LO || !g_chance(density / 2 + 5))
+                continue;
+            if (!kit) {
+                c->note = (uint8_t)deg_move(c->note, root, p, g_chance(50) ? 1 : -1);
+            } else {
+                int to = (r + (g_chance(50) ? 1 : -1) + len) % len;
+                if (s->cell[pat][to][t].note == NOTE_EMPTY) {
+                    s->cell[pat][to][t] = *c;
+                    c->note = 0, c->vol = 0, c->fx = 0, c->fx2 = 0;
+                }
+            }
+        }
+        return;
+    case G_ROLLS:                                /* ratchets at the ends of beats (KAWA's ROLLS) */
+        for (r = 3; r < len; r += 4) {
+            en_cell_t *c = &s->cell[pat][r][t];
+            if (!g_chance(density + 10))
+                continue;
+            if (c->note < NOTE_LO) {             /* nothing there: the beat's last note again */
+                int q;
+                for (q = r - 1; q >= 0 && col[q].note < NOTE_LO; q--)
+                    ;
+                if (q < 0)
+                    continue;
+                c->note = col[q].note;
+            }
+            put_fx(c, FX_RATCHET, 1 + g_irand(3));
+        }
+        return;
+    case G_ACCENTS:                              /* the beats at full, the rest softer as density says */
+        for (r = 0; r < len; r++) {
+            en_cell_t *c = &s->cell[pat][r][t];
+            if (c->note < NOTE_LO)
+                continue;
+            c->vol = (uint8_t)(1 + (r % 4 == 0 ? 15 : r % 2 == 0 ? 11 - density / 25 : 8 - density / 20));
+        }
+        return;
+    case G_SHIFT:                                /* on a row, round the pattern */
+        for (r = 0; r < len; r++)
+            s->cell[pat][(r + 1) % len][t] = col[r];
+        return;
+    case G_UP:                                   /* a step up the scale (a kit: each drum the next) */
+        for (r = 0; r < len; r++) {
+            en_cell_t *c = &s->cell[pat][r][t];
+            if (c->note >= NOTE_LO)
+                c->note = (uint8_t)(kit ? 36 + (c->note - 36 + 1) % EN_NDRUM : deg_move(c->note, root, p, 1));
+        }
+        return;
+    default:
+        return;
+    }
 }
 
 void en_grow(en_song_t *s, int pat, int t, int style, int density, int range, uint32_t seed)
@@ -1702,8 +1831,12 @@ void en_grow(en_song_t *s, int pat, int t, int style, int density, int range, ui
     if (!g_rng)
         g_rng = 1u;
     pat &= 15;
+    if (style >= G_EUCLID) {                     /* the tools: on what's there */
+        grow_tool(s, pat, t, style, density, range, base);
+        return;
+    }
     for (r = 0; r < EN_NROW; r++)
-        s->cell[pat][r][t].note = 0, s->cell[pat][r][t].fx = 0;
+        s->cell[pat][r][t].note = 0, s->cell[pat][r][t].fx = 0, s->cell[pat][r][t].vol = 0, s->cell[pat][r][t].fx2 = 0;
     if (en_sound_is_kit(snd)) {
         grow_kit(s, pat, t, style, density);
         return;
@@ -1717,7 +1850,7 @@ void en_grow(en_song_t *s, int pat, int t, int style, int density, int range, ui
                 n = GN(4);
             g_put(s, pat, r, t, (r & 2) ? n + 12 : n, 0, 0);
             if (g_chance(density / 4))
-                g_put(s, pat, r + 1, t, n + 12, FX_VOLUME, 8);
+                g_put(s, pat, r + 1, t, n + 12, 0, 0), g_vol(s, pat, r + 1, t, 8);
         }
         break;
     }
@@ -1828,8 +1961,9 @@ typedef struct {
 static void lead_read(const en_song_t *s, int pat, int lt, lead_t *L)
 {
     int r, cur = 0;
+    const int len = en_pat_len(s, pat);
     L->ons = 0, L->last = 0, L->prev = 0;
-    for (r = 0; r < EN_NROW; r++) {             /* what's held over from the end of the pattern */
+    for (r = 0; r < len; r++) {                 /* what's held over from the end of the pattern */
         int n = s->cell[pat][r][lt].note;
         if (n >= NOTE_LO)
             cur = n;
@@ -1837,8 +1971,10 @@ static void lead_read(const en_song_t *s, int pat, int lt, lead_t *L)
             cur = 0;
     }
     for (r = 0; r < EN_NROW; r++) {
-        int n = s->cell[pat][r][lt].note;
+        int n = r < len ? s->cell[pat][r][lt].note : NOTE_EMPTY;
         L->onset[r] = 0;
+        if (r >= len)
+            cur = 0;
         if (n >= NOTE_LO) {
             cur = n;
             L->onset[r] = 1;
@@ -1927,6 +2063,7 @@ static void f_put(en_cell_t *o, int r, int note, int fx, int v)
 {
     o[r & 15].note = (uint8_t)note;
     o[r & 15].fx = (uint8_t)(fx << 4 | (v & 15));
+    o[r & 15].vol = 0, o[r & 15].fx2 = 0;
 }
 
 /* its own generator, on the stack: the render and the screen both call en_follow */
@@ -1947,7 +2084,7 @@ void en_follow(const en_song_t *s, int pat, int t, uint32_t seed, en_cell_t *o)
     lead_t L;
     int ch[2], r, busy, lvl;
     for (r = 0; r < EN_NROW; r++)
-        o[r].note = 0, o[r].fx = 0;
+        o[r].note = 0, o[r].fx = 0, o[r].vol = 0, o[r].fx2 = 0;
     if (role == FR_OFF)
         return;
     pat &= 15;
@@ -1973,7 +2110,7 @@ void en_follow(const en_song_t *s, int pat, int t, uint32_t seed, en_cell_t *o)
             } else if (!(r & 1)) {
                 f_put(o, r, (r & 2) ? root + 12 : root, 0, 0);
             } else if (F_CHANCE(dens / 4)) {
-                f_put(o, r, root + 12, FX_VOLUME, 8);
+                f_put(o, r, root + 12, 0, 0), o[r].vol = 9;
             }
         }
         if (dens > 40 && F_CHANCE(55)) {        /* a step into the next bar's chord */
@@ -2092,7 +2229,7 @@ void en_follow(const en_song_t *s, int pat, int t, uint32_t seed, en_cell_t *o)
             else if (lvl > 50 ? !(r & 1) : r % 4 == 2)
                 f_put(o, r, 38, 0, 0);
             else if ((r & 1) && F_CHANCE(dens / 3))
-                f_put(o, r, 38, FX_VOLUME, 5);
+                f_put(o, r, 38, 0, 0), o[r].vol = 6;
         }
         if (dens > 45 && !L.sound[12] && !L.sound[13] && !L.sound[14] && F_CHANCE(60)) {   /* a fill where it rests */
             f_put(o, 13, 40, 0, 0);
@@ -2180,6 +2317,8 @@ void en_song_recipe(int i, en_song_t *s)
     s->par[P_LEAD] = R->lead;
     for (k = 0; k < 16; k++)
         s->order[k] = ORDER[k];
+    for (k = 0; k < EN_NPAT; k++)
+        s->len[k] = EN_NROW;
     for (t = 0; t < EN_NTRK; t++) {
         s->par[P_T(t, TP_SOUND)] = R->snd[t], s->par[P_T(t, TP_LEVEL)] = R->lvl[t];
         s->par[P_T(t, TP_VIB)] = R->vib[t], s->par[P_T(t, TP_ARP)] = R->arp[t];
@@ -2209,6 +2348,12 @@ void en_song_recipe(int i, en_song_t *s)
         }
 }
 
+int en_pat_len(const en_song_t *s, int pat)
+{
+    int n = s->len[pat & 15];
+    return n < 1 || n > EN_NROW ? EN_NROW : n;
+}
+
 int en_song_valid(const en_song_t *s)
 {
     int i, p, r, t;
@@ -2217,17 +2362,119 @@ int en_song_valid(const en_song_t *s)
     for (i = 0; i < P_NSONG; i++)
         if (s->par[i] < PARAMS[i].lo || s->par[i] > PARAMS[i].hi)
             return 0;
-    for (i = 0; i < EN_NORD; i++)
-        if (s->order[i] >= EN_NPAT)
+    for (p = 0; p < EN_NPAT; p++)
+        if (s->len[p] < 1 || s->len[p] > EN_NROW)
             return 0;
     for (p = 0; p < EN_NPAT; p++)
         for (r = 0; r < EN_NROW; r++)
             for (t = 0; t < EN_NTRK; t++) {
-                int n = s->cell[p][r][t].note;
+                const en_cell_t *c = &s->cell[p][r][t];
+                int n = c->note;
                 if (n != NOTE_EMPTY && n != NOTE_OFF && (n < NOTE_LO || n > NOTE_HI))
+                    return 0;
+                if (c->vol > 16)
                     return 0;
             }
     if (s->name[sizeof s->name - 1])
         return 0;
     return 1;
+}
+
+/* --------------------------------------------------------------- packing --- */
+/* the song as saved: its header, parameters, order list and lengths as they are (little-endian), then a bitmap
+ * of the cells in use (pattern, row, track order), then each used cell: its note (bit 7: it has a volume or a
+ * second effect) and its effect, and then those two when it has them. 16 patterns of 16 rows of 6 four-byte
+ * cells are 6 KB; packed, a song is a third of that or so, in a 3840-byte flash object. */
+#define PK_NCELL (EN_NPAT * EN_NROW * EN_NTRK)
+#define PK_FIXED (4 + 2 + 2 + 16 + 2 * P_NSONG + EN_NORD + EN_NPAT + PK_NCELL / 8)
+static int cell_used(const en_cell_t *c) { return c->note || c->vol || c->fx || c->fx2; }
+static int cell_full(const en_cell_t *c) { return c->vol || c->fx2; }
+
+int en_song_pack(const en_song_t *s, uint8_t *b, int max)
+{
+    const en_cell_t *c = &s->cell[0][0][0];
+    int n = 0, k;
+    uint8_t *bm;
+    if (max < PK_FIXED)
+        return -1;
+    b[n++] = (uint8_t)s->magic, b[n++] = (uint8_t)(s->magic >> 8), b[n++] = (uint8_t)(s->magic >> 16), b[n++] = (uint8_t)(s->magic >> 24);
+    b[n++] = (uint8_t)s->format, b[n++] = (uint8_t)(s->format >> 8), b[n++] = 0, b[n++] = 0;
+    for (k = 0; k < 16; k++)
+        b[n++] = (uint8_t)s->name[k];
+    for (k = 0; k < P_NSONG; k++)
+        b[n++] = (uint8_t)s->par[k], b[n++] = (uint8_t)((uint16_t)s->par[k] >> 8);
+    for (k = 0; k < EN_NORD; k++)
+        b[n++] = s->order[k];
+    for (k = 0; k < EN_NPAT; k++)
+        b[n++] = s->len[k];
+    bm = b + n;
+    for (k = 0; k < PK_NCELL / 8; k++)
+        bm[k] = 0;
+    n += PK_NCELL / 8;
+    for (k = 0; k < PK_NCELL; k++) {
+        if (!cell_used(&c[k]))
+            continue;
+        bm[k >> 3] |= (uint8_t)(1u << (k & 7));
+        if (n + (cell_full(&c[k]) ? 4 : 2) > max)
+            return -1;
+        b[n++] = (uint8_t)(c[k].note | (cell_full(&c[k]) ? 0x80u : 0u));
+        b[n++] = c[k].fx;
+        if (cell_full(&c[k]))
+            b[n++] = c[k].vol, b[n++] = c[k].fx2;
+    }
+    return n;
+}
+
+int en_song_size(const en_song_t *s)
+{
+    const en_cell_t *c = &s->cell[0][0][0];
+    int n = PK_FIXED, k;
+    for (k = 0; k < PK_NCELL; k++)
+        if (cell_used(&c[k]))
+            n += cell_full(&c[k]) ? 4 : 2;
+    return n;
+}
+
+int en_song_unpack(const uint8_t *b, int len, en_song_t *s)
+{
+    en_cell_t *c = &s->cell[0][0][0];
+    const uint8_t *bm;
+    int n = 0, k;
+    uint8_t *z = (uint8_t *)s;
+    for (k = 0; k < (int)sizeof *s; k++)
+        z[k] = 0;
+    if (len < PK_FIXED)
+        return -1;
+    s->magic = (uint32_t)b[0] | (uint32_t)b[1] << 8 | (uint32_t)b[2] << 16 | (uint32_t)b[3] << 24;
+    s->format = (uint16_t)(b[4] | b[5] << 8);
+    n = 8;
+    if (s->magic != EN_SONG_MAGIC || s->format != EN_SONG_FORMAT)
+        return -1;
+    for (k = 0; k < 16; k++)
+        s->name[k] = (char)b[n++];
+    for (k = 0; k < P_NSONG; k++, n += 2)
+        s->par[k] = (int16_t)(uint16_t)(b[n] | b[n + 1] << 8);
+    for (k = 0; k < EN_NORD; k++)
+        s->order[k] = b[n++];
+    for (k = 0; k < EN_NPAT; k++)
+        s->len[k] = b[n++];
+    bm = b + n;
+    n += PK_NCELL / 8;
+    for (k = 0; k < PK_NCELL; k++) {
+        int full;
+        if (!(bm[k >> 3] >> (k & 7) & 1u))
+            continue;
+        if (n + 2 > len)
+            return -1;
+        full = b[n] >> 7;
+        c[k].note = (uint8_t)(b[n++] & 0x7Fu);
+        c[k].fx = b[n++];
+        if (full) {
+            if (n + 2 > len)
+                return -1;
+            c[k].vol = b[n++];
+            c[k].fx2 = b[n++];
+        }
+    }
+    return n == len && en_song_valid(s) ? 0 : -1;
 }

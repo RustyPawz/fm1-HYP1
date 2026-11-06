@@ -36,7 +36,7 @@ LANDING = """<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BIT-1</title>
-<meta name="description" content="BIT-1: a generative 8-bit tracker for the M-VAVE FM-1. Six tracks, twenty-four chip voices, sixteen effects, five songs. By RedtailWorks.">
+<meta name="description" content="BIT-1: a generative 8-bit tracker for the M-VAVE FM-1. Six tracks, twenty-four chip voices, two effects a cell, five songs. By RedtailWorks.">
 <meta name="theme-color" content="#06060a">
 <link rel="icon" type="image/png" href="img/favicon.png">
 <meta property="og:title" content="BIT-1: a generative 8-bit tracker for the M-VAVE FM-1">
@@ -126,7 +126,7 @@ a.kofi { display: inline-flex; align-items: center; gap: .4em; background: var(-
 <div class="expnote"><b>Experimental.</b> BIT-1 is new: built and tested in the simulator and in the emulator here, not yet on a real FM-1. Install it at your own risk; HYP-1, or M-VAVE's own firmware, goes back on the same way.</div>
 <img class="hero" src="img/bit-hero.png" width="1600" height="1161" alt="An M-VAVE FM-1 running BIT-1: a tracker's grid of six tracks, notes and effects, the row playing lit in yellow, the cell's Note, Effect, Value and Pattern below it.">
 <p class="lede"><b>BIT-1</b> turns the M-VAVE FM-1 into a <b>generative 8-bit tracker</b>. Six tracks of sixteen rows,
-a note and an effect a cell, played by chip voices: an NES-style pulse and stepped triangle, Game Boy-style 4-bit
+a note, a volume and two effects a cell, played by chip voices: an NES-style pulse and stepped triangle, Game Boy-style 4-bit
 waves, an LFSR noise, SID-style saws and pulses through a resonant filter, and a ring bell, their volume in sixteen
 steps and their arpeggios at frame rate. <b>Follow</b> writes the other tracks from a melody you write: bass, chords,
 an arp, a harmony, a counter-line and drums that answer it, a new take whenever you like. Or switch it off and write
@@ -142,7 +142,7 @@ every note yourself. Evolve lets each pattern drift a little every pass; Grow wr
   <div class="card"><h3>Patterns</h3><p>Sixteen patterns of sixteen rows (a bar of sixteenths), six tracks a row. The keys write notes as the cursor steps down (<b>REC</b>); playing, they go into the row that's playing. Knobs set the cell's <b>note</b>, <b>effect</b> and <b>value</b>.</p></div>
   <div class="card"><h3>The song</h3><p>An order list of up to 32 positions, each playing a pattern; loop the song or one pattern. <b>EDIT</b> on the Song page makes a fresh copy to vary. Five songs, each saved in its own place on the FM-1.</p></div>
   <div class="card"><h3>The sounds</h3><p>Twenty-four chip voices, synthesised: the <b>NES</b>, <b>GB</b> and <b>SID</b> kits, <b>Tri bass</b>, <b>Wave bass</b>, <b>Octave bass</b>, <b>Square</b>, <b>Duty lead</b>, <b>SID lead</b>, <b>Chip arp</b>, <b>Wave pad</b>, <b>Ring bell</b>, <b>Laser</b>, <b>Power-up</b>, <b>Metal</b> and more. Each track shapes its own with Tone, Decay, Vibrato, Arp and Crush.</p></div>
-  <div class="card"><h3>Sixteen effects</h3><p><b>G</b>lide, chance (<b>?</b>), <b>R</b>atchet, <b>D</b>elay, <b>T</b>one, <b>V</b>olume, <b>B</b>end (a drop over the row), <b>E</b>cho throw, chord (<b>A</b>), <b>M</b>utate, <b>L</b>ength, crush (<b>X</b>), <b>S</b>tutter (30&ndash;60 ms crushed repeats), s<b>W</b>ell and <b>J</b>ump.</p></div>
+  <div class="card"><h3>Two effects a cell</h3><p>A volume and two effects a cell, after KAWA's, from fifteen: <b>G</b>lide, chance (<b>?</b>), <b>R</b>atchet, <b>D</b>elay, <b>T</b>one, <b>V</b>ibrato, <b>B</b>end (a drop over the row), <b>H</b>op (to a row, once a pass), chord (<b>A</b>), <b>M</b>utate, <b>L</b>ength, crush (<b>X</b>), <b>S</b>tutter (30&ndash;60 ms crushed repeats), s<b>W</b>ell and <b>J</b>ump.</p></div>
   <div class="card"><h3>Follow the lead</h3><p>Write a melody on one track and name it the <b>Lead</b>. Give the others a role (<b>Bass</b>, <b>Chords</b>, <b>Arp</b>, <b>Harmony</b>, <b>Counter</b>, <b>Drums</b>, or <b>Auto</b>) and each plays a take written from the chords heard in your lead. <b>Change</b> how often a pass brings a new take; <b>SEL + EDIT</b> writes the takes in to edit by hand.</p></div>
   <div class="card"><h3>Evolve and Grow</h3><p><b>Evolve</b> lets a track's notes drift a degree or two in the scale on each pass, and lean back home. <b>Grow</b> writes a pattern in one of eight chip styles: Driver, Hold, Ostinato, Melody, Triplet, Arp run, Bleeps, Sparse.</p></div>
   <div class="card"><h3>Space</h3><p>A ping-pong echo in time with the tempo, Dattorro's plate, Lo-fi (a darker top and fewer bits, twelve down to five), and the kick ducking everything else if you ask it to.</p></div>
