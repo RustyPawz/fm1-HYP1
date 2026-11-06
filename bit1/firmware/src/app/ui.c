@@ -153,7 +153,7 @@ int ui_dirty(void) { return ui.dirty != 0; }
 
 /* ------------------------------------------------------------ the song --- */
 static int pat_shown(void) { return EN_ORD_PAT(en_song.order[ui.pos % EN_NORD]); }
-static en_cell_t *cur_cell(void) { return &en_song.cell[pat_shown()][ui.row & 15][ui.trk % EN_NTRK]; }
+static en_cell_t *cur_cell(void) { return en_cell(&en_song, pat_shown(), ui.row & 31, ui.trk % EN_NTRK); }
 static int trk_sound(int t) { return par_get(P_T(t, TP_SOUND)); }
 static int trk_kit(int t) { return en_sound_is_kit(trk_sound(t)); }
 static int song_len(void) { return par_get(P_LEN); }
@@ -251,11 +251,12 @@ static void knob_range(int k, int *lo, int *hi)
     case K_DENS: case K_RANGE: *hi = 100; break;
     case K_SLEN: *lo = 1, *hi = EN_NORD; break;
     case K_PARTS: *lo = 2, *hi = EN_NPAT; break;
-    case K_STEPS: *lo = 1, *hi = EN_NROW; break;
+    case K_STEPS: *lo = 1, *hi = EN_MAXROW; break;
     case K_SEED: *hi = 99; break;
     case K_VOL: *hi = 16; break;
     case K_FX2: case K_VAL2: *hi = 15; break;
-    case K_LEN: case K_REP: *lo = 1, *hi = 16; break;
+    case K_LEN: *lo = 1, *hi = EN_MAXROW; break;
+    case K_REP: *lo = 1, *hi = 16; break;
     default: *hi = 0; break;
     }
 }
@@ -401,7 +402,7 @@ static int note_default(void)                    /* a note for an empty cell: th
     if (trk_kit(ui.trk))
         return 36;
     for (r = (int)ui.row; r >= 0; r--) {
-        int n = en_song.cell[pat_shown()][r][ui.trk].note;
+        int n = en_cell(&en_song, pat_shown(), r, ui.trk)->note;
         if (n >= NOTE_LO)
             return n;
     }
@@ -455,7 +456,8 @@ static void play_toggle(int from_row)
 
 static void row_step(int d)
 {
-    ui.row = (uint8_t)(((int)ui.row + d + EN_NROW * 4) % EN_NROW);
+    const int n = en_pat_len(&en_song, pat_shown()) > EN_NROW ? en_pat_len(&en_song, pat_shown()) : EN_NROW;   /* a long pattern: its rows */
+    ui.row = (uint8_t)(((int)ui.row + d + n * 4) % n);
 }
 
 /* EDIT on SONG: the position's pattern into the first one no position plays, which this position then plays */
@@ -521,8 +523,12 @@ static void grow(int all)
     }
     for (t = 0; t < EN_NTRK; t++)
         if (all || t == ui.trk)
-            en_grow(&en_song, pat_shown(), t, ui.style, ui.dens, ui.range,
-                    (uint32_t)ui.seed * 7919u + (uint32_t)ui.pos * 13u + plat_ms());
+        {
+            int hh;
+            for (hh = 0; hh <= (ui.style < G_EUCLID && en_pat_len(&en_song, pat_shown()) > EN_NROW); hh++)   /* a long one: both halves */
+                en_grow(&en_song, (pat_shown() + hh) & 15, t, ui.style, ui.dens, ui.range,
+                        (uint32_t)ui.seed * 7919u + (uint32_t)ui.pos * 13u + plat_ms() + (uint32_t)hh * 7919u);
+        }
     two((uint32_t)pat_shown() + 1u, b + 1);
     say(all ? "GREW ALL" : "GREW", b);
     ui.seed = (uint8_t)((ui.seed + 1) % 100);
@@ -554,9 +560,13 @@ static void follow_write(void)
         done[pat] = 1;
         for (t = 0; t < EN_NTRK; t++)
             if (en_follow_role(&en_song, t)) {
-                en_follow(&en_song, pat, t, en_take_seed(&en_song, t, pat), o);
-                for (r = 0; r < EN_NROW; r++)
-                    en_song.cell[pat][r][t] = o[r];
+                int hh;
+                for (hh = 0; hh <= (en_pat_len(&en_song, pat) > EN_NROW); hh++) {   /* a long one: its linked half too */
+                    const int pp = (pat + hh) & 15;
+                    en_follow(&en_song, pp, t, en_take_seed(&en_song, t, pp), o);
+                    for (r = 0; r < EN_NROW; r++)
+                        en_song.cell[pp][r][t] = o[r];
+                }
                 wrote |= 1u << t;
             }
     }
@@ -686,7 +696,7 @@ static void write_note(int n)                    /* REC: into the row playing, o
         return;
     }
     if (en_playing && ui.follow) {
-        c = &en_song.cell[en_pat_now % EN_NPAT][en_row % EN_NROW][ui.trk];
+        c = en_cell(&en_song, en_pat_now % EN_NPAT, en_row % EN_MAXROW, ui.trk);
         c->note = (uint8_t)n;
     } else {
         c = cur_cell();
@@ -1290,17 +1300,21 @@ static void draw_grid(void)
     const int pat = pat_shown(), playing_here = en_playing && en_pat_now == pat && (ui.follow || en_pos == ui.pos);
     const int lead = par_get(P_LEAD) - 1, plen = en_pat_len(&en_song, pat);
     int top = (int)ui.row - 4, i, t;
-    static en_cell_t takes[EN_NTRK][EN_NROW];   /* what a following track plays here: its take, not its cells */
+    static en_cell_t takes[EN_NTRK][EN_MAXROW];  /* what a following track plays here: its take, not its cells */
+    const int shown = plen > EN_NROW ? plen : EN_NROW;   /* the rows the grid scrolls through */
     uint8_t fol[EN_NTRK];
     for (t = 0; t < EN_NTRK; t++) {
         fol[t] = (uint8_t)en_follow_role(&en_song, t);
-        if (fol[t])
+        if (fol[t]) {
             en_follow(&en_song, pat, t, en_take_seed(&en_song, t, pat), takes[t]);
+            if (plen > EN_NROW)                  /* the linked half's */
+                en_follow(&en_song, (pat + 1) & 15, t, en_take_seed(&en_song, t, (pat + 1) & 15), takes[t] + EN_NROW);
+        }
     }
     if (top < 0)
         top = 0;
-    if (top > EN_NROW - G_NROWS)
-        top = EN_NROW - G_NROWS;
+    if (top > shown - G_NROWS)
+        top = shown - G_NROWS;
     cv_begin(240, MAIN_H, K_BG);
     for (t = 0; t < EN_NTRK; t++) {              /* the heads: the track's sound, its level under it */
         int32_t x = G_X0 + t * G_CW;
@@ -1334,9 +1348,9 @@ static void draw_grid(void)
         else if (r % 4 == 0)
             cv_rect(0, y, 240, G_ROWH, mix(K_BG, K_PANEL, 7));
         two((uint32_t)r, num);
-        cv_text(1, y - 2, &FONT_XS, num, r >= plen ? K_LINE : r % 4 == 0 ? K_ACC : K_DIM);
+        cv_text(1, y - 2, &FONT_XS, num, r >= plen ? K_LINE : r >= EN_NROW ? K_COLD : r % 4 == 0 ? K_ACC : K_DIM);   /* past 16: the next pattern's */
         for (t = 0; t < EN_NTRK; t++) {
-            const en_cell_t *c = fol[t] ? &takes[t][r] : &en_song.cell[pat][r][t];
+            const en_cell_t *c = fol[t] ? &takes[t][r] : en_ccell(&en_song, pat, r, t);
             int32_t x = G_X0 + t * G_CW + 2;
             int fx = c->fx >> 4, muted = ui.mutes >> t & 1u;
             char n[6];
@@ -1550,6 +1564,11 @@ static void draw_main(void)
         for (k = 0; k < (uint32_t)(EN_NROW * EN_NTRK); k++)
             h = hash(h, (uint32_t)c[k].note | (uint32_t)c[k].fx << 8 | (uint32_t)c[k].vol << 16 | (uint32_t)c[k].fx2 << 24);
         h = hash(h, (uint32_t)en_pat_len(&en_song, pat_shown()));
+        if (en_pat_len(&en_song, pat_shown()) > EN_NROW) {   /* a long pattern: the next one's cells show too */
+            const en_cell_t *c2 = &en_song.cell[(pat_shown() + 1) & 15][0][0];
+            for (k = 0; k < (uint32_t)(EN_NROW * EN_NTRK); k++)
+                h = hash(h, (uint32_t)c2[k].note | (uint32_t)c2[k].fx << 8 | (uint32_t)c2[k].vol << 16 | (uint32_t)c2[k].fx2 << 24);
+        }
         h = hash(h, (uint32_t)par_get(P_LEAD) | (uint32_t)par_get(P_TAKE) << 4 | (uint32_t)par_get(P_FDENS) << 12 |
                         (uint32_t)par_get(P_ROOT) << 20 | (uint32_t)par_get(P_MODE) << 24);
         for (t = 0; t < EN_NTRK; t++)

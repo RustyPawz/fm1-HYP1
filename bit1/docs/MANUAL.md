@@ -126,10 +126,12 @@ A **pattern** is up to sixteen rows, a bar of sixteenths, for six tracks. Each c
 - two **effects**, each a letter and a value, 0 to F (see 8).
 
 On the Pattern page the knobs are the cell's **Note**, **Effect** and **Value** and the position's **Pattern**.
-Hold **SEL** and they become its **Volume**, **Effect 2** and **Value 2**, and the pattern's **Rows** (1 to 16:
-a pattern of 12 is a bar of 3/4, of 7 a bar of seven). Let go of SEL after a turn and it does nothing else. In
-the grid, a volume is a bar beside the note, as tall as it's loud; a second effect behind the first is a dot
-(alone, it shows in the first's place); rows past the pattern's end are dim.
+Hold **SEL** and they become its **Volume**, **Effect 2** and **Value 2**, and the pattern's **Rows** (1 to 32:
+a pattern of 12 is a bar of 3/4, of 7 a bar of seven, of 32 two bars). Past 16, a pattern plays on into the next
+one: rows 17 to 32 of pattern 3 are rows 1 to 16 of pattern 4 (KAWA's linked patterns), which still plays as itself
+wherever the order list has it. Let go of SEL after a turn and it does nothing else. In the grid, a volume is a bar
+beside the note, as tall as it's loud; a second effect behind the first is a dot (alone, it shows in the first's
+place); rows past the pattern's end are dim, and the rows from the next pattern are numbered in blue.
 
 A note on a track holds until the next note or a note-off on that track (a drum rings out on its own). A
 sound given the note it is still holding keeps holding it, so a held note can sit through pattern after pattern.
@@ -311,8 +313,8 @@ no position of yours plays (and empty), and comes back where it comes again, so 
 do. Nothing written at all: it grows a first pattern from each track's sound, then the song. With Follow on, the
 tracks that follow write themselves in every new pattern too. EDIT again (the seed moves on) for another.
 
-And **New song**: a whole song from nothing. Its knobs are **Parts** (2 to 16 patterns) and **Steps** (1 to 16
-rows each, the parts' length). **EDIT** asks first ("EDIT AGAIN TO REPLACE"), since it replaces the song; EDIT again
+And **New song**: a whole song from nothing. Its knobs are **Parts** (2 to 16 patterns) and **Steps** (1 to 32
+rows each, the parts' length; past 16 a part is a linked pair of patterns, so eight parts at most). **EDIT** asks first ("EDIT AGAIN TO REPLACE"), since it replaces the song; EDIT again
 within a couple of seconds and BIT-1 makes one:
 
 - **The sounds:** every track a sound for its role: a kit, a bass, chords, a lead, a counter, effects. With ROM

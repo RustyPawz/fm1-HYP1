@@ -1,0 +1,30 @@
+# 32 steps: SEL + KNOB 4 takes the pattern's Rows past 16 to 32 (its rows 17-32 are the next pattern's 1-16);
+# the cursor scrolls down to row 20; a key written there lands in the next pattern's row 4 (and steps on); it wraps at 32
+wait 500
+tap PLAY
+wait 200
+expect playing 0
+tap ARP
+tap ARP
+spin K1 -4
+expect par12 0
+tap HOME
+press SEL
+spin K4 16
+expect len 32
+release SEL
+spin ALGO 2
+spin SELECT 20
+expect row 20
+tap REC
+tapkey 0
+expect cell1.4.2 53
+tap REC
+spin SELECT -3
+wait 200
+shot rows32.png
+spin SELECT 12
+wait 100
+expect row 30
+spin SELECT 4
+expect row 2

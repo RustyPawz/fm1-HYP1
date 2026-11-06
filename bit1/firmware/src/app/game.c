@@ -76,6 +76,7 @@ static const en_cell_t *gm_cell(int pat, int row)
     static en_cell_t take[EN_NROW];
     static int take_pat = -1;
     static uint32_t take_seed;
+    pat = (pat + (row >> 4)) & 15, row &= 15;      /* past 16: the linked pattern's */
     if (!en_follow_role(&en_song, gm.trk))
         return &en_song.cell[pat][row][gm.trk];
     if (take_pat != pat || take_seed != en_take_seed(&en_song, gm.trk, pat)) {

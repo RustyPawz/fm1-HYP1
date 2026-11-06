@@ -464,7 +464,7 @@ typedef struct {
     float peak;
     int8_t duty;                                /* Tone's steps of a chip pulse's duty: -1 wider .. 2 narrower */
     uint8_t arp;                                /* Arp: its shape (0 the sound's own) */
-    int8_t drift[EN_NROW];                      /* Evolve: each row's drift, in degrees of the scale */
+    int8_t drift[EN_MAXROW];                    /* Evolve: each row's drift, in degrees of the scale */
     uint8_t last, group, midi_note;             /* its last note; the note group playing; its MIDI note sounding */
     int8_t glide_from;
 } track_t;
@@ -1062,7 +1062,7 @@ static void track_apply(int t)
     }
     if (!par[P_T(t, TP_EVOLVE)]) {               /* Evolve off: the notes as written, at once */
         int r;
-        for (r = 0; r < EN_NROW; r++)
+        for (r = 0; r < EN_MAXROW; r++)
             T->drift[r] = 0;
     }
 }
@@ -1306,11 +1306,11 @@ static void evolve_pass(void)
         float e = pct(par[P_T(t, TP_EVOLVE)]);
         int8_t *d = tk[t].drift;
         if (e <= 0.0f || en_follow_role(&en_song, t)) {   /* a track that follows: its Evolve is how often a new take */
-            for (r = 0; r < EN_NROW; r++)
+            for (r = 0; r < EN_MAXROW; r++)
                 d[r] = 0;
             continue;
         }
-        for (r = 0; r < EN_NROW; r++) {
+        for (r = 0; r < EN_MAXROW; r++) {
             if (frand() < e * 0.18f) {
                 int s = d[r] + (frand() < 0.5f ? -1 : 1);
                 d[r] = (int8_t)(s < -3 ? -3 : s > 3 ? 3 : s);
@@ -1336,17 +1336,18 @@ uint32_t en_take_seed(const en_song_t *s, int t, int pat)
 }
 static const en_cell_t *cell_of(int t, int pat)
 {
+    const int pp = (pat + (seq_row >> 4)) & 15, rr = seq_row & 15;   /* past 16: the linked pattern's */
     if (!en_follow_role(&en_song, t))
-        return &en_song.cell[pat][seq_row][t];
-    if (seq_row == 0 || take_pat[t] != pat) {    /* the top of a pass (the lead may have changed), or new here */
+        return &en_song.cell[pp][rr][t];
+    if (rr == 0 || take_pat[t] != pp) {          /* the top of a pass or a half (the lead may have changed), or new here */
         if (seq_row == 0 && take_pat[t] >= 0 && frand() < pct(par[P_T(t, TP_EVOLVE)])) {
             take_var[t]++;
             en_takes++;
         }
-        en_follow(&en_song, pat, t, en_take_seed(&en_song, t, pat), take[t]);
-        take_pat[t] = (int8_t)pat;
+        en_follow(&en_song, pp, t, en_take_seed(&en_song, t, pp), take[t]);
+        take_pat[t] = (int8_t)pp;
     }
-    return &take[t][seq_row];
+    return &take[t][rr];
 }
 
 static void row_fire(int32_t at)
@@ -1410,7 +1411,7 @@ static void all_release(void)
 static void play_start(int pos, int row)
 {
     seq_pos = pos < 0 ? 0 : pos >= song_len() ? 0 : pos;
-    seq_row = row < 0 || row >= EN_NROW ? 0 : row;
+    seq_row = row < 0 || row >= EN_MAXROW ? 0 : row;
     row_frac = 0.9999f;                          /* the first row now */
     clk_acc = 0.0f;
     jump_to = -1, hop_to = -1, hop_used = 0, seq_rep = 0;
@@ -1844,14 +1845,14 @@ static int g_chance(int pct_) { return (int)(g_rnd() % 100u) < pct_; }
 static int g_irand(int n) { return n > 0 ? (int)(g_rnd() % (uint32_t)n) : 0; }
 static void g_put(en_song_t *s, int pat, int row, int t, int note, int fx, int v)
 {
-    en_cell_t *c = &s->cell[pat][row & 15][t];
+    en_cell_t *c = en_cell(s, pat, row & 31, t);
     c->note = (uint8_t)note;
     c->vol = 0, c->fx2 = 0;
     c->fx = (uint8_t)(fx << 4 | (v & 15));
 }
 static void g_vol(en_song_t *s, int pat, int row, int t, int level)   /* a cell's volume, 0..15 */
 {
-    s->cell[pat][row & 15][t].vol = (uint8_t)(level + 1);
+    en_cell(s, pat, row & 31, t)->vol = (uint8_t)(level + 1);
 }
 enum { D_KIK = 36, D_SNR, D_HAT, D_OHT, D_TOM, D_X1, D_X2, D_X3 };
 
@@ -1912,15 +1913,15 @@ static void grow_tool(en_song_t *s, int pat, int t, int tool, int density, int r
 {
     const int root = s->par[P_ROOT], kit = en_sound_is_kit(s->par[P_T(t, TP_SOUND)]), len = en_pat_len(s, pat);
     const uint32_t p = EN_MODE_POOL[(unsigned)s->par[P_MODE] < EN_NMODES ? s->par[P_MODE] : 0];
-    en_cell_t col[EN_NROW];
+    en_cell_t col[EN_MAXROW];
     int r;
-    for (r = 0; r < EN_NROW; r++)
-        col[r] = s->cell[pat][r][t];
+    for (r = 0; r < EN_MAXROW; r++)
+        col[r] = *en_cell(s, pat, r, t);
     switch (tool) {
     case G_EUCLID: {                             /* density's hits over the pattern, as evenly as they go */
         int k = 1 + density * (len - 1) / 100, rot = g_irand(len);
-        for (r = 0; r < EN_NROW; r++) {
-            en_cell_t *c = &s->cell[pat][r][t];
+        for (r = 0; r < (len > EN_NROW ? EN_MAXROW : EN_NROW); r++) {
+            en_cell_t *c = en_cell(s, pat, r, t);
             c->note = 0, c->vol = 0, c->fx = 0, c->fx2 = 0;
             if (r < len && g_euclid(k, len, (r + rot) % len))
                 c->note = (uint8_t)(kit ? 36 : deg_move(base, root, p, g_chance(range / 2) ? 4 : 0));
@@ -1929,15 +1930,15 @@ static void grow_tool(en_song_t *s, int pat, int t, int tool, int density, int r
     }
     case G_VARY:                                 /* a few notes a step in the scale, a drum or two moved over */
         for (r = 0; r < len; r++) {
-            en_cell_t *c = &s->cell[pat][r][t];
+            en_cell_t *c = en_cell(s, pat, r, t);
             if (c->note < NOTE_LO || !g_chance(density / 2 + 5))
                 continue;
             if (!kit) {
                 c->note = (uint8_t)deg_move(c->note, root, p, g_chance(50) ? 1 : -1);
             } else {
                 int to = (r + (g_chance(50) ? 1 : -1) + len) % len;
-                if (s->cell[pat][to][t].note == NOTE_EMPTY) {
-                    s->cell[pat][to][t] = *c;
+                if (en_cell(s, pat, to, t)->note == NOTE_EMPTY) {
+                    *en_cell(s, pat, to, t) = *c;
                     c->note = 0, c->vol = 0, c->fx = 0, c->fx2 = 0;
                 }
             }
@@ -1945,7 +1946,7 @@ static void grow_tool(en_song_t *s, int pat, int t, int tool, int density, int r
         return;
     case G_ROLLS:                                /* ratchets at the ends of beats (KAWA's ROLLS) */
         for (r = 3; r < len; r += 4) {
-            en_cell_t *c = &s->cell[pat][r][t];
+            en_cell_t *c = en_cell(s, pat, r, t);
             if (!g_chance(density + 10))
                 continue;
             if (c->note < NOTE_LO) {             /* nothing there: the beat's last note again */
@@ -1961,7 +1962,7 @@ static void grow_tool(en_song_t *s, int pat, int t, int tool, int density, int r
         return;
     case G_ACCENTS:                              /* the beats at full, the rest softer as density says */
         for (r = 0; r < len; r++) {
-            en_cell_t *c = &s->cell[pat][r][t];
+            en_cell_t *c = en_cell(s, pat, r, t);
             if (c->note < NOTE_LO)
                 continue;
             c->vol = (uint8_t)(1 + (r % 4 == 0 ? 15 : r % 2 == 0 ? 11 - density / 25 : 8 - density / 20));
@@ -1969,11 +1970,11 @@ static void grow_tool(en_song_t *s, int pat, int t, int tool, int density, int r
         return;
     case G_SHIFT:                                /* on a row, round the pattern */
         for (r = 0; r < len; r++)
-            s->cell[pat][(r + 1) % len][t] = col[r];
+            *en_cell(s, pat, (r + 1) % len, t) = col[r];
         return;
     case G_UP:                                   /* a step up the scale (a kit: each drum the next) */
         for (r = 0; r < len; r++) {
-            en_cell_t *c = &s->cell[pat][r][t];
+            en_cell_t *c = en_cell(s, pat, r, t);
             if (c->note >= NOTE_LO)
                 c->note = (uint8_t)(kit ? 36 + (c->note - 36 + 1) % EN_NDRUM : deg_move(c->note, root, p, 1));
         }
@@ -2105,22 +2106,29 @@ static int pat_empty(const en_song_t *s, int p)
 static void pat_clear_track(en_song_t *s, int p, int t)
 {
     int r;
-    for (r = 0; r < EN_NROW; r++)
-        s->cell[p][r][t].note = 0, s->cell[p][r][t].vol = 0, s->cell[p][r][t].fx = 0, s->cell[p][r][t].fx2 = 0;
+    for (r = 0; r < en_pat_len(s, p); r++) {
+        en_cell_t *c = en_cell(s, p, r, t);
+        c->note = 0, c->vol = 0, c->fx = 0, c->fx2 = 0;
+    }
 }
 static int snd_bass(int snd) { return snd >= 3 && snd <= 7; }
 static int snd_pad(int snd) { return snd >= 14 && snd <= 16; }
 
 /* a section of `kind` made from pattern `src` into pattern `dst` */
-static void song_section(en_song_t *s, int src, int dst, int kind, int density, uint32_t seed)
+static void song_section(en_song_t *s, int src, int dst, int kind, int density, uint32_t seed, int pair)
 {
-    int t;
+    int t, half;
     uint8_t *d = (uint8_t *)s->cell[dst];
     const uint8_t *o = (const uint8_t *)s->cell[src];
     uint32_t k;
-    for (k = 0; k < sizeof s->cell[0]; k++)
-        d[k] = o[k];
-    s->len[dst] = s->len[src];
+    const int whole = pair && en_pat_len(s, src) > EN_NROW;   /* a linked pair into a pair (New song's long parts) */
+    for (half = 0; half <= whole; half++) {
+        uint8_t *d2 = (uint8_t *)s->cell[(dst + half) & 15];
+        const uint8_t *o2 = (const uint8_t *)s->cell[(src + half) & 15];
+        for (k = 0; k < sizeof s->cell[0]; k++)
+            d2[k] = o2[k];
+    }
+    s->len[dst] = (uint8_t)(whole ? en_pat_len(s, src) : en_pat_len(s, src) > EN_NROW ? EN_NROW : en_pat_len(s, src));
     for (t = 0; t < EN_NTRK; t++) {
         const int snd = s->par[P_T(t, TP_SOUND)], kit = en_sound_is_kit(snd);
         g_rng = seed * 2654435761u + (uint32_t)(dst * 977 + t * 131 + kind) + 1u;
@@ -2145,9 +2153,11 @@ static void song_section(en_song_t *s, int src, int dst, int kind, int density, 
         case SK_OUTRO:
             if (kit) {
                 int r;
-                for (r = 0; r < EN_NROW; r++)
-                    if (s->cell[dst][r][t].note != 38 && s->cell[dst][r][t].note != NOTE_EMPTY)
-                        s->cell[dst][r][t].note = 0, s->cell[dst][r][t].fx = 0, s->cell[dst][r][t].vol = 0, s->cell[dst][r][t].fx2 = 0;
+                for (r = 0; r < en_pat_len(s, dst); r++) {
+                    en_cell_t *c = en_cell(s, dst, r, t);
+                    if (c->note != 38 && c->note != NOTE_EMPTY)
+                        c->note = 0, c->fx = 0, c->vol = 0, c->fx2 = 0;
+                }
             } else if (!snd_pad(snd) && !snd_bass(snd) && t != s->par[P_LEAD] - 1) {
                 pat_clear_track(s, dst, t);
             }
@@ -2227,7 +2237,7 @@ int en_grow_song(en_song_t *s, int len, int density, uint32_t seed)
             if (kind != SK_MAIN) {
                 if (made[src][kind] == 0xFF && nfree > 0) {   /* made once, played again where it comes back */
                     made[src][kind] = freep[--nfree];
-                    song_section(s, src, made[src][kind], kind, density, seed + (uint32_t)(src * 7 + kind));
+                    song_section(s, src, made[src][kind], kind, density, seed + (uint32_t)(src * 7 + kind), 0);
                 }
                 if (made[src][kind] != 0xFF)
                     pat = made[src][kind];
@@ -2257,7 +2267,11 @@ int en_new_song(en_song_t *s, int parts, int steps, int density, uint32_t seed)
     uint32_t u;
     uint8_t *z = (uint8_t *)s;
     parts = parts < 2 ? 2 : parts > EN_NPAT ? EN_NPAT : parts;
-    steps = steps < 1 ? 1 : steps > EN_NROW ? EN_NROW : steps;
+    steps = steps < 1 ? 1 : steps > EN_MAXROW ? EN_MAXROW : steps;
+    const int pairs = steps > EN_NROW;           /* a part past 16 steps: a linked pair of patterns, so eight at most */
+    if (pairs && parts > EN_NPAT / 2)
+        parts = EN_NPAT / 2;
+#define PART(i) (pairs ? 2 * (i) : (i))
     g_rng = seed * 2654435761u + 0x7F4A7C15u;
     if (!g_rng)
         g_rng = 1u;
@@ -2316,8 +2330,8 @@ int en_new_song(en_song_t *s, int parts, int steps, int density, uint32_t seed)
         s->par[P_T(t, TP_CRUSH)] = (int16_t)(g_chance(20) ? g_irand(40) : 0);
     }
     for (p = 0; p < EN_NPAT; p++)
-        s->len[p] = (uint8_t)steps;
-    /* part A (pattern 1) and part B (pattern 2), by the way chosen */
+        s->len[p] = (uint8_t)(pairs && (p & 1) ? EN_NROW : steps);
+    /* part A and part B, by the way chosen */
     for (p = 0; p < 2; p++) {
         const uint32_t ps = seed * 31u + (uint32_t)p * 977u;
         for (t = 0; t < EN_NTRK; t++) {
@@ -2344,11 +2358,16 @@ int en_new_song(en_song_t *s, int parts, int steps, int density, uint32_t seed)
                 st = t == 3 ? G_MELODY : t == 0 ? G_DRIVER : G_SPARSE;
                 break;
             }
-            if (st == G_EUCLID) {
-                en_grow(s, p, t, G_DRIVER, density, 40, ps + (uint32_t)t);
-                en_grow(s, p, t, G_EUCLID, density, 40, ps + (uint32_t)t);
-            } else {
-                en_grow(s, p, t, st, density, 50, ps + (uint32_t)t);
+            {
+                int hh;
+                for (hh = 0; hh <= pairs; hh++) {   /* (a long part: both its halves) */
+                    const uint32_t hs = ps + (uint32_t)t + (uint32_t)hh * 7919u;
+                    if (st == G_EUCLID)
+                        en_grow(s, PART(p) + hh, t, G_DRIVER, density, 40, hs);
+                    en_grow(s, PART(p) + hh, t, st == G_EUCLID ? G_DRIVER : st, density, 50, hs);
+                }
+                if (st == G_EUCLID)              /* Euclid across the whole part */
+                    grow_tool(s, PART(p), t, G_EUCLID, density, 40, 48 + s->par[P_ROOT]);
             }
         }
         if (p == 1)                              /* B: the tune a few steps up (a IV, more or less) */
@@ -2356,7 +2375,7 @@ int en_new_song(en_song_t *s, int parts, int steps, int density, uint32_t seed)
                 if (!en_sound_is_kit(s->par[P_T(t, TP_SOUND)]))
                     for (k = 0; k < 3; k++) {
                         g_rng ^= ps + (uint32_t)k;
-                        grow_tool(s, 1, t, G_UP, density, 40, 48);
+                        grow_tool(s, PART(1), t, G_UP, density, 40, 48);
                     }
     }
     if (alg == NS_FOLLOW) {                      /* the lead, track 4; the others follow it */
@@ -2372,11 +2391,13 @@ int en_new_song(en_song_t *s, int parts, int steps, int density, uint32_t seed)
         for (p = 2; p < parts; p++) {
             const int i = p - 2;
             if (i < (int)sizeof KIND) {
-                song_section(s, FROM[i], p, KIND[i], density, seed + (uint32_t)p * 7u);
+                song_section(s, PART(FROM[i]), PART(p), KIND[i], density, seed + (uint32_t)p * 7u, pairs);
             } else {                             /* a fresh part, its own melody over A's drums */
-                for (t = 0; t < EN_NTRK; t++)
-                    en_grow(s, p, t, en_sound_is_kit(s->par[P_T(t, TP_SOUND)]) ? G_DRIVER : t == 3 ? G_MELODY : G_OSTINATO,
-                            density, 50, seed * 131u + (uint32_t)(p * 17 + t));
+                int hh;
+                for (hh = 0; hh <= pairs; hh++)
+                    for (t = 0; t < EN_NTRK; t++)
+                        en_grow(s, PART(p) + hh, t, en_sound_is_kit(s->par[P_T(t, TP_SOUND)]) ? G_DRIVER : t == 3 ? G_MELODY : G_OSTINATO,
+                                density, 50, seed * 131u + (uint32_t)(p * 17 + t + hh * 5));
             }
         }
     }
@@ -2404,11 +2425,12 @@ int en_new_song(en_song_t *s, int parts, int steps, int density, uint32_t seed)
         ADD(outro, 1);
 #undef ADD
         for (k = 0; k < f; k++)
-            s->order[k] = EN_ORD(form[k], rep[k]);
+            s->order[k] = EN_ORD(PART(form[k]), rep[k]);
         n = f;
         s->par[P_LEN] = (int16_t)f;
     }
     return n;
+#undef PART
 }
 
 /* ------------------------------------------------------------- FOLLOW --- */
@@ -2447,7 +2469,7 @@ typedef struct {
 static void lead_read(const en_song_t *s, int pat, int lt, lead_t *L)
 {
     int r, cur = 0;
-    const int len = en_pat_len(s, pat);
+    const int len = en_pat_len(s, pat) > EN_NROW ? EN_NROW : en_pat_len(s, pat);
     L->ons = 0, L->last = 0, L->prev = 0;
     for (r = 0; r < len; r++) {                 /* what's held over from the end of the pattern */
         int n = s->cell[pat][r][lt].note;
@@ -2853,7 +2875,7 @@ void en_song_recipe(int i, en_song_t *s)
 int en_pat_len(const en_song_t *s, int pat)
 {
     int n = s->len[pat & 15];
-    return n < 1 || n > EN_NROW ? EN_NROW : n;
+    return n < 1 || n > EN_MAXROW ? EN_NROW : n;
 }
 
 int en_song_valid(const en_song_t *s)
@@ -2865,7 +2887,7 @@ int en_song_valid(const en_song_t *s)
         if (s->par[i] < PARAMS[i].lo || s->par[i] > PARAMS[i].hi)
             return 0;
     for (p = 0; p < EN_NPAT; p++)
-        if (s->len[p] < 1 || s->len[p] > EN_NROW)
+        if (s->len[p] < 1 || s->len[p] > EN_MAXROW)
             return 0;
     for (p = 0; p < EN_NPAT; p++)
         for (r = 0; r < EN_NROW; r++)

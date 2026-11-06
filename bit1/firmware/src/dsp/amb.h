@@ -24,7 +24,8 @@
 
 #define EN_SR 44100.0f
 #define EN_NTRK 6                      /* tracks */
-#define EN_NROW 16                     /* rows a pattern: a bar of sixteenths */
+#define EN_NROW 16                     /* rows a pattern holds: a bar of sixteenths */
+#define EN_MAXROW 32                   /* rows a pattern plays, at most: past 16, the next pattern's (KAWA's link) */
 #define EN_NPAT 16                     /* patterns a song */
 #define EN_NORD 32                     /* the order list's length, at most */
 #define EN_NBUILTIN 24                 /* the sound bank, built in */
@@ -128,7 +129,7 @@ typedef struct {
     char name[16];
     int16_t par[P_NSONG];
     uint8_t order[EN_NORD];
-    uint8_t len[EN_NPAT];                      /* each pattern's rows, 1..16 (KAWA's END) */
+    uint8_t len[EN_NPAT];                      /* each pattern's rows, 1..32 (KAWA's END); past 16, the next one's */
     en_cell_t cell[EN_NPAT][EN_NROW][EN_NTRK];
 } en_song_t;
 extern en_song_t en_song;                      /* the song playing (and being edited) */
@@ -137,7 +138,16 @@ int en_song_valid(const en_song_t *s);         /* 1: every value in range */
  * volume and second effect when it has them). The size, or -1 when it won't fit in max bytes. */
 int en_song_pack(const en_song_t *s, uint8_t *buf, int max);
 int en_song_unpack(const uint8_t *buf, int n, en_song_t *s);   /* 0: a valid song */
-int en_pat_len(const en_song_t *s, int pat);  /* its rows, 1..16 */
+int en_pat_len(const en_song_t *s, int pat);  /* its rows, 1..32 */
+/* a pattern's row r (0..31): rows 16..31 are the next pattern's 0..15 (a 32-step part is a linked pair) */
+static inline en_cell_t *en_cell(en_song_t *s, int pat, int row, int t)
+{
+    return &s->cell[(pat + (row >> 4)) & 15][row & 15][t];
+}
+static inline const en_cell_t *en_ccell(const en_song_t *s, int pat, int row, int t)
+{
+    return &s->cell[(pat + (row >> 4)) & 15][row & 15][t];
+}
 int en_song_size(const en_song_t *s);         /* its packed size, in bytes */
 void en_song_recipe(int i, en_song_t *s);      /* song i as it comes */
 const char *en_song_title(int i);

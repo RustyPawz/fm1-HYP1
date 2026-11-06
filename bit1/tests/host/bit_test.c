@@ -210,7 +210,7 @@ int main(void)
         static uint8_t pk[3840];
         int seed, ways[4] = {0, 0, 0, 0};
         for (seed = 0; seed < 40; seed++) {
-            const int parts = 2 + seed % 15, steps = 4 + seed % 13;
+            const int parts = 2 + seed % 15, steps = 4 + seed % 29, pairs = steps > EN_NROW;
             int n = en_new_song(&g, parts, steps, 55, (uint32_t)seed * 101u), ok = 1;
             en_new_song(&h, parts, steps, 55, (uint32_t)seed * 101u);
             CHECK(!memcmp(&g, &h, sizeof g), "new song %d: not the same from the same seed", seed);
@@ -219,10 +219,10 @@ int main(void)
             CHECK(en_sound_is_kit(g.par[P_T(0, TP_SOUND)]), "new song %d: track 1 isn't a kit", seed);
             for (i = 0; i < n; i++) {
                 int p2 = EN_ORD_PAT(g.order[i]), r2, t2, any = 0;
-                ok &= p2 < parts && g.len[p2] == steps;
-                for (r2 = 0; r2 < EN_NROW; r2++)
+                ok &= (pairs ? (p2 & 1) == 0 && p2 < 2 * (parts > 8 ? 8 : parts) : p2 < parts) && g.len[p2] == steps;
+                for (r2 = 0; r2 < steps; r2++)
                     for (t2 = 0; t2 < EN_NTRK; t2++)
-                        any |= g.cell[p2][r2][t2].note != 0;
+                        any |= en_ccell(&g, p2, r2, t2)->note != 0;
                 ok &= any || en_follow_role(&g, 0);
             }
             CHECK(ok, "new song %d: a position outside its parts, a part's steps not %d, or an empty one", seed, steps);
@@ -418,6 +418,35 @@ int main(void)
         run(0.1);
     }
     en_song.cell[0][7][5].fx2 = 0;
+
+    /* 32 steps: a pattern of 32 rows plays its 16 and then the next pattern's (KAWA's link), 32 rows a pass;
+     * a note in the linked half plays; Shift goes round all 32 */
+    blank();
+    set(P_TEMPO, 120);
+    en_song.len[0] = 32;
+    en_song.cell[1][4][2].note = 55;             /* row 20 of pattern 1: pattern 2's row 4 */
+    {
+        uint32_t p0;
+        midi_reset();
+        en_play(0, 0);
+        run(0.05);
+        p0 = en_passes;
+        run(8.0);                                /* 64 rows at 120: two passes of 32 */
+        CHECK(en_passes - p0 == 2, "32 rows: %u passes in 8 s, wanted 2", en_passes - p0);
+        CHECK(midi_notes[2] == 2, "the linked half's note: played %u times in two passes", midi_notes[2]);
+        en_stop();
+        run(0.1);
+    }
+    {
+        static en_song_t g;
+        g = en_song;
+        en_cell(&g, 0, 31, 3)->note = 60;
+        en_grow(&g, 0, 3, G_SHIFT, 50, 40, 1u);
+        CHECK(en_ccell(&g, 0, 0, 3)->note == 60 && en_ccell(&g, 0, 31, 3)->note == 0, "Shift round 32 rows");
+        CHECK(en_song_valid(&g), "a 32-row pattern: not valid");
+    }
+    en_song.len[0] = 16;
+    en_song.cell[1][4][2].note = 0;
 
     /* effects: Chance 0 plays about one in sixteen; Ratchet 3 plays four; Chord 1 a triad */
     blank();

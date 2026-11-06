@@ -174,7 +174,7 @@ body.stream .ctl.knob.sv-turn > circle:first-child { stroke: #ff9a3c; stroke-wid
       <div>
         <h3>Pattern <span>HOME</span></h3>
         <dl>
-          <dt>The grid</dt><dd>Sixteen rows (a bar of sixteenths), six tracks. A cell is a note (a kit's: its drum, KIK, SNR, HAT...) or a note-off (the bars), a volume (0–F, a bar beside the note) and two effects, each a letter and a value 0–F (KAWA's cell). Hold <b>SEL</b> and the knobs are the cell's Volume, Effect 2 and Value 2, and the pattern's Rows (1–16). Rows past a pattern's end are dim. <b>SELECT</b> the row (with SEL: four), <b>ALGORITHM</b> the track. The row playing glows yellow.</dd>
+          <dt>The grid</dt><dd>Sixteen rows (a bar of sixteenths), six tracks. A cell is a note (a kit's: its drum, KIK, SNR, HAT...) or a note-off (the bars), a volume (0–F, a bar beside the note) and two effects, each a letter and a value 0–F (KAWA's cell). Hold <b>SEL</b> and the knobs are the cell's Volume, Effect 2 and Value 2, and the pattern's Rows (1–32: past 16 it plays on into the next pattern, its rows numbered in blue). Rows past a pattern's end are dim. <b>SELECT</b> the row (with SEL: four), <b>ALGORITHM</b> the track. The row playing glows yellow.</dd>
           <dt>Note, Effect, Value</dt><dd>The cursor's cell. Note goes from empty to off to the notes (a kit: its eight drums).</dd>
           <dt>Pattern</dt><dd>Which of the sixteen patterns this position of the song plays.</dd>
         </dl>
@@ -230,7 +230,7 @@ body.stream .ctl.knob.sv-turn > circle:first-child { stroke: #ff9a3c; stroke-wid
           <dt>Style</dt><dd>Eight chip styles: <b>Driver</b> (an eighth-note bass bouncing its octave; four on the floor), <b>Hold</b> (a held note; half-time), <b>Ostinato</b> (fourths and fifths, round and round; a broken beat), <b>Melody</b> (a phrase through the scale, landing on the chord; a rock beat), <b>Triplet</b> (every three rows; a shuffle), <b>Arp run</b> (sixteenths up and down the chord), <b>Bleeps</b> (short and crushed), <b>Sparse</b>.</dd>
           <dt>Density, Range, Seed</dt><dd>How busy, how wide, and which of a hundred. <b>EDIT</b> writes the cursor's track of the pattern on screen; SEL + EDIT every track.</dd>
           <dt>Song</dt><dd>The last Style: a whole song grown around what you've written. Its third knob is the <b>Length</b> (1–32 positions); <b>EDIT</b> keeps your positions (those playing a pattern with notes) and fills every other one with an arrangement made from them: intro, variations, builds, a breakdown, an outro, repeats.</dd>
-          <dt>New song</dt><dd>The very last: a song from nothing. Its knobs are <b>Parts</b> (2–16) and <b>Steps</b> (1–16 rows); <b>EDIT</b> twice replaces the song with one made in one of four ways (Follow, Grow, Euclid, Minimal): every track's sound (ROM voices among them, with a bank), the key and the feel, parts A and B and the rest from them, in a song's form with repeats.</dd>
+          <dt>New song</dt><dd>The very last: a song from nothing. Its knobs are <b>Parts</b> (2–16) and <b>Steps</b> (1–32 rows; past 16, a part is a linked pair, eight parts at most); <b>EDIT</b> twice replaces the song with one made in one of four ways (Follow, Grow, Euclid, Minimal): every track's sound (ROM voices among them, with a bank), the key and the feel, parts A and B and the rest from them, in a song's form with repeats.</dd>
         </dl>
       </div>
       <div>
