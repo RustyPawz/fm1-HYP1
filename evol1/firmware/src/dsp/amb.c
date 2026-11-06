@@ -875,7 +875,10 @@ static void track_apply(int t)
 
 static void apply(int p, int v)
 {
-    const en_param_t *pi = en_param_info(p);
+    const en_param_t *pi;
+    if (p < 0 || p >= P_NPARAMS)
+        return;
+    pi = en_param_info(p);
     if (v < pi->lo)
         v = pi->lo;
     if (v > pi->hi)
