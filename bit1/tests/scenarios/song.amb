@@ -1,0 +1,27 @@
+# BIT-1's Grow, Song: the first song cut to its first four positions, then grown to 32 around them (Style
+# Song, its third knob the length); it plays through, and still packs into its flash object
+wait 500
+tap PLAY
+wait 200
+tap SEQ
+expect view 1
+spin K3 -12
+expect par4 4
+tap ARP
+expect view 7
+spin K1 14
+wait 200
+shot song_grow.png
+tap EDIT
+expect par4 32
+expect dirty 1
+expect packed <3840
+tap SEQ
+wait 300
+shot song_grown.png
+tap PLAY
+wait 8000
+expect playing 1
+expect rows >60
+tap SAVE
+expect dirty 0

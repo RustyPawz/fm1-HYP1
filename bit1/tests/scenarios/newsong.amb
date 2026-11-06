@@ -1,0 +1,23 @@
+# BIT-1's Grow, New song: Style New song, its Parts (KNOB 2) and Steps (KNOB 3); EDIT once asks, EDIT again
+# replaces the song with one made from nothing; it plays, and packs
+wait 500
+tap ARP
+expect view 7
+spin K1 15
+spin K2 -2
+spin K3 -4
+wait 200
+shot newsong_knobs.png
+tap EDIT
+expect dirty 0
+tap EDIT
+expect dirty 1
+expect len 12
+expect packed <3840
+wait 300
+shot newsong_grid.png
+tap SEQ
+wait 300
+shot newsong_song.png
+wait 6000
+expect playing 1

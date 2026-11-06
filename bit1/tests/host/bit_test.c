@@ -162,6 +162,86 @@ int main(void)
         CHECK(memcmp(g.cell[9], h.cell[9], sizeof g.cell[9]), "grow gives the same from two seeds");
     }
 
+    /* SONG: grown to 32 positions around what's written: the user's positions and their patterns untouched,
+     * every position playing a pattern with notes, the same from the same seed; from nothing, a song too */
+    {
+        static en_song_t g, h, before;
+        int n, used[EN_NPAT] = {0}, distinct = 0;
+        en_song_recipe(1, &g);
+        g.par[P_LEN] = 4;                        /* the user's: positions 1-4 (patterns 1, 1, 2, 2) */
+        g.order[1] = EN_ORD(0, 3);
+        before = g;
+        h = g;
+        n = en_grow_song(&g, 32, 60, 77u);
+        en_grow_song(&h, 32, 60, 77u);
+        CHECK(n == 28 && g.par[P_LEN] == 32, "song: %d positions filled, length %d", n, g.par[P_LEN]);
+        CHECK(!memcmp(&g, &h, sizeof g), "song: not the same from the same seed");
+        CHECK(!memcmp(g.order, before.order, 4) && !memcmp(g.cell[0], before.cell[0], sizeof g.cell[0]) &&
+              !memcmp(g.cell[1], before.cell[1], sizeof g.cell[1]), "song: the user's positions or patterns changed");
+        for (i = 0; i < 32; i++) {
+            int p2 = EN_ORD_PAT(g.order[i]), r2, t2, any = 0;
+            for (r2 = 0; r2 < EN_NROW; r2++)
+                for (t2 = 0; t2 < EN_NTRK; t2++)
+                    any |= g.cell[p2][r2][t2].note != 0;
+            CHECK(any, "song: position %d plays an empty pattern", i + 1);
+            if (!used[p2]++)
+                distinct++;
+        }
+        CHECK(distinct >= 4 && distinct <= EN_NPAT, "song: %d patterns in it", distinct);
+        CHECK(en_song_valid(&g), "song: not valid");
+        printf("  song grown: %d positions, %d patterns\n", n, distinct);
+        memset(g.cell, 0, sizeof g.cell);        /* nothing written: grown from nothing */
+        g.par[P_LEN] = 1;
+        n = en_grow_song(&g, 16, 50, 5u);
+        CHECK(n == 16 && g.par[P_LEN] == 16, "song from nothing: %d positions", n);
+        for (i = 0; i < 16; i++) {
+            int p2 = EN_ORD_PAT(g.order[i]), r2, t2, any = 0;
+            for (r2 = 0; r2 < EN_NROW; r2++)
+                for (t2 = 0; t2 < EN_NTRK; t2++)
+                    any |= g.cell[p2][r2][t2].note != 0;
+            CHECK(any, "song from nothing: position %d plays an empty pattern", i + 1);
+        }
+    }
+
+    /* NEW SONG: from nothing, for every seed tried: valid, the same from the same seed, its parts and steps as
+     * asked, every position playing a part with notes, a kit on track 1, it packs; it plays */
+    {
+        static en_song_t g, h;
+        static uint8_t pk[3840];
+        int seed, ways[4] = {0, 0, 0, 0};
+        for (seed = 0; seed < 40; seed++) {
+            const int parts = 2 + seed % 15, steps = 4 + seed % 13;
+            int n = en_new_song(&g, parts, steps, 55, (uint32_t)seed * 101u), ok = 1;
+            en_new_song(&h, parts, steps, 55, (uint32_t)seed * 101u);
+            CHECK(!memcmp(&g, &h, sizeof g), "new song %d: not the same from the same seed", seed);
+            CHECK(en_song_valid(&g), "new song %d: not valid", seed);
+            CHECK(n >= 4 && n <= EN_NORD && g.par[P_LEN] == n, "new song %d: %d positions", seed, n);
+            CHECK(en_sound_is_kit(g.par[P_T(0, TP_SOUND)]), "new song %d: track 1 isn't a kit", seed);
+            for (i = 0; i < n; i++) {
+                int p2 = EN_ORD_PAT(g.order[i]), r2, t2, any = 0;
+                ok &= p2 < parts && g.len[p2] == steps;
+                for (r2 = 0; r2 < EN_NROW; r2++)
+                    for (t2 = 0; t2 < EN_NTRK; t2++)
+                        any |= g.cell[p2][r2][t2].note != 0;
+                ok &= any || en_follow_role(&g, 0);
+            }
+            CHECK(ok, "new song %d: a position outside its parts, a part's steps not %d, or an empty one", seed, steps);
+            CHECK(en_song_pack(&g, pk, (int)sizeof pk) > 0, "new song %d: doesn't pack", seed);
+            ways[g.name[0] == 'F' ? 0 : g.name[0] == 'G' ? 1 : g.name[0] == 'E' ? 2 : 3]++;
+        }
+        CHECK(ways[0] && ways[1] && ways[2] && ways[3], "new songs: the ways %d %d %d %d", ways[0], ways[1], ways[2], ways[3]);
+        printf("  new songs: %d Follow, %d Grow, %d Euclid, %d Minimal\n", ways[0], ways[1], ways[2], ways[3]);
+        en_new_song(&en_song, 6, 16, 55, 4242u); /* and one plays */
+        en_reload();
+        meter_reset();
+        bad = 0;
+        en_play(0, 0);
+        run(8.0);
+        CHECK(!bad && rms_db() > -40.0 && peak < 0.98, "a new song plays: %.1f dB peak %.2f", rms_db(), peak);
+        en_stop();
+        run(2.0);
+    }
+
     /* every song plays: notes, rows at its tempo, a sensible level, nothing past full scale */
     for (i = 0; i < EN_NSONG; i++) {
         uint32_t n0, r0;
@@ -675,6 +755,16 @@ int main(void)
         run(0.3);
         CHECK(rms_db() < -50.0, "the one-shot still sounds: %.1f dB", rms_db());
         en_audition(3, 60, 0);
+        {                                        /* a bank in: new songs take its voices now and then */
+            static en_song_t g;
+            int seed, roms = 0, t2;
+            for (seed = 0; seed < 20; seed++) {
+                en_new_song(&g, 4, 16, 50, (uint32_t)seed);
+                for (t2 = 0; t2 < EN_NTRK; t2++)
+                    roms += g.par[P_T(t2, TP_SOUND)] >= EN_NBUILTIN && g.par[P_T(t2, TP_SOUND)] < EN_NBUILTIN + 5;
+            }
+            CHECK(roms >= 10, "new songs with a bank: %d ROM voices in 20 songs", roms);
+        }
         en_bank(0, 0);                           /* no bank: the ROM sounds silent */
         run(0.05);
         CHECK(en_rom_count() == 0, "no bank: %d voices", en_rom_count());

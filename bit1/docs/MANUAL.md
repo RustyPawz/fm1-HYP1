@@ -301,6 +301,34 @@ Then six tools, after KAWA's MAGIC, that work on what's there:
 | Shift | Everything a row on, round the pattern |
 | Up a step | Every note a step up the scale; on a kit, each drum the next |
 
+And **Song**: a whole song grown around what you've written. Its third knob is the song's **Length** (1 to 32
+positions). Write what you want to keep (patterns, positions, repeats) and press **EDIT**: the positions within
+the song that play a pattern with notes stay exactly as they are, and every other one up to the length is filled
+with an arrangement made from them: an intro, your patterns again, variations, builds into a fill, a breakdown
+near the middle (the drums and the bass out), an outro, with repeats where they suit. Past your last position, each
+phrase of four comes from the next of your patterns. Each kind of section is made once per pattern, into a pattern
+no position of yours plays (and empty), and comes back where it comes again, so the song repeats as written songs
+do. Nothing written at all: it grows a first pattern from each track's sound, then the song. With Follow on, the
+tracks that follow write themselves in every new pattern too. EDIT again (the seed moves on) for another.
+
+And **New song**: a whole song from nothing. Its knobs are **Parts** (2 to 16 patterns) and **Steps** (1 to 16
+rows each, the parts' length). **EDIT** asks first ("EDIT AGAIN TO REPLACE"), since it replaces the song; EDIT again
+within a couple of seconds and BIT-1 makes one:
+
+- **The sounds:** every track a sound for its role: a kit, a bass, chords, a lead, a counter, effects. With ROM
+  voices in the bank, a track takes one of them now and then.
+- **The key and the feel:** the root, the mode, the tempo, the swing, the arps' rate, the echo, the plate, Lo-fi;
+  each track's level, pan, sends, vibrato, arp and Evolve.
+- **The way:** one of four. **Follow** (a lead melody on track 4, the others written from it), **Grow** (each role
+  in a style of its own), **Euclid** (even drums, a driving bass, an arp run), **Minimal** (holds, a sparse lead,
+  a triplet). The song's name says which, and its seed.
+- **The parts:** A and B (B a few steps up the scale), then from them a build, a breakdown, variations of each, an
+  intro and an outro; with more parts than that, fresh ones of their own.
+- **The form:** the parts in a song's order with repeats: intro, A twice, B, the variations, a build, a breakdown,
+  the fresh parts, A and B again, an outro.
+
+SAVE keeps it (the Song page shows how full); PRESETS or SAVE held on Setup brings back the song as it came.
+
 **Density** and **Range** shape it; **Seed** picks one of a hundred. **EDIT** grows the cursor's track; **SEL +
 EDIT** every track. Each grow moves the seed on, so EDIT again gives another.
 
@@ -423,7 +451,7 @@ Five songs, each one chip's:
 | Song | |
 | --- | --- |
 | Overworld | 140 BPM, C major, NES, played by Follow: a Square lead, and the kit, the triangle bass, the Wave pad's chords and a Duty lead in harmony all written from it; blips |
-| Dungeon | 108, A aeolian, Game Boy: a broken beat, the wave bass, an organ played as a seventh, a duty lead, metal, pickups |
+| Corrosion | 92, D phrygian, SID, dark and crushed, never the same twice: a broken SID kit dropping out and ghosting in, a saw ostinato, a falling noise wash, a lead mutating as it drifts through a long echo, metal trilling, a bell far off; Lo-fi and a big plate |
 | Starfield | 126, D lydian, SID: a saw bass, the SID pad, the SID lead, ring bells, lasers far off |
 | Boss Rush | 168, E phrygian, NES: the octave bass, sixteenth chip arps, a thin lead, metal |
 | Lullaby | 84, F major, Game Boy: a triangle bass held, a wave pad as a triad, up and down, the wave lead, a ring bell, a noise sweep |
@@ -434,6 +462,17 @@ Each is eight patterns layered from an intro to an outro, the order list playing
 its own place in the FM-1's flash. A dot top right shows something isn't saved. **PRESETS** opens another song;
 with changes unsaved, the first turn warns and a second turn drops them. Hold **SAVE** for 1.5 s on the Setup
 page to have the song back as it came (SAVE again to keep that).
+
+---
+
+## A secret
+
+Hold **SEL** and press **REC**: **BIT BEAT**. The cursor's track becomes the chart: its notes fall down eight
+lanes, white keys 1–8, in time with the song, and the track goes quiet: you play it. On time (Perfect within
+50 ms, Good within 110) the note sounds and the combo climbs to ×4; a miss shakes the screen, flashes it red and
+crunches the mix. The heat bar under the score rises as you hit and falls as you miss, and the other tracks
+mutate with it: Evolve, then arpeggios, then everything at once. The white keys light as their notes come near.
+Round the song, a grade. HOME, or SEL + REC, to leave: everything is as it was, the song as saved never changed.
 
 ---
 

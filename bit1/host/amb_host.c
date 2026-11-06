@@ -19,6 +19,7 @@
  *   leds                         print the lit buttons and keys
  *   expect WHAT VALUE            check state: exit 1 on mismatch; VALUE "<N" / ">N" is a bound
  *   splash MS                    the boot cards for MS at the next reboot (0: none, the tests' default)
+ *   autoplay 0|1                 BIT BEAT (SEL + REC) plays its notes itself
  *   reboot                       re-run boot from the simulated flash (persistence test)
  */
 #define EN_HOST 1
@@ -410,6 +411,20 @@ static int expect(const char *what, const char *val)
         got = en_pat_len(&en_song, pat_shown());
     else if (!strcmp(what, "rep"))
         got = EN_ORD_REP(en_song.order[ui.pos % EN_NORD]);
+    else if (!strcmp(what, "game"))               /* BIT BEAT: on; its state, score, combo, misses, hits, heat level */
+        got = gm.on;
+    else if (!strcmp(what, "gstate"))
+        got = gm.st;
+    else if (!strcmp(what, "gscore"))
+        got = (int)gm.score;
+    else if (!strcmp(what, "gcombo"))
+        got = (int)gm.maxc;
+    else if (!strcmp(what, "gmiss"))
+        got = (int)gm.miss;
+    else if (!strcmp(what, "ghits"))
+        got = (int)(gm.perfect + gm.good);
+    else if (!strcmp(what, "glevel"))
+        got = gm.lvl;
     else if (!strcmp(what, "packed"))             /* the song's packed size, bytes */
         got = en_song_size(&en_song);
     else if (!strncmp(what, "cell", 4)) {         /* cellP.R.T: a cell's note */
@@ -586,6 +601,8 @@ int main(int argc, char **argv)
             fails += expect(a, b);
         else if (!strcmp(cmd, "splash"))           /* the boot cards for MS (then reboot) */
             ui_splash_ms = (uint32_t)strtoul(a, 0, 10);
+        else if (!strcmp(cmd, "autoplay"))         /* BIT BEAT plays itself (1) or not (0): the tests, the renders */
+            gm.autoplay = (uint8_t)atoi(a);
         else if (!strcmp(cmd, "reboot")) {
             memset(&proj, 0, sizeof proj);
             boot();

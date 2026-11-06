@@ -28,7 +28,8 @@ const char *const EN_SOUND_NAME[EN_NBUILTIN] = {
     "Chip arp", "Wave pad", "SID pad", "Organ", "Ring bell",
     "Blip", "Laser", "Power-up", "Pickup", "Metal", "Noise sweep"};
 const char *const EN_GROW_NAME[EN_NGROW] = {"Driver", "Hold", "Ostinato", "Melody", "Triplet", "Arp run", "Bleeps", "Sparse",
-                                            "Euclid", "Vary", "Rolls", "Accents", "Shift", "Up a step"};
+                                            "Euclid", "Vary", "Rolls", "Accents", "Shift", "Up a step", "Song",
+                                            "New song"};
 const char *const EN_ARP_NAME[EN_NARP] = {"Off", "Triad", "Down", "Up-down", "Seventh", "Octave", "Power", "Trill"};
 const char *const EN_ROLE_NAME[EN_NROLE] = {"Off", "Auto", "Bass", "Chords", "Arp", "Harmony", "Counter", "Drums"};
 static const char *const THEME_NAME[EN_NTHEMES] = {"Arcade", "Pocket", "Home", "Neon", "Mono"};
@@ -190,7 +191,7 @@ void en_track_mute(uint32_t m) { post(C_TMUTE, (int)(m & 0x3Fu), 0); }
 
 /* -------------------------------------------------------------- state --- */
 en_song_t en_song EN_POOL;
-volatile uint8_t en_playing, en_ext, en_pos, en_row, en_pat_now;
+volatile uint8_t en_playing, en_ext, en_pos, en_row, en_pat_now, en_rep;
 volatile float en_bpm = 96.0f;
 volatile uint8_t en_bus_on;
 #ifdef EN_HOST
@@ -1360,6 +1361,7 @@ static void row_fire(int32_t at)
         seq_row = 0;
     en_pos = (uint8_t)seq_pos;
     en_row = (uint8_t)seq_row;
+    en_rep = (uint8_t)seq_rep;
     en_pat_now = (uint8_t)pat;
     if (seq_row & 1)                             /* the swing: the off sixteenths late */
         sw = (int32_t)(row_samples() * pct(par[P_SWING]) * 0.5f);
@@ -2088,6 +2090,327 @@ void en_grow(en_song_t *s, int pat, int t, int style, int density, int range, ui
 #undef GN
 }
 
+/* --------------------------------------------------------------- SONG --- */
+/* the whole song grown from what's written (amb.h en_grow_song) */
+enum { SK_MAIN, SK_VAR, SK_BUILD, SK_BREAK, SK_INTRO, SK_OUTRO, SK_N };
+static int pat_empty(const en_song_t *s, int p)
+{
+    const uint8_t *z = (const uint8_t *)s->cell[p & 15];
+    uint32_t k;
+    for (k = 0; k < sizeof s->cell[0]; k++)
+        if (z[k])
+            return 0;
+    return 1;
+}
+static void pat_clear_track(en_song_t *s, int p, int t)
+{
+    int r;
+    for (r = 0; r < EN_NROW; r++)
+        s->cell[p][r][t].note = 0, s->cell[p][r][t].vol = 0, s->cell[p][r][t].fx = 0, s->cell[p][r][t].fx2 = 0;
+}
+static int snd_bass(int snd) { return snd >= 3 && snd <= 7; }
+static int snd_pad(int snd) { return snd >= 14 && snd <= 16; }
+
+/* a section of `kind` made from pattern `src` into pattern `dst` */
+static void song_section(en_song_t *s, int src, int dst, int kind, int density, uint32_t seed)
+{
+    int t;
+    uint8_t *d = (uint8_t *)s->cell[dst];
+    const uint8_t *o = (const uint8_t *)s->cell[src];
+    uint32_t k;
+    for (k = 0; k < sizeof s->cell[0]; k++)
+        d[k] = o[k];
+    s->len[dst] = s->len[src];
+    for (t = 0; t < EN_NTRK; t++) {
+        const int snd = s->par[P_T(t, TP_SOUND)], kit = en_sound_is_kit(snd);
+        g_rng = seed * 2654435761u + (uint32_t)(dst * 977 + t * 131 + kind) + 1u;
+        switch (kind) {
+        case SK_VAR:                             /* a few notes moved; the drums roll at the ends of beats */
+            grow_tool(s, dst, t, kit ? G_ROLLS : G_VARY, density, 40, 48 + s->par[P_ROOT]);
+            break;
+        case SK_BUILD:                           /* rolls, the beats loud, and a fill to finish */
+            grow_tool(s, dst, t, G_ROLLS, 60 + density / 3, 40, 48);
+            grow_tool(s, dst, t, G_ACCENTS, density, 40, 48);
+            if (kit) {
+                const int len = en_pat_len(s, dst);
+                g_put(s, dst, len - 2, t, D_TOM, 0, 0);
+                g_put(s, dst, len - 1, t, D_SNR, FX_RATCHET, 3);
+            }
+            break;
+        case SK_BREAK:                           /* the drums and the bass out */
+            if (kit || snd_bass(snd))
+                pat_clear_track(s, dst, t);
+            break;
+        case SK_INTRO:                           /* the pads and the bass, the hats coming in */
+        case SK_OUTRO:
+            if (kit) {
+                int r;
+                for (r = 0; r < EN_NROW; r++)
+                    if (s->cell[dst][r][t].note != 38 && s->cell[dst][r][t].note != NOTE_EMPTY)
+                        s->cell[dst][r][t].note = 0, s->cell[dst][r][t].fx = 0, s->cell[dst][r][t].vol = 0, s->cell[dst][r][t].fx2 = 0;
+            } else if (!snd_pad(snd) && !snd_bass(snd) && t != s->par[P_LEAD] - 1) {
+                pat_clear_track(s, dst, t);
+            }
+            break;
+        default:
+            break;
+        }
+    }
+    if (pat_empty(s, dst))                       /* nothing left at all: the source as it is */
+        for (k = 0; k < sizeof s->cell[0]; k++)
+            d[k] = o[k];
+}
+
+int en_grow_song(en_song_t *s, int len, int density, uint32_t seed)
+{
+    const int old = s->par[P_LEN] < 1 ? 1 : s->par[P_LEN] > EN_NORD ? EN_NORD : s->par[P_LEN];
+    uint8_t keep[EN_NORD], mine[EN_NPAT], made[EN_NPAT][SK_N], freep[EN_NPAT], srcs[EN_NPAT];
+    int i, p, k, nfree = 0, filled = 0, first = -1, nsrc = 0, last = -1;
+    len = len < 1 ? 1 : len > EN_NORD ? EN_NORD : len;
+    for (p = 0; p < EN_NPAT; p++)
+        mine[p] = 0;
+    for (i = 0; i < EN_NORD; i++) {              /* the user's: within the song, a pattern with notes */
+        keep[i] = (uint8_t)(i < old && i < len && !pat_empty(s, EN_ORD_PAT(s->order[i])));
+        if (keep[i]) {
+            if (!mine[EN_ORD_PAT(s->order[i])])
+                srcs[nsrc++] = (uint8_t)EN_ORD_PAT(s->order[i]);   /* the user's patterns, in the song's order */
+            mine[EN_ORD_PAT(s->order[i])] = 1;
+            last = i;
+            if (first < 0)
+                first = EN_ORD_PAT(s->order[i]);
+        }
+    }
+    for (p = 0; p < EN_NPAT; p++) {               /* where new sections can go: no position of the user's, empty */
+        for (k = 0; k < SK_N; k++)
+            made[p][k] = 0xFF;
+        if (!mine[p] && pat_empty(s, p))
+            freep[nfree++] = (uint8_t)p;
+    }
+    if (first < 0) {                             /* nothing written: a pattern grown first */
+        int t;
+        if (!nfree)
+            return 0;
+        first = freep[--nfree];
+        for (t = 0; t < EN_NTRK; t++) {
+            const int snd = s->par[P_T(t, TP_SOUND)];
+            const int st = en_sound_is_kit(snd) ? G_DRIVER : snd_bass(snd) ? G_DRIVER : snd_pad(snd) ? G_HOLD
+                         : snd == 13 ? G_ARPRUN : snd >= 17 ? G_SPARSE : G_MELODY;
+            en_grow(s, first, t, st, density, 40, seed * 31u + (uint32_t)t);
+        }
+        mine[first] = 1;
+        srcs[nsrc++] = (uint8_t)first;
+    }
+    g_rng = seed * 2246822519u + 0x85EBCA6Bu;
+    if (!g_rng)
+        g_rng = 1u;
+    {
+        int src = first, brk = len >= 8 ? len / 2 + (int)(g_rnd() % 2u) : -1;
+        for (i = 0; i < len; i++) {
+            int kind, pat;
+            if (keep[i]) {
+                src = EN_ORD_PAT(s->order[i]);   /* the sections after it come from it */
+                continue;
+            }
+            if (i > last && nsrc > 1)            /* past what's written: each phrase of four from the next of them */
+                src = srcs[((i - last - 1) / 4) % nsrc];
+            if (i == 0 && len > 2)
+                kind = SK_INTRO;
+            else if (i == len - 1 && len > 2)
+                kind = SK_OUTRO;
+            else if (i == brk)
+                kind = SK_BREAK;
+            else if (i == brk - 1 || i % 4 == 3)
+                kind = SK_BUILD;
+            else
+                kind = i % 4 == 2 ? SK_VAR : SK_MAIN;
+            pat = src;
+            if (kind != SK_MAIN) {
+                if (made[src][kind] == 0xFF && nfree > 0) {   /* made once, played again where it comes back */
+                    made[src][kind] = freep[--nfree];
+                    song_section(s, src, made[src][kind], kind, density, seed + (uint32_t)(src * 7 + kind));
+                }
+                if (made[src][kind] != 0xFF)
+                    pat = made[src][kind];
+            }
+            s->order[i] = EN_ORD(pat, kind == SK_MAIN && g_chance(density / 2) ? 2 : kind == SK_BREAK && g_chance(50) ? 2 : 1);
+            filled++;
+        }
+    }
+    s->par[P_LEN] = (int16_t)len;
+    return filled;
+}
+
+/* ------------------------------------------------------------ NEW SONG --- */
+/* a song from nothing (amb.h en_new_song) */
+enum { NS_FOLLOW, NS_GROW, NS_EUCLID, NS_MINIMAL, NS_N };
+static int ns_pick(const uint8_t *pool, int n) { return pool[g_irand(n)]; }
+
+int en_new_song(en_song_t *s, int parts, int steps, int density, uint32_t seed)
+{
+    static const uint8_t BASS[] = {3, 4, 5, 6, 7}, PAD[] = {14, 15, 16}, LEAD[] = {8, 9, 10, 11, 12},
+                         CTR[] = {8, 10, 12, 13, 17}, FX[] = {17, 18, 19, 20, 21, 22, 23};
+    static const uint8_t MODES[] = {MODE_MAJOR, MODE_MAJOR, MODE_AEOLIAN, MODE_AEOLIAN, MODE_DORIAN, MODE_MIXOLYDIAN,
+                                    MODE_PHRYGIAN, MODE_LYDIAN, MODE_PENT_MIN};
+    static const char *const ALG_NAME[NS_N] = {"Follow", "Grow", "Euclid", "Minimal"};
+    uint8_t rom[EN_NROM];
+    int nrom = 0, alg, t, k, p, n = 0;
+    uint32_t u;
+    uint8_t *z = (uint8_t *)s;
+    parts = parts < 2 ? 2 : parts > EN_NPAT ? EN_NPAT : parts;
+    steps = steps < 1 ? 1 : steps > EN_NROW ? EN_NROW : steps;
+    g_rng = seed * 2654435761u + 0x7F4A7C15u;
+    if (!g_rng)
+        g_rng = 1u;
+    for (k = 0; k < EN_NROM; k++)                /* the ROM voices loaded: in the pools too */
+        if (rom_name[k][0])
+            rom[nrom++] = (uint8_t)(EN_NBUILTIN + k);
+    for (u = 0; u < sizeof *s; u++)
+        z[u] = 0;
+    s->magic = EN_SONG_MAGIC;
+    s->format = EN_SONG_FORMAT;
+    for (k = 0; k < P_NSONG; k++)
+        s->par[k] = PARAMS[k].def;
+    alg = g_irand(NS_N);
+    {                                            /* its name: the way it was made, and the seed */
+        const char *a = ALG_NAME[alg];
+        char num[8];
+        int i = 0, j;
+        while (*a && i < 9)
+            s->name[i++] = *a++;
+        s->name[i++] = ' ';
+        itoa_s((int)(seed % 10000u), num);
+        for (j = 0; num[j] && i < 15; j++)
+            s->name[i++] = num[j];
+    }
+    /* the key, the feel */
+    s->par[P_ROOT] = (int16_t)g_irand(12);
+    s->par[P_MODE] = MODES[g_irand((int)sizeof MODES)];
+    s->par[P_TEMPO] = (int16_t)(alg == NS_MINIMAL ? 70 + g_irand(40) : 100 + g_irand(70));
+    s->par[P_SWING] = (int16_t)(g_chance(30) ? 15 + g_irand(30) : 0);
+    s->par[P_ARP_T] = (int16_t)g_irand(5);
+    s->par[P_ECHO_T] = (int16_t)g_irand(6);
+    s->par[P_ECHO_FB] = (int16_t)(20 + g_irand(40));
+    s->par[P_VERB] = (int16_t)(20 + g_irand(50));
+    s->par[P_LOFI] = (int16_t)(g_irand(40));
+    /* the sounds, a role a track: drums, bass, chords, lead, counter, effects; a ROM voice now and then */
+    for (t = 0; t < EN_NTRK; t++) {
+        int snd;
+        switch (t) {
+        case 0: snd = g_irand(3); break;
+        case 1: snd = ns_pick(BASS, (int)sizeof BASS); break;
+        case 2: snd = ns_pick(PAD, (int)sizeof PAD); break;
+        case 3: snd = ns_pick(LEAD, (int)sizeof LEAD); break;
+        case 4: snd = ns_pick(CTR, (int)sizeof CTR); break;
+        default: snd = ns_pick(FX, (int)sizeof FX); break;
+        }
+        if (t > 0 && nrom && g_chance(t == 5 ? 50 : 35))
+            snd = rom[g_irand(nrom)];
+        s->par[P_T(t, TP_SOUND)] = (int16_t)snd;
+        s->par[P_T(t, TP_LEVEL)] = (int16_t)(t == 0 ? 68 : t == 1 ? 74 : t == 3 ? 58 : t == 5 ? 30 : 44);
+        s->par[P_T(t, TP_PAN)] = (int16_t)(t <= 1 ? 0 : t == 3 ? 8 : (g_irand(60) - 30));
+        s->par[P_T(t, TP_ECHO)] = (int16_t)(t <= 1 ? 0 : 10 + g_irand(35));
+        s->par[P_T(t, TP_VERB)] = (int16_t)(t <= 1 ? 5 : 15 + g_irand(40));
+        s->par[P_T(t, TP_VIB)] = (int16_t)(t == 3 ? 15 + g_irand(30) : 0);
+        s->par[P_T(t, TP_ARP)] = (int16_t)(t == 4 && snd < EN_NBUILTIN && g_chance(40) ? 1 + g_irand(EN_NARP - 1) : 0);
+        s->par[P_T(t, TP_EVOLVE)] = (int16_t)(g_chance(30) ? 10 + g_irand(30) : 0);
+        s->par[P_T(t, TP_CRUSH)] = (int16_t)(g_chance(20) ? g_irand(40) : 0);
+    }
+    for (p = 0; p < EN_NPAT; p++)
+        s->len[p] = (uint8_t)steps;
+    /* part A (pattern 1) and part B (pattern 2), by the way chosen */
+    for (p = 0; p < 2; p++) {
+        const uint32_t ps = seed * 31u + (uint32_t)p * 977u;
+        for (t = 0; t < EN_NTRK; t++) {
+            int st;
+            switch (alg) {
+            case NS_EUCLID:
+                st = t == 0 ? (p ? G_ARPRUN : G_DRIVER) : t == 1 ? G_DRIVER : t == 2 ? G_HOLD : t == 3 ? G_MELODY
+                   : t == 4 ? G_ARPRUN : G_EUCLID;
+                break;
+            case NS_MINIMAL:
+                st = t == 0 ? G_SPARSE : t == 1 ? G_HOLD : t == 2 ? G_HOLD : t == 3 ? G_SPARSE : t == 4 ? G_TRIPLET : G_SPARSE;
+                break;
+            case NS_GROW: {
+                static const uint8_t ST[EN_NTRK][4] = {{G_DRIVER, G_OSTINATO, G_MELODY, G_TRIPLET},
+                                                       {G_DRIVER, G_OSTINATO, G_HOLD, G_TRIPLET},
+                                                       {G_HOLD, G_HOLD, G_ARPRUN, G_SPARSE},
+                                                       {G_MELODY, G_MELODY, G_OSTINATO, G_TRIPLET},
+                                                       {G_ARPRUN, G_OSTINATO, G_TRIPLET, G_MELODY},
+                                                       {G_BLEEPS, G_SPARSE, G_BLEEPS, G_EUCLID}};
+                st = ST[t][g_irand(4)];
+                break;
+            }
+            default:                             /* Follow: the lead's melody; the rest written from it */
+                st = t == 3 ? G_MELODY : t == 0 ? G_DRIVER : G_SPARSE;
+                break;
+            }
+            if (st == G_EUCLID) {
+                en_grow(s, p, t, G_DRIVER, density, 40, ps + (uint32_t)t);
+                en_grow(s, p, t, G_EUCLID, density, 40, ps + (uint32_t)t);
+            } else {
+                en_grow(s, p, t, st, density, 50, ps + (uint32_t)t);
+            }
+        }
+        if (p == 1)                              /* B: the tune a few steps up (a IV, more or less) */
+            for (t = 1; t < EN_NTRK; t++)
+                if (!en_sound_is_kit(s->par[P_T(t, TP_SOUND)]))
+                    for (k = 0; k < 3; k++) {
+                        g_rng ^= ps + (uint32_t)k;
+                        grow_tool(s, 1, t, G_UP, density, 40, 48);
+                    }
+    }
+    if (alg == NS_FOLLOW) {                      /* the lead, track 4; the others follow it */
+        s->par[P_LEAD] = 4;
+        for (t = 0; t < EN_NTRK; t++)
+            if (t != 3)
+                s->par[P_T(t, TP_FOLLOW)] = (int16_t)(t == 2 ? FR_CHORDS : t == 4 ? (g_chance(50) ? FR_COUNTER : FR_HARMONY) : FR_AUTO);
+    }
+    /* the other parts: a build, a breakdown, variations, an intro and an outro from A and B; then fresh ones */
+    {
+        static const uint8_t KIND[] = {SK_BUILD, SK_BREAK, SK_VAR, SK_VAR, SK_INTRO, SK_OUTRO};
+        static const uint8_t FROM[] = {0, 0, 0, 1, 0, 0};
+        for (p = 2; p < parts; p++) {
+            const int i = p - 2;
+            if (i < (int)sizeof KIND) {
+                song_section(s, FROM[i], p, KIND[i], density, seed + (uint32_t)p * 7u);
+            } else {                             /* a fresh part, its own melody over A's drums */
+                for (t = 0; t < EN_NTRK; t++)
+                    en_grow(s, p, t, en_sound_is_kit(s->par[P_T(t, TP_SOUND)]) ? G_DRIVER : t == 3 ? G_MELODY : G_OSTINATO,
+                            density, 50, seed * 131u + (uint32_t)(p * 17 + t));
+            }
+        }
+    }
+    /* the form: the parts in an order a song might take, with repeats, up to 32 positions */
+    {
+        const int intro = parts > 6 ? 6 : -1, outro = parts > 7 ? 7 : -1, build = parts > 2 ? 2 : -1, brk = parts > 3 ? 3 : -1;
+        const int va = parts > 4 ? 4 : 0, vb = parts > 5 ? 5 : 1;
+        int form[EN_NORD], rep[EN_NORD], f = 0, extra = 8;
+#define ADD(pt, r) do { if (f < EN_NORD && (pt) >= 0) { form[f] = (pt); rep[f] = (r); f++; } } while (0)
+        ADD(intro, 1);
+        ADD(0, 2);
+        ADD(1, 1);
+        ADD(va, 1);
+        ADD(build, 1);
+        ADD(0, 1);
+        ADD(vb, 2);
+        ADD(brk, g_chance(50) ? 2 : 1);
+        ADD(build, 1);
+        for (; extra < parts; extra++) {          /* the fresh parts, each before A again */
+            ADD(extra, 2);
+            ADD(va, 1);
+        }
+        ADD(0, 2);
+        ADD(1, 1);
+        ADD(outro, 1);
+#undef ADD
+        for (k = 0; k < f; k++)
+            s->order[k] = EN_ORD(form[k], rep[k]);
+        n = f;
+        s->par[P_LEN] = (int16_t)f;
+    }
+    return n;
+}
+
 /* ------------------------------------------------------------- FOLLOW --- */
 /* the other tracks written from the lead (amb.h). Pure, on its own generator like GROW: the render calls it
  * at the top of each pass, the screen to show the takes, the tests to check them. */
@@ -2418,6 +2741,7 @@ typedef struct {
     int8_t deg[EN_NTRK], vib[EN_NTRK], arp[EN_NTRK], evolve[EN_NTRK], pan[EN_NTRK], echo[EN_NTRK],
         verb_[EN_NTRK], crush[EN_NTRK], tone[EN_NTRK];
     uint8_t lead, fol[EN_NTRK];                 /* Follow: the lead (1-6, 0 none), each track's role */
+    uint8_t mutate;                             /* the melodic tracks' notes given Mutate (M) now and then, this far */
 } recipe_t;
 #define KIT_M 0xDC                               /* the drums: patterns 3, 4, 5, 7, 8 (of 1-8) */
 #define BAS_M 0x5E
@@ -2430,31 +2754,34 @@ static const recipe_t SONGS[EN_NSONG] = {
      {0, 3, 14, 8, 10, 18}, {0, 0, 1, 3, 3, 6}, {60, 50, 0, 60, 45, 20}, {70, 80, 40, 60, 40, 28},
      {KIT_M, BAS_M, ALL_M, ALL_M, 0xD0, 0x50}, {0, 0, 0, 0, 0, 0}, {0, 0, 0, 30, 20, 0}, {0, 0, 0, 0, 0, 0},
      {25, 15, 0, 0, 0, 0}, {0, 0, -20, 10, 25, -30}, {0, 0, 10, 25, 30, 40}, {5, 5, 25, 20, 25, 20},
-     {0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 25, 0}, 4, {FR_AUTO, FR_AUTO, FR_CHORDS, FR_OFF, FR_HARMONY, FR_OFF}},
-    /* Dungeon: Game Boy, A minor, a broken beat, the wave's bass and organ, a 25% lead */
-    {"Dungeon", 108, 9, MODE_AEOLIAN, 2, 1, 40, 25, 0,
-     {1, 6, 16, 10, 22, 21}, {2, 2, 1, 3, 4, 6}, {55, 70, 40, 55, 40, 25}, {68, 76, 42, 56, 30, 26},
-     {KIT_M, BAS_M, ALL_M, TOP_M, 0xD8, 0x90}, {0, 0, 0, 0, 0, 0}, {0, 0, 0, 25, 0, 0}, {0, 0, 4, 0, 0, 0},
-     {10, 0, 0, 30, 40, 0}, {0, 0, 20, -10, 30, -25}, {0, 0, 10, 40, 30, 30}, {5, 5, 30, 25, 30, 20},
-     {0, 10, 0, 0, 20, 0}, {0, 0, 0, 0, 0, 0}, 0, {0}},
+     {0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 25, 0}, 4, {FR_AUTO, FR_AUTO, FR_CHORDS, FR_OFF, FR_HARMONY, FR_OFF}, 0},
+    /* Corrosion: SID, D phrygian, slow and crushed, never the same twice: a broken SID kit dropping out and
+     * ghosting in, a dark saw ostinato, a falling noise wash under it all, a lead whose notes drift further each
+     * pass through a long dotted echo, metal trilling at a 32nd, a crushed bell far off; Lo-fi, a big dark plate,
+     * the kick ducking the rest */
+    {"Corrosion", 92, 2, MODE_PHRYGIAN, 2, 3, 80, 60, 30,
+     {2, 5, 23, 11, 22, 17}, {2, 2, 1, 3, 6, 7}, {65, 55, 0, 45, 45, 50}, {70, 78, 30, 52, 30, 30},
+     {KIT_M, BAS_M, ALL_M, TOP_M, 0xD8, 0xF2}, {0, 0, 0, 0, 0, 0}, {0, 0, 0, 40, 0, 0}, {0, 0, 0, 0, 7, 0},
+     {85, 60, 0, 100, 100, 70}, {0, 0, 0, 8, -35, 35}, {0, 0, 15, 45, 30, 55}, {10, 5, 60, 35, 30, 65},
+     {45, 35, 25, 30, 60, 40}, {-10, -20, -15, -25, 0, -10}, 0, {0}, 2},
     /* Starfield: SID, D lydian, a saw bass under a moving pad, a lead and its ring bells, lasers far off */
     {"Starfield", 126, 2, MODE_LYDIAN, 2, 3, 55, 10, 20,
      {2, 5, 15, 11, 17, 19}, {0, 0, 1, 3, 4, 7}, {55, 55, 40, 60, 50, 40}, {66, 72, 44, 54, 40, 26},
      {KIT_M, BAS_M, ALL_M, TOP_M, 0xF0, 0x30}, {0, 0, 0, 0, 4, 0}, {0, 0, 0, 25, 0, 0}, {0, 0, 0, 0, 0, 0},
      {0, 15, 0, 25, 40, 0}, {0, 0, -15, 10, 30, -35}, {0, 10, 20, 35, 45, 50}, {5, 5, 50, 35, 45, 40},
-     {0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0}, 0, {0}},
+     {0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0}, 0, {0}, 0},
     /* Boss Rush: NES, E phrygian, fast: the octave bass, sixteenth arps, a thin lead, the metal */
     {"Boss Rush", 168, 4, MODE_PHRYGIAN, 1, 0, 25, 20, 0,
      {0, 7, 13, 9, 22, 19}, {5, 0, 5, 3, 2, 6}, {65, 60, 70, 65, 50, 30}, {72, 72, 38, 58, 28, 26},
      {KIT_M, BAS_M, 0xFE, TOP_M, 0xD8, 0xD0}, {0, 0, 0, 0, 0, 0}, {0, 0, 0, 35, 0, 0}, {0, 0, 0, 0, 0, 0},
      {0, 0, 20, 20, 30, 0}, {0, 0, -25, 10, 25, -30}, {0, 0, 15, 25, 20, 40}, {5, 5, 15, 20, 20, 25},
-     {0, 0, 0, 0, 15, 0}, {0, 0, 25, 30, 0, 0}, 0, {0}},
+     {0, 0, 0, 0, 15, 0}, {0, 0, 25, 30, 0, 0}, 0, {0}, 0},
     /* Lullaby: Game Boy, F major, slow: a held triangle, a wave pad as a slow arp, the wave lead, the bell */
     {"Lullaby", 84, 5, MODE_MAJOR, 4, 2, 60, 30, 0,
      {1, 3, 14, 12, 17, 23}, {7, 1, 1, 3, 4, 7}, {30, 0, 50, 50, 40, 30}, {50, 72, 46, 56, 38, 22},
      {0xD8, ALL_M, ALL_M, TOP_M, 0xF8, 0x81}, {0, 0, 0, 0, 2, 0}, {0, 0, 0, 30, 0, 0}, {0, 0, 3, 0, 0, 0},
      {0, 0, 0, 35, 40, 0}, {0, 0, -20, 10, 25, 0}, {0, 0, 20, 40, 45, 30}, {10, 10, 50, 40, 55, 60},
-     {0, 0, 0, 0, 0, 0}, {0, 0, -10, 0, 0, 0}, 0, {0}},
+     {0, 0, 0, 0, 0, 0}, {0, 0, -10, 0, 0, 0}, 0, {0}, 0},
 };
 
 const char *en_song_title(int i) { return SONGS[(unsigned)i < EN_NSONG ? i : 0].name; }
@@ -2502,6 +2829,18 @@ void en_song_recipe(int i, en_song_t *s)
                 }
         }
     }
+    if (R->mutate)                               /* Mutate on the off-beat notes of the melodic tracks (its second effect) */
+        for (pt = 0; pt < 8; pt++)
+            for (t = 1; t < EN_NTRK; t++) {
+                int r;
+                if (en_sound_is_kit(R->snd[t]))
+                    continue;
+                for (r = 0; r < EN_NROW; r++) {
+                    en_cell_t *c = &s->cell[pt][r][t];
+                    if (c->note >= NOTE_LO && (r % 4 != 0) && !c->fx2)
+                        c->fx2 = (uint8_t)(FX_MUTATE << 4 | (R->mutate + (r & 1)));
+                }
+            }
     for (t = 0; t < EN_NTRK; t++)                /* the outro and the dip: what goes quiet lets go at their top */
         if (!en_sound_is_kit(R->snd[t])) {
             if (!(R->mask[t] >> 7 & 1u))

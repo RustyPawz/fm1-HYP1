@@ -112,7 +112,7 @@ shot s_overworld.png
 spin PRESET 1
 spin PRESET 1
 wait 30000
-shot s_dungeon.png
+shot s_corrosion.png
 spin PRESET 1
 wait 30000
 shot s_starfield.png

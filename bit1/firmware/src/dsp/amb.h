@@ -176,6 +176,7 @@ void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2);
 extern volatile uint8_t en_playing, en_ext;
 extern volatile uint8_t en_pos, en_row;        /* the order position and row playing */
 extern volatile uint8_t en_pat_now;            /* the pattern playing */
+extern volatile uint8_t en_rep;                /* its repeat now (0: the first time) */
 extern volatile float en_trk_glow[EN_NTRK];    /* 0..1: the track just played */
 extern volatile uint8_t en_trk_note[EN_NTRK];  /* its last note (MIDI) */
 extern volatile float en_level[EN_NTRK];       /* how loud each track is now, about 0..1 */
@@ -198,9 +199,23 @@ int en_snap(int note, int root, uint32_t pool);   /* a note moved to the nearest
  * Then KAWA's MAGIC tools, on what's there: Euclid (density's hits, as evenly as they go), Vary (a few notes a
  * step in the scale, a few moved), Rolls (ratchets at the ends of beats), Accents (the beats loud, the rest
  * softer), Shift (on a row), Up (a step up the scale). */
-#define EN_NGROW 14
+#define EN_NGROW 16
 enum { G_DRIVER, G_HOLD, G_OSTINATO, G_MELODY, G_TRIPLET, G_ARPRUN, G_BLEEPS, G_SPARSE,
-       G_EUCLID, G_VARY, G_ROLLS, G_ACCENTS, G_SHIFT, G_UP };
+       G_EUCLID, G_VARY, G_ROLLS, G_ACCENTS, G_SHIFT, G_UP, G_SONG, G_NEW };
+/* SONG: the order list grown to `len` positions (1..32). The positions within the song's length that play a
+ * pattern with notes are the user's and stay as they are (their patterns, their repeats); every other position
+ * is filled: an arrangement (an intro, the main pattern, variations, builds, a breakdown near the middle, an
+ * outro) made from the user's pattern nearest before it, each kind made once per pattern (into a pattern no
+ * position of the user's plays, and empty) and played again where it comes back. Nothing written at all: a
+ * pattern is grown first, each track in the style its sound suits. Sets P_LEN; the positions filled. */
+int en_grow_song(en_song_t *s, int len, int density, uint32_t seed);
+/* NEW SONG: a song from nothing, in `parts` patterns (2..16) of `steps` rows (1..16). Every track's sound chosen
+ * for its role (a kit, a bass, chords, a lead, a counter, effects; one of the bank's ROM voices now and then),
+ * the key, the mode, the tempo and the feel; then one of four ways (Follow: a lead and the rest written from it;
+ * Grow: each role a style; Euclid: even drums, a driving bass, an arp run; Minimal: holds, a sparse lead and a
+ * triplet) for parts A and B (B a few steps up), the rest made from them (a build, a breakdown, variations, an
+ * intro, an outro; then fresh ones), in a song's order with repeats. Replaces the whole song; the positions. */
+int en_new_song(en_song_t *s, int parts, int steps, int density, uint32_t seed);
 extern const char *const EN_GROW_NAME[EN_NGROW];
 void en_grow(en_song_t *s, int pat, int track, int style, int density, int range, uint32_t seed);
 /* FOLLOW: with a lead (P_LEAD), each track given a role plays a take written from the lead's notes in the same

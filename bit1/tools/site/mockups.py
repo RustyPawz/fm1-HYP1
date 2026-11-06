@@ -192,9 +192,9 @@ def screens(names, out, cols=None, label=None, scale=2, gap=24):
 
 SCREENS = ["splash", "splash_bit", "pattern", "song", "sound", "move", "sends", "space", "groove", "grow", "follow", "setup", "device",
            "mutes", "help", "rec", "playing", "synced", "synced_setup",
-           "s_overworld", "s_dungeon", "s_starfield", "s_boss", "s_lullaby",
+           "s_overworld", "s_corrosion", "s_starfield", "s_boss", "s_lullaby",
            "t_arcade", "t_pocket", "t_home", "t_neon", "t_mono"]
-SONGS = ["overworld", "dungeon", "starfield", "boss", "lullaby"]
+SONGS = ["overworld", "corrosion", "starfield", "boss", "lullaby"]
 RED = "#ff4040"
 YEL = "#ffc828"
 
@@ -224,7 +224,7 @@ def main():
         im.resize((480, 480), Image.NEAREST).save(OUT / f"bit-screen-{n.replace('_', '-')}.png")
     print("wrote docs/img/bit-screen-*.png")
     screens([f"s_{n}" for n in SONGS], OUT / "bit-songs.png", cols=5,
-            label=["OVERWORLD", "DUNGEON", "STARFIELD", "BOSS RUSH", "LULLABY"])
+            label=["OVERWORLD", "CORROSION", "STARFIELD", "BOSS RUSH", "LULLABY"])
     screens(["pattern", "song", "sound", "move", "sends", "space", "groove", "grow", "follow", "setup", "device", "mutes", "help"],
             OUT / "bit-pages.png", cols=4,
             label=["PATTERN · HOME", "SONG · SEQ", "SOUND · ENV", "MOVE · ENV TWICE", "SENDS · ENV X3", "SPACE · LFO",

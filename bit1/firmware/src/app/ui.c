@@ -28,7 +28,7 @@ static const char *const VIEW_NAME[NVIEWS] = {"Pattern", "Song", "Sound", "Move"
 static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_SEQ, B_ENV, B_ENV, B_ENV, B_LFO, B_LFO, B_ARP, B_ARP, B_GLO, B_GLO};
 #define GRID_VIEW(v) ((v) == V_PATTERN || (v) == V_GROW || (v) == V_FOLLOW)   /* the pages that show the grid */
 enum { K_NOTE = 200, K_FX, K_VAL, K_PAT, K_POS, K_FOLLOW, K_STYLE, K_DENS, K_RANGE, K_SEED, K_VOL, K_FX2, K_VAL2, K_LEN,
-       K_REP, K_NONE };
+       K_REP, K_SLEN, K_PARTS, K_STEPS, K_NONE };
 static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Note", "Effect", "Value", "Pattern"},
     {"Position", "Pattern", "Length", "Follow"},
@@ -64,7 +64,9 @@ static const char *snd_short(int s)              /* a sound's four letters: buil
 static struct {
     uint8_t view, trk, row, pos, rec, follow, mutes, fxwin;
     uint8_t shift;                     /* SEL held: the second set of knobs (Pattern, Song) */
-    uint8_t style, dens, range, seed;
+    uint8_t style, dens, range, seed, slen;   /* Grow; slen: the song's length when Style is Song */
+    uint8_t parts, steps;              /* Grow, New song: its parts (patterns) and steps (rows) */
+    uint32_t new_until;                /* New song: EDIT again before this replaces the song */
     uint32_t btn, keys, btn_used;
     uint32_t enc_t[NE];
     uint8_t enc_run[NE];
@@ -198,7 +200,10 @@ static int view_knob(int v, int i)
         if (v == V_SENDS && i == 3)
             return P_ARP_T;
         return P_T(ui.trk, TRKP[v - V_SOUND][i]);
-    case V_GROW: return K_STYLE + i;
+    case V_GROW:
+        if (ui.style == G_NEW && (i == 1 || i == 2))   /* New song: its parts and steps */
+            return i == 1 ? K_PARTS : K_STEPS;
+        return i == 2 && ui.style == G_SONG ? K_SLEN : K_STYLE + i;   /* Song: Range is the length */
     case V_FOLLOW: return i == 0 ? P_LEAD : i == 1 ? P_T(ui.trk, TP_FOLLOW) : i == 2 ? P_T(ui.trk, TP_EVOLVE) : P_FDENS;
     default: return K[v][i];
     }
@@ -217,6 +222,9 @@ static int knob_get(int k)
     case K_STYLE: return ui.style;
     case K_DENS: return ui.dens;
     case K_RANGE: return ui.range;
+    case K_SLEN: return ui.slen;
+    case K_PARTS: return ui.parts;
+    case K_STEPS: return ui.steps;
     case K_SEED: return ui.seed;
     case K_VOL: return cur_cell()->vol;
     case K_FX2: return cur_cell()->fx2 >> 4;
@@ -241,6 +249,9 @@ static void knob_range(int k, int *lo, int *hi)
     case K_FOLLOW: *hi = 1; break;
     case K_STYLE: *hi = EN_NGROW - 1; break;
     case K_DENS: case K_RANGE: *hi = 100; break;
+    case K_SLEN: *lo = 1, *hi = EN_NORD; break;
+    case K_PARTS: *lo = 2, *hi = EN_NPAT; break;
+    case K_STEPS: *lo = 1, *hi = EN_NROW; break;
     case K_SEED: *hi = 99; break;
     case K_VOL: *hi = 16; break;
     case K_FX2: case K_VAL2: *hi = 15; break;
@@ -282,6 +293,15 @@ static void knob_text(int k, char *b)
         b[0] = ' ', b[1] = 'r', b[2] = 'o', b[3] = 'w', b[4] = 's', b[5] = 0;
         break;
     case K_REP: b[0] = 'x', itoa_u((uint32_t)v, b + 1); break;
+    case K_PARTS: case K_STEPS:
+        itoa_u((uint32_t)v, b);
+        break;
+    case K_SLEN:
+        itoa_u((uint32_t)v, b);
+        while (*b)
+            b++;
+        b[0] = ' ', b[1] = 'p', b[2] = 'o', b[3] = 's', b[4] = 0;
+        break;
     case K_PAT: b[0] = 'P', two((uint32_t)v + 1u, b + 1); break;
     case K_POS:
         two((uint32_t)v + 1u, b);
@@ -349,6 +369,9 @@ static void knob_set(int k, int v)
     case K_STYLE: ui.style = (uint8_t)v; break;
     case K_DENS: ui.dens = (uint8_t)v; break;
     case K_RANGE: ui.range = (uint8_t)v; break;
+    case K_SLEN: ui.slen = (uint8_t)v; break;
+    case K_PARTS: ui.parts = (uint8_t)v; break;
+    case K_STEPS: ui.steps = (uint8_t)v; break;
     case K_SEED: ui.seed = (uint8_t)v; break;
     default: break;
     }
@@ -462,6 +485,40 @@ static void grow(int all)
 {
     int t;
     char b[12] = "P";
+    if (ui.style == G_NEW) {                     /* a new song from nothing: EDIT twice (it replaces this one) */
+        if (plat_ms() > ui.new_until) {
+            ui.new_until = plat_ms() + 2500u;
+            say("NEW SONG:", "EDIT AGAIN TO REPLACE");
+            ui.msg_until = ui.new_until;
+            return;
+        }
+        ui.new_until = 0;
+        {
+            const int was = en_playing;
+            en_stop();
+            en_new_song(&en_song, ui.parts, ui.steps, ui.dens, (uint32_t)ui.seed * 7919u + plat_ms());
+            en_reload();                         /* every value to the engine as the song now has it */
+            if (was)
+                en_play(0, 0);
+            say("NEW SONG", en_song.name);
+            ui.seed = (uint8_t)((ui.seed + 1) % 100);
+            ui.pos = 0, ui.row = 0;
+            ui.sig[0] = ui.sig[1] = ui.sig[2] = 0;
+            mark_dirty();
+        }
+        return;
+    }
+    if (ui.style == G_SONG) {                    /* the song: every position up to the length, around what's written */
+        int n = en_grow_song(&en_song, ui.slen, ui.dens, (uint32_t)ui.seed * 7919u + plat_ms());
+        char c[12];
+        par_put(P_LEN, en_song.par[P_LEN]);
+        itoa_u((uint32_t)n, c);
+        say("SONG GROWN", n ? c : "NOTHING TO FILL");
+        ui.seed = (uint8_t)((ui.seed + 1) % 100);
+        ui.pos = 0;
+        mark_dirty();
+        return;
+    }
     for (t = 0; t < EN_NTRK; t++)
         if (all || t == ui.trk)
             en_grow(&en_song, pat_shown(), t, ui.style, ui.dens, ui.range,
@@ -521,6 +578,7 @@ static void set_mutes(uint32_t m)
 }
 
 static void rm_enter(void);                     /* REMOTE, below */
+static void game_start(void);                   /* BIT BEAT (game.c), below */
 static void button(int b, int shift)
 {
     int v;
@@ -544,6 +602,10 @@ static void button(int b, int shift)
         break;
     case B_PLAY: play_toggle(shift); break;
     case B_REC:
+        if (shift) {                             /* SEL + REC: the secret */
+            game_start();
+            break;
+        }
         ui.rec ^= 1u;
         say("EDIT", ui.rec ? "ON: THE KEYS WRITE" : "OFF");
         break;
@@ -1401,7 +1463,7 @@ static int help_lines(int b, const char *l[HELP_LINES])
     case B_SEQ: L("THE SONG: THE ORDER LIST"); L("SELECT THE POSITION"); L("EDIT: A FRESH COPY HERE"); L("SEL + EDIT: CLEAR IT"); break;
     case B_ENV: L("THE TRACK'S SOUND,"); L("TONE, DECAY, LEVEL"); L("AGAIN: MOVE (VIBRATO, ARP,"); L("EVOLVE, PAN), THEN SENDS"); break;
     case B_LFO: L("THE SPACE: ECHO, FEEDBACK,"); L("REVERB, LO-FI"); L("AGAIN: GROOVE (TEMPO,"); L("SWING, DUCK, LOOP)"); break;
-    case B_ARP: L("GROW: EDIT WRITES A PATTERN"); L("(SEL: EVERY TRACK). AGAIN:"); L("FOLLOW THE LEAD: EDIT A NEW"); L("TAKE, SEL + EDIT WRITE IT"); break;
+    case B_ARP: L("GROW: EDIT WRITES (STYLE SONG:"); L("THE WHOLE SONG). AGAIN:"); L("FOLLOW THE LEAD: EDIT A NEW"); L("TAKE, SEL + EDIT WRITE IT"); break;
     case B_GLO: L("SETUP: ROOT, MODE,"); L("TUNE, SYNC"); L("AGAIN: THE DEVICE"); L("SEL + GLO: REMOTE"); break;
     case B_EDIT: L("CLEAR THE CELL"); L("SEL + EDIT: A NOTE-OFF"); L("(GROW AND SONG:"); L("SEE THEIR CARDS)"); break;
     case B_REC: L("EDIT ON / OFF:"); L("THE KEYS WRITE NOTES,"); L("THE CURSOR STEPS DOWN"); L("PLAYING: INTO THE ROW"); break;
@@ -1557,7 +1619,7 @@ static void draw_knobs(void)
         {
             static const char *const SHIFTED[4] = {"Volume", "Effect 2", "Value 2", "Rows"};
             caps(t, ui.shift && ui.view == V_PATTERN ? SHIFTED[i] : ui.shift && ui.view == V_SONG && i == 1 ? "Repeat"
-                                                                                                             : KNOB_LABEL[ui.view][i], sizeof t);
+                    : k == K_SLEN ? "Length" : k == K_PARTS ? "Parts" : k == K_STEPS ? "Steps" : KNOB_LABEL[ui.view][i], sizeof t);
         }
         {
             const felucca_font_t *f = text_w(&FONT_S, t) <= 57 ? &FONT_S : &FONT_XS;
@@ -1681,6 +1743,8 @@ static uint16_t panda_col(char c)
 #define K_RUST RGB(200, 84, 32)
 #define K_RINGS RGB(232, 156, 92)
 
+#include "game.c"                                /* the secret: BIT BEAT (SEL + REC) */
+
 static void draw_splash(void)
 {
     int i, x, y;
@@ -1767,6 +1831,8 @@ void ui_init(void)
     ui.style = 0;
     ui.dens = 50;
     ui.range = 40;
+    ui.slen = EN_NORD;
+    ui.parts = 6, ui.steps = EN_NROW;
     ui.splash = ui_splash_ms > 0u;
     if (ui.splash) {
         draw_splash();
@@ -1801,6 +1867,20 @@ void ui_frame(void)
         if (!en_playing)
             en_play(0, 0);
     }
+    if (game_on()) {                             /* BIT BEAT: the whole screen; SEL + REC or HOME to leave */
+        game_poll();
+        if (gm.quit) {
+            ui.btn = gm.btn, ui.keys = gm.keys;
+            ui.btn_used = gm.btn;                /* (their let-go does nothing after) */
+            game_stop();
+        } else {
+            midi_in();
+            game_update();
+            game_draw();
+        }
+        ui.frame++;
+        return;
+    }
     input();
     engine_news();
     draw_header();
@@ -1810,4 +1890,10 @@ void ui_frame(void)
     ui.frame++;
 }
 
-void ui_input_only(void) { input(); }
+void ui_input_only(void)
+{
+    if (game_on())                               /* BIT BEAT has the keys */
+        game_poll();
+    else
+        input();
+}

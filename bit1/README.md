@@ -7,7 +7,9 @@ two-op FM ring bell, with sixteen steps of volume and arpeggios at frame rate, t
 plate and Lo-fi. Follow writes the other tracks from a melody you write (bass, chords, an arp, a harmony, a
 counter-line, drums, each a new take when you like), or none of it. ROM voices: a GBA game you own lends its
 instruments, read in your browser and sent to the FM-1. Evolve lets each pattern drift a little on every pass;
-Grow writes one in eight chip styles. A RedtailWorks project, alongside HYP-1 in this repository.
+Grow writes one in eight chip styles, a whole song of up to 32 positions around what you've written, or a New
+song from nothing (its sounds, ROM voices among them, its key, its parts and steps, its form).
+A RedtailWorks project, alongside HYP-1 in this repository.
 
 > **Experimental.** Built and tested in the simulator and the browser emulator, not yet on a real FM-1.
 > Versions are 0.x until it has been. Install it at your own risk; HYP-1 or M-VAVE's firmware goes back on
@@ -35,6 +37,7 @@ Grow writes one in eight chip styles. A RedtailWorks project, alongside HYP-1 in
 | FX · SEL | Mute the track (held: black keys mute, white keys solo) · follow the song (held: shift) |
 | OCT− / OCT+ | The keys' octave (SEL: the cell a semitone) |
 | SAVE | Save the song; held on Setup: the song as it came |
+| SEL + REC | A secret: BIT BEAT, a rhythm game on the cursor's track (HOME to leave) |
 
 **Fifteen effects, two a cell:** Glide, Chance, Ratchet, Delay, Tone, Vibrato, Bend, Hop (to a row, once a
 pass), Chord, Mutate, Length, Crush, Stutter, Swell, Jump. **Grow's tools** after KAWA's MAGIC: Euclid, Vary,
@@ -42,7 +45,7 @@ Rolls, Accents, Shift, Up a step. **Twenty-four sounds:** three kits (NES, GB, S
 Wave bass, Octave bass, Square, Thin lead, Duty lead, SID lead, Wave lead, Chip arp, Wave pad, SID pad, Organ,
 Ring bell, Blip, Laser, Power-up, Pickup, Metal, Noise sweep; then ROM 1 to ROM 16, a GBA game's instruments
 (the Voices page). **Five songs,** each one chip's: Overworld (NES),
-Dungeon (Game Boy), Starfield (SID), Boss Rush (NES), Lullaby (Game Boy).
+Corrosion (SID, dark and mutating), Starfield (SID), Boss Rush (NES), Lullaby (Game Boy).
 
 **To your DAW:** MIDI clock in (USB or TRS) drives the rows, six ticks a row; MIDI out sends each track's notes
 on its own channel, and the clock when asked. Notes in play and write the cursor's track.

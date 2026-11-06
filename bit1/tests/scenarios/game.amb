@@ -1,0 +1,28 @@
+# BIT-1's secret, BIT BEAT: SEL + REC on track 1 (the kit). Left alone, the notes go by: misses, the heat stays
+# low; playing itself (autoplay), every note hits, the combo climbs, the other tracks mutate; HOME leaves and
+# every value is back (the song as saved never changed)
+wait 500
+expect par26 1
+press SEL
+tap REC
+release SEL
+expect game 1
+expect gstate 0
+shot game_count.png
+wait 2600
+expect gstate 1
+expect playing 1
+wait 4000
+expect gmiss >5
+expect gscore 0
+shot game_miss.png
+autoplay 1
+wait 9000
+expect ghits >30
+expect gcombo >20
+expect glevel >1
+shot game_play.png
+tap HOME
+expect game 0
+expect par26 1
+expect dirty 0
