@@ -51,6 +51,11 @@ FIRMWARES = [
      "A city grows and plays",
      "Each power-on a new town on new land (forest, desert, alpine, volcano isles, plains, beach or river) grows to a huge "
      "city: every car, building, storm and disaster is a note, each land its own sound."),
+    ("evol", "EVOL-1", "#ff3aa8", "Experimental", "evol/img/evol-device.png",
+     "the FM-1 running EVOL-1: a tracker's grid of six tracks of notes and effects, the row playing lit orange",
+     "A tracker in the sound of Evol",
+     "Six tracks of sixteen rows, a note and an effect a cell, played by the sounds of RedtailWorks' album Evol: "
+     "sine kicks, the Eb drone stack, pumping pads, FM bells, glitches. Evolve lets each pattern drift."),
 ]
 
 PAGE = """<!doctype html>
@@ -59,10 +64,10 @@ PAGE = """<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FM-1 firmware by RedtailWorks</title>
-<meta name="description" content="Five free, open-source generative firmwares for the M-VAVE FM-1: HYP-1, LOF-1, ECO-1, GRAV-1 and CTY-1. By RedtailWorks.">
+<meta name="description" content="Six free, open-source firmwares for the M-VAVE FM-1: HYP-1, LOF-1, ECO-1, GRAV-1, CTY-1 and EVOL-1. By RedtailWorks.">
 <meta name="theme-color" content="#141318">
 <link rel="icon" type="image/png" href="img/favicon.png">
-<meta property="og:title" content="Five firmwares for the M-VAVE FM-1, by RedtailWorks">
+<meta property="og:title" content="Six firmwares for the M-VAVE FM-1, by RedtailWorks">
 <meta property="og:image" content="img/fw-scene.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -155,7 +160,7 @@ footer .rw span:nth-of-type(1) { color: var(--purple-2); } footer .rw span:nth-o
 <section class="intro">
   <img src="img/fw-scene.png" width="2000" height="2000" alt="Four M-VAVE FM-1s on a dark desk, each running a RedtailWorks firmware: HYP-1 with purple keys, LOF-1 with peach keys and a turning record, ECO-1 with green keys and a fern, GRAV-1 with gold keys and a star and its planets.">
   <div>
-    <h1>Five firmwares for the <em>M&#8209;VAVE FM&#8209;1</em></h1>
+    <h1>Six firmwares for the <em>M&#8209;VAVE FM&#8209;1</em></h1>
     <p class="lede">Generative music machines that turn the FM-1 into something new each time you install one: hypnotic techno, a lofi band, a plant, a solar system.</p>
     <p>All free and open source. Try any of them in your browser first, then install from Chrome or Edge with the FM-1 plugged in; the installer can always put M-VAVE's own firmware back.</p>
     <div class="pick"><label for="fw-pick">Go to</label>
@@ -188,7 +193,7 @@ __CARDS__
   <span><b>OPEN-1</b> <em>Ideas phase</em><br>An idea for an open-firmware synth under $200: 27 keys, 16 pads, 16 buttons, audio in and out, and a microSD library of firmware. Goals, target specs, the pitch video and the build log. <u>Follow along</u></span></a>
 
 <div class="support">
-  <p><b>All five are free.</b> If they're useful to you, a coffee keeps new firmware coming, and the videos too.</p>
+  <p><b>All six are free.</b> If they're useful to you, a coffee keeps new firmware coming, and the videos too.</p>
   <a class="kofi" href="https://ko-fi.com/redtailworks">__KOFI__Support on Ko-fi</a>
 </div>
 <p class="small">The experimental firmwares are built and tested in the simulator and the browser emulator, not yet on every FM-1; they're numbered 0.x until they have been. HYP-1 grew from <a href="https://github.com/charlesvestal/fm1-amb">AMB-1</a> by Charles Vestal. Installing is at your own risk.</p>
