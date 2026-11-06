@@ -2077,7 +2077,7 @@ static uint32_t f_rnd(uint32_t *x)
 #define F_CHANCE(pc) ((int)(f_rnd(&fr) % 100u) < (pc))
 #define F_IRAND(n) ((int)(f_rnd(&fr) % (uint32_t)(n)))
 
-void en_follow(const en_song_t *s, int pat, int t, uint32_t seed, en_cell_t *o)
+void en_follow(const en_song_t *s, int pat, int t, uint32_t seed, en_cell_t o[EN_NROW])
 {
     uint32_t fr;
     const int role = en_follow_role(s, t), dens = s->par[P_FDENS];
