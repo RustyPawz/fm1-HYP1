@@ -195,6 +195,28 @@ play: no samples. A chip voice steps its volume in sixteen levels, as the old ch
 On a kit, a note's pitch picks its drum (36–43, C2–G2, the eight in order); the white keys play them. A
 kit's Tone tunes it.
 
+### ROM voices
+
+After Noise sweep come sixteen more sounds, **ROM 1** to **ROM 16**: a GBA game's own instruments, from a ROM of
+a game you own. The **Voices** page ([bit/voices](https://rustypawz.github.io/fm1-HYP1/bit/voices/)) reads the ROM
+in your browser (nothing is uploaded), finds the instruments of its sound engine (Nintendo's MP2K, "Sappy": most
+GBA games), and lets you hear them and pick up to sixteen. Name them (they show by name on the Sound page; in
+the grid as R1 to R16); halve a long sample's rate to fit more in.
+
+- **Samples** play as the GBA plays them: 8-bit, at their own rate, looping where they loop; a drum (a fixed-pitch
+  sample) plays at its pitch whatever the note. Envelopes are the game's, in BIT-1's terms.
+- **Game Boy-style voices** (square, wave, noise) play on BIT-1's own chip voices, with the game's wave shapes.
+- The bank holds about **236 KB** of samples: some seventeen seconds at the GBA's usual 13 kHz.
+
+**Use in the emulator** keeps the bank in the browser; the emulator takes it the next time it's switched on.
+**Send to the FM-1** (Chrome or Edge, the FM-1 connected by USB with BIT-1 on it) stops the music, writes the
+bank where M-VAVE keeps its user samples (they go), reads it back to check it, and plays from it from then on;
+a send cut short leaves no bank rather than half of one. **Save the bank** keeps it as a file, to send again
+later. With no bank, the ROM sounds are silent.
+
+BIT-1 contains no game and no audio from one: the bank is built on your computer from your ROM, and stays
+there and on your FM-1.
+
 ---
 
 ## 8. The effects

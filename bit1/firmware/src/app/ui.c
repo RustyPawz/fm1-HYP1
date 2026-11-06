@@ -42,9 +42,24 @@ static const char *const KNOB_LABEL[NVIEWS][4] = {
     {"Root", "Mode", "Tune", "Sync"},
     {"Theme", "Lights", "MIDI out", "Channel"},
 };
-static const char *const SHORT[EN_NSOUND] = {"NES", "GB", "SID", "TRI", "PBAS", "SBAS", "WBAS", "OBAS", "SQR", "THIN",
+static const char *const SHORT[EN_NBUILTIN] = {"NES", "GB", "SID", "TRI", "PBAS", "SBAS", "WBAS", "OBAS", "SQR", "THIN",
                                              "DUTY", "SLED", "WLED", "ARP", "WPAD", "SPAD", "ORGN", "BELL", "BLIP", "LASR",
                                              "PWUP", "PICK", "METL", "NSWP"};
+static const char *snd_short(int s)              /* a sound's four letters: built in, or "R1".."R16" for the bank's */
+{
+    static char r[EN_NROM][5];
+    int k = s - EN_NBUILTIN;
+    if (s >= 0 && s < EN_NBUILTIN)
+        return SHORT[s];
+    if (k < 0 || k >= EN_NROM)
+        return SHORT[0];
+    r[k][0] = 'R';
+    if (k + 1 >= 10)
+        r[k][1] = '1', r[k][2] = (char)('0' + (k + 1) % 10), r[k][3] = 0;
+    else
+        r[k][1] = (char)('1' + k), r[k][2] = 0;
+    return r[k];
+}
 
 static struct {
     uint8_t view, trk, row, pos, rec, follow, mutes, fxwin;
@@ -560,7 +575,7 @@ static void button(int b, int shift)
         break;
     case B_FX:
         set_mutes(ui.mutes ^ (1u << ui.trk));
-        say(ui.mutes >> ui.trk & 1u ? "MUTED" : "UNMUTED", SHORT[trk_sound(ui.trk) % EN_NSOUND]);
+        say(ui.mutes >> ui.trk & 1u ? "MUTED" : "UNMUTED", snd_short(trk_sound(ui.trk)));
         break;
     case B_OCTDN: case B_OCTUP: {
         int d = b == B_OCTUP ? 1 : -1;
@@ -1232,7 +1247,7 @@ static void draw_grid(void)
         uint16_t c = muted ? K_LINE : mix(K_DIM, TRK_C[t], 6 + q16(en_trk_glow[t]) * 10 / 16);
         if (sel)
             cv_round(x, 0, G_CW - 1, G_HEAD - 1, 3, K_PANEL);
-        caps(s, SHORT[trk_sound(t) % EN_NSOUND], sizeof s);
+        caps(s, snd_short(trk_sound(t)), sizeof s);
         cv_text(x + 3, -2, &FONT_XS, s, sel ? TRK_C[t] : c);
         cv_rect(x + 2, G_HEAD - 2, (int32_t)(fm_clampf(en_level[t], 0.0f, 1.0f) * (float)(G_CW - 5)), 1,
                 muted ? K_LINE : TRK_C[t]);
@@ -1359,7 +1374,7 @@ static void draw_mixer(void)
             cv_round(x - 2, 0, 38, MAIN_H, 6, K_PANEL);
         s[0] = (char)('1' + t), s[1] = 0;
         text_c(x + 17, -1, &FONT_B, s, sel ? TRK_C[t] : K_DIM);
-        caps(s, SHORT[trk_sound(t) % EN_NSOUND], sizeof s);
+        caps(s, snd_short(trk_sound(t)), sizeof s);
         text_c(x + 17, 17, &FONT_XS, s, muted ? K_LINE : TRK_C[t]);
         cv_rect(x + 9, 36, 16, 84, mix(K_BG, K_LINE, 10));
         h = (int32_t)(lv * 82.0f);
@@ -1424,7 +1439,7 @@ static void draw_fxwin(void)
         cv_round(x, 26, 34, 100, 6, muted ? K_PANEL : TRK_C[t]);
         s[0] = (char)('1' + t), s[1] = 0;
         text_c(x + 17, 34, &FONT_L, s, muted ? K_DIM : K_BG);
-        caps(s, SHORT[trk_sound(t) % EN_NSOUND], sizeof s);
+        caps(s, snd_short(trk_sound(t)), sizeof s);
         text_c(x + 17, 74, &FONT_XS, s, muted ? K_DIM : K_BG);
         text_c(x + 17, 100, &FONT_XS, muted ? "MUTE" : "ON", muted ? K_HOT : K_BG);
     }
@@ -1517,7 +1532,7 @@ static void draw_knobs(void)
             for (m = 0; t[m]; m++)
                 ;
             t[m++] = ' ', t[m++] = '-', t[m++] = ' ', t[m++] = 'T', t[m++] = (char)('1' + ui.trk), t[m++] = ' ';
-            caps(u, EN_SOUND_NAME[trk_sound(ui.trk) % EN_NSOUND], sizeof u);
+            caps(u, en_sound_name(trk_sound(ui.trk)), sizeof u);
             for (i = 0; u[i] && m < 30; i++)
                 t[m++] = u[i];
             t[m] = 0;

@@ -46,6 +46,8 @@ fi
 run host-build sh host/build_host.sh
 if command -v node >/dev/null 2>&1 && command -v wasm-ld >/dev/null 2>&1; then
     run emu sh -c "sh web/emu/build_clang.sh >/dev/null && node tests/host/emu_test.mjs build/emu/amb.wasm"
+    run voices node tests/host/voices_test.mjs build/emu/amb.wasm
+    run bank sh -c "$CC -O2 -Wall -Wextra -Wno-unused-function -DEN_HOST -Ifirmware/src/dsp -o $OUT/bank_test tests/bank_test.c firmware/src/dsp/amb.c -lm && $OUT/bank_test"
 else
     echo "  skip emu (needs clang with wasm-ld, and node)"
 fi

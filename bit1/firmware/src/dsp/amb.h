@@ -27,7 +27,9 @@
 #define EN_NROW 16                     /* rows a pattern: a bar of sixteenths */
 #define EN_NPAT 16                     /* patterns a song */
 #define EN_NORD 32                     /* the order list's length, at most */
-#define EN_NSOUND 24                   /* the sound bank */
+#define EN_NBUILTIN 24                 /* the sound bank, built in */
+#define EN_NROM 16                     /* and the ROM voices after it (sounds 24..39): the voice bank's */
+#define EN_NSOUND (EN_NBUILTIN + EN_NROM)
 #define EN_NDRUM 8                     /* drums in a kit: a note's pitch class picks one */
 #define EN_NFX 16                      /* effect commands, 0 none */
 #define EN_NSONG 5
@@ -55,7 +57,30 @@ enum { MODE_AEOLIAN, MODE_PHRYGIAN, MODE_DORIAN, MODE_MIXOLYDIAN, MODE_MAJOR, MO
 extern const char *const EN_MODE_NAME[EN_NMODES];
 extern const uint16_t EN_MODE_POOL[EN_NMODES];
 extern const char *const EN_NOTE_NAME[12];
-extern const char *const EN_SOUND_NAME[EN_NSOUND];
+extern const char *const EN_SOUND_NAME[EN_NBUILTIN];
+const char *en_sound_name(int s);               /* a sound's name: built in, or the bank's ("ROM 3" when empty) */
+
+/* THE VOICE BANK: up to sixteen voices taken from a GBA game's sound (the Voices page reads a ROM you own, in
+ * the browser, and sends the bank), in flash at 0xA0000..0xDBFFF on the FM-1 (where M-VAVE keeps its user
+ * samples), read in place. Little-endian:
+ *   0   'BITV' (EN_BANK_MAGIC), u16 version 1, u16 voices, u32 size (bytes in all), u32 CRC-32 of [16, size)
+ *   16  sixteen voices of 64 bytes:
+ *         0 name[12] (NUL-padded)   12 type (0 none, 1 sample, 2 square, 3 wave, 4 noise)
+ *         13 flags (1 loop, 2 fixed pitch: a drum)   14 root (the MIDI note a sample plays at its rate)
+ *         15 duty (square 0..3: 12.5, 25, 50, 75%) or 1 the short noise
+ *         16 u16 attack ms   18 u16 decay ms   20 sustain 0..255   22 u16 release ms
+ *         24 u32 rate (Hz x 1024, as the GBA keeps it)   28 u32 offset (from the bank's start, >= 4096)
+ *         32 u32 length (samples)   36 u32 loop start   40 wave[16] (32 steps of 4 bits, high nibble first)
+ *         56 gain (128 = 1.0)
+ *   4096 the samples: 8-bit signed PCM */
+#define EN_BANK_MAGIC 0x56544942u              /* "BITV" */
+#define EN_BANK_MAX 0x3C000u                   /* 240 KiB */
+#define EN_BANK_HDR 4096u
+enum { RV_NONE, RV_SAMPLE, RV_SQUARE, RV_WAVE, RV_NOISE };
+int en_bank_check(const uint8_t *p, uint32_t n);  /* the voices in a bank, or -1 when it isn't one */
+void en_bank(const uint8_t *p, uint32_t n);     /* play from this bank (0: none); taken at the next block */
+int en_rom_count(void);                         /* the voices of the bank in use */
+uint32_t en_crc32(const uint8_t *p, uint32_t n);
 int en_sound_is_kit(int s);
 const char *en_drum_name(int sound, int note);  /* a kit's drum for a note: three letters ("KIK") */
 

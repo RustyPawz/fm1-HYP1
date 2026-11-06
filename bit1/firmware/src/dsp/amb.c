@@ -21,7 +21,7 @@ const uint16_t EN_MODE_POOL[EN_NMODES] = {0x5ADu, 0x5ABu, 0x6ADu, 0x6B5u, 0xAB5u
 const char EN_FX_CHAR[EN_NFX + 1] = ".G?RDTVBHAMLXSWJ";
 const char *const EN_FX_NAME[EN_NFX] = {"None", "Glide", "Chance", "Ratchet", "Delay", "Tone", "Vibrato", "Bend",
                                         "Hop", "Chord", "Mutate", "Length", "Crush", "Stutter", "Swell", "Jump"};
-const char *const EN_SOUND_NAME[EN_NSOUND] = {
+const char *const EN_SOUND_NAME[EN_NBUILTIN] = {
     "NES kit", "GB kit", "SID kit",
     "Tri bass", "Pulse bass", "SID bass", "Wave bass", "Octave bass",
     "Square", "Thin lead", "Duty lead", "SID lead", "Wave lead",
@@ -105,7 +105,7 @@ void en_param_text(int i, int v, char *b)
         *e++ = '-';
         itoa_s(v + 6, e);
     } else if (k == TP_SOUND)
-        cpy(b, EN_SOUND_NAME[(unsigned)v < EN_NSOUND ? v : 0]);
+        cpy(b, en_sound_name(v));
     else if (k == TP_ARP)
         cpy(b, EN_ARP_NAME[(unsigned)v < EN_NARP ? v : 0]);
     else if (k == TP_FOLLOW)
@@ -162,7 +162,7 @@ int en_snap(int note, int root, uint32_t pool)
 }
 
 /* ------------------------------------------------------------ commands --- */
-enum { C_SET, C_PLAY, C_STOP, C_AUD_ON, C_AUD_OFF, C_RELOAD, C_SEED, C_PANIC, C_CLOCK, C_MUTE, C_TMUTE };
+enum { C_SET, C_PLAY, C_STOP, C_AUD_ON, C_AUD_OFF, C_RELOAD, C_SEED, C_PANIC, C_CLOCK, C_MUTE, C_TMUTE, C_BANK };
 static uint8_t muted;                           /* remote: the FM-1 is playing the browser */
 static float mute_g = 1.0f;
 #define QN 256u
@@ -264,7 +264,7 @@ static void pan_gains(float pn, float *gl, float *gr)
  * an arpeggio (a shape in the scale, stepping at the song's Arp rate), vibrato (coming in after 0.12 s), a sweep
  * (semitones a second, on and on), a pulse width that moves (PWM). A kit is eight of these, each with its own
  * fixed pitch. */
-enum { O_SINE, O_TRI, O_SAW, O_PULSE, O_SUPER, O_FM, O_NOISE, O_TRI4, O_WAVE, O_LFSR };
+enum { O_SINE, O_TRI, O_SAW, O_PULSE, O_SUPER, O_FM, O_NOISE, O_TRI4, O_WAVE, O_LFSR, O_ROM };
 enum { F_LP, F_BP, F_HP };
 enum { W_SAW, W_GB, W_ORGAN, W_HOLLOW, NWAVES };
 typedef struct {
@@ -277,10 +277,14 @@ typedef struct {
     float vib, sweep, pwm;                      /* semitones deep; semitones a second; Hz */
     float drive, crush, verb, echo, gain;
     int8_t reg;                                 /* register: semitones */
+    uint8_t root, ploop_on, fixed;              /* a ROM sample's: the note it plays at its rate; it loops; a drum */
+    float prate;                                /* its rate, Hz */
+    uint32_t plen, ploop;                       /* its length and loop start, in samples */
+    const int8_t *pcm;                          /* its samples (in the bank: flash on the FM-1) */
 } snd_t;
 #define S_(o, f) .osc = o, .fmode = f
 #define OPEN .cut = 16000.0f                    /* a chip voice: the filter all but open (Tone still darkens it) */
-static const snd_t MEL[EN_NSOUND - 3] = {
+static const snd_t MEL[EN_NBUILTIN - 3] = {
     /* Tri bass: the NES triangle, stepped, no volume of its own (it rings until let go) */
     {S_(O_TRI4, F_LP), OPEN, .att = 0.001f, .dec = 2.0f, .sus = 1.0f, .rel = 0.03f, .verb = 0.05f, .gain = 0.7f, .reg = -12},
     /* Pulse bass: a 50% pulse, sixteen steps of volume */
@@ -409,15 +413,18 @@ const char *en_drum_name(int sound, int note)
 {
     return DRUM_NAME[en_sound_is_kit(sound) ? sound : 0][drum_of(note < 0 ? 0 : note)];
 }
+static snd_t rom_snd[EN_NROM];                  /* the bank's voices, as sounds (built by the render) */
 static const snd_t *sound_of(int s, int note)
 {
     if (en_sound_is_kit(s))
         return &KITS[s][drum_of(note)];
-    return &MEL[(unsigned)(s - 3) < EN_NSOUND - 3 ? s - 3 : 0];
+    if (s >= EN_NBUILTIN && s < EN_NSOUND)
+        return &rom_snd[s - EN_NBUILTIN];
+    return &MEL[(unsigned)(s - 3) < EN_NBUILTIN - 3 ? s - 3 : 0];
 }
 
 /* the waves: 32 steps of 4 bits, centred (built in en_init) */
-static float wave_t[NWAVES][32];
+static float wave_t[NWAVES + EN_NROM][32];       /* the built-in waves, then the bank's */
 static void waves_init(void)
 {
     static const uint8_t GB[32] = {8, 11, 13, 14, 15, 15, 14, 13, 11, 8, 6, 4, 3, 2, 1, 1, 2, 3, 5, 7, 9, 10, 10, 9, 8, 7,
@@ -476,6 +483,7 @@ typedef struct {
     float duty, pwph, vdep, vph, vt;            /* the pulse's width, its PWM's phase; vibrato's depth, phase, time */
     float ar[4];                                /* the arpeggio: each step's pitch ratio */
     float nacc, nval;                           /* the LFSR: its clock, its output */
+    float pos, pkk;                             /* a ROM sample: the read point, samples a cycle of the oscillator */
     int32_t wait, gate;                         /* samples before it starts; until it lets go (-1 held) */
     int32_t acnt;                               /* samples to the arpeggio's next step */
     uint16_t lfsr;
@@ -529,6 +537,8 @@ static void voice_start(int t, int nn, int32_t wait, const hit_t *h)
     float f, dec = T->decay, att;
     if (kit)
         f = s->hz * fm_exp2f((float)par[P_T(t, TP_TONE)] * (1.0f / 100.0f));   /* Tone tunes a kit, half an octave */
+    else if (s->osc == O_ROM && s->fixed)
+        f = mtof((float)s->root);                /* a ROM drum: at its own rate, whatever the note */
     else
         f = mtof((float)(nn + s->reg));
     f = fm_clampf(f, 8.0f, 16000.0f);
@@ -592,6 +602,8 @@ static void voice_start(int t, int nn, int32_t wait, const hit_t *h)
     v->acnt = arp_len;
     v->lfsr = (uint16_t)((0x7FFFu ^ ((uint32_t)k * 2654435761u >> 17)) | 1u);
     v->nacc = 0.0f, v->nval = 0.0f;
+    v->pos = 0.0f;
+    v->pkk = s->osc == O_ROM ? s->prate / mtof((float)s->root) : 0.0f;   /* at the root, the sample's own rate */
     v->wait = wait;
     v->gate = h->gate;
     v->started = 0;
@@ -643,7 +655,7 @@ static void render_voices(uint32_t n)
         track_t *T;
         uint32_t j = 0;
         float ph, ph2, ph3, sph, mph, inc, idx, env, fe, ic1, ic2, chold, cph, cut, g1, a1, dg, da, kres, gl, gr, sr, se, amp;
-        float pk1, det, vibf, tgt, base, nacc, nval, duty, peak = 0.0f;
+        float pk1, det, vibf, tgt, base, nacc, nval, duty, pos, peak = 0.0f;
         int32_t acnt;
         uint16_t lfsr;
         uint8_t ai;
@@ -694,7 +706,7 @@ static void render_voices(uint32_t n)
         se = (v->send_e + 0.0f) * T->send_e * amp;
         ph = v->ph, ph2 = v->ph2, ph3 = v->ph3, sph = v->sph, mph = v->mph, inc = v->inc, idx = v->idx, env = v->env;
         fe = v->fe, ic1 = v->ic1, ic2 = v->ic2, chold = v->chold, cph = v->cph;
-        nacc = v->nacc, nval = v->nval, lfsr = v->lfsr, acnt = v->acnt, ai = v->ai;
+        nacc = v->nacc, nval = v->nval, lfsr = v->lfsr, acnt = v->acnt, ai = v->ai, pos = v->pos;
         pk1 = 1.0f - v->pk;
         det = fm_exp2f(s->det * (1.0f / 1200.0f));
         base = v->inc_t * vibf;
@@ -765,6 +777,26 @@ static void render_voices(uint32_t n)
                     x = nval;
                     break;
                 }
+                case O_ROM: {                    /* a ROM sample, read in place, between its points */
+                    const uint32_t i0 = (uint32_t)pos, n = s->plen;
+                    uint32_t i1 = i0 + 1u;
+                    const float fr = pos - (float)i0;
+                    if (i1 >= n)
+                        i1 = s->ploop_on ? s->ploop : i0;
+                    x = ((float)s->pcm[i0] + (float)(s->pcm[i1] - s->pcm[i0]) * fr) * (1.0f / 128.0f);
+                    pos += inc * v->pkk;                /* the oscillator's cycle, in the sample's samples */
+                    if (pos >= (float)n) {
+                        if (s->ploop_on && s->ploop < n) {
+                            const float span = (float)(n - s->ploop);
+                            while (pos >= (float)n)
+                                pos -= span;
+                        } else {                 /* a one-shot's end: the voice goes */
+                            pos = (float)(n - 1u);
+                            stage = 3, env = 0.0f;
+                        }
+                    }
+                    break;
+                }
                 default: x = wnoise(&noise_s); break;
                 }
                 if (s->sub > 0.0f) {
@@ -830,7 +862,7 @@ static void render_voices(uint32_t n)
         }
         v->ph = ph, v->ph2 = ph2, v->ph3 = ph3, v->sph = sph, v->mph = mph, v->inc = inc, v->idx = idx;
         v->env = env, v->ic1 = fm_flush(ic1), v->ic2 = fm_flush(ic2), v->chold = chold, v->cph = cph;
-        v->nacc = nacc, v->nval = nval, v->lfsr = lfsr, v->acnt = acnt, v->ai = ai;
+        v->nacc = nacc, v->nval = nval, v->lfsr = lfsr, v->acnt = acnt, v->ai = ai, v->pos = pos;
         v->g0 = g1, v->a0 = a1;
         /* the filter's envelope falls by the chunk */
         v->fe = fe * fm_powf(v->fek, (float)n);
@@ -1462,6 +1494,136 @@ static void control(uint32_t n)
     pl_decay += (pl_decay_t - pl_decay) * fm_minf(dt * 2.0f, 1.0f);
 }
 
+/* ------------------------------------------------------------ the bank --- */
+/* the voice bank (amb.h): checked whole (with its CRC) on the main loop by en_bank(); the render then builds
+ * its sounds from it at the start of a block, the voices playing the old ones gone first */
+static const uint8_t *volatile bank_next;
+static volatile uint32_t bank_next_n;
+static int rom_n;
+static char rom_name[EN_NROM][13];
+static uint32_t rd32(const uint8_t *b) { return (uint32_t)b[0] | (uint32_t)b[1] << 8 | (uint32_t)b[2] << 16 | (uint32_t)b[3] << 24; }
+static uint32_t rd16(const uint8_t *b) { return (uint32_t)b[0] | (uint32_t)b[1] << 8; }
+
+uint32_t en_crc32(const uint8_t *p, uint32_t n)  /* zlib's CRC-32, a bit at a time (the bank's, once a load) */
+{
+    uint32_t c = 0xFFFFFFFFu, k;
+    while (n--) {
+        c ^= *p++;
+        for (k = 0; k < 8u; k++)
+            c = c & 1u ? (c >> 1) ^ 0xEDB88320u : c >> 1;
+    }
+    return ~c;
+}
+
+static int bank_voice_ok(const uint8_t *e, uint32_t size)
+{
+    uint32_t type = e[12], rate = rd32(e + 24), off = rd32(e + 28), len = rd32(e + 32), loop = rd32(e + 36);
+    if (type > RV_NOISE)
+        return 0;
+    if (type != RV_SAMPLE)
+        return 1;
+    return len >= 2u && off >= EN_BANK_HDR && off <= size && len <= size - off && loop < len && rate >= 1000u * 1024u &&
+           rate <= 96000u * 1024u && e[14] >= NOTE_LO && e[14] <= NOTE_HI;
+}
+
+int en_bank_check(const uint8_t *p, uint32_t n)
+{
+    uint32_t size, cnt, k;
+    if (!p || n < EN_BANK_HDR || rd32(p) != EN_BANK_MAGIC || rd16(p + 4) != 1u)
+        return -1;
+    cnt = rd16(p + 6), size = rd32(p + 8);
+    if (cnt > EN_NROM || size < EN_BANK_HDR || size > n || size > EN_BANK_MAX || en_crc32(p + 16, size - 16u) != rd32(p + 12))
+        return -1;
+    for (k = 0; k < EN_NROM; k++)
+        if (!bank_voice_ok(p + 16 + 64 * k, size))
+            return -1;
+    return (int)cnt;
+}
+
+void en_bank(const uint8_t *p, uint32_t n)
+{
+    if (p && en_bank_check(p, n) < 0)
+        p = 0;
+    bank_next = p;
+    bank_next_n = p ? n : 0;
+    post(C_BANK, 0, 0);
+}
+
+int en_rom_count(void) { return rom_n; }
+
+const char *en_sound_name(int s)
+{
+    static char dflt[EN_NROM][8];
+    int k;
+    if (s >= 0 && s < EN_NBUILTIN)
+        return EN_SOUND_NAME[s];
+    k = s - EN_NBUILTIN;
+    if (k < 0 || k >= EN_NROM)
+        return EN_SOUND_NAME[0];
+    if (rom_name[k][0])
+        return rom_name[k];
+    cpy(dflt[k], "ROM ");                       /* an empty slot: its number */
+    itoa_s(k + 1, dflt[k] + 4);
+    return dflt[k];
+}
+
+static void rom_build(void)
+{
+    static const float SQ_DUTY[4] = {0.125f, 0.25f, 0.5f, 0.75f};
+    const uint8_t *p = bank_next;
+    int k, i;
+    for (k = 0; k < NV; k++)                     /* the voices playing the old bank: gone */
+        if (vc[k].on && vc[k].s >= rom_snd && vc[k].s < rom_snd + EN_NROM)
+            vc[k].on = 0;
+    rom_n = 0;
+    for (k = 0; k < EN_NROM; k++) {
+        snd_t *r = &rom_snd[k];
+        const uint8_t *e = p ? p + 16 + 64 * k : 0;
+        uint8_t *z = (uint8_t *)r;
+        for (i = 0; i < (int)sizeof *r; i++)
+            z[i] = 0;
+        rom_name[k][0] = 0;
+        r->osc = O_SINE, r->fmode = F_LP, r->cut = 16000.0f, r->att = 0.001f, r->dec = 0.1f, r->rel = 0.05f;
+        if (!e || !e[12])
+            continue;                            /* empty: silent (gain 0) */
+        for (i = 0; i < 12 && e[i]; i++)
+            rom_name[k][i] = (char)e[i];
+        rom_name[k][i] = 0;
+        r->att = fm_maxf((float)rd16(e + 16) * 0.001f, 0.001f);
+        r->dec = fm_maxf((float)rd16(e + 18) * 0.001f, 0.005f);
+        r->sus = (float)e[20] * (1.0f / 255.0f);
+        r->rel = fm_maxf((float)rd16(e + 22) * 0.001f, 0.003f);
+        r->gain = (float)e[56] * (1.0f / 128.0f) * 0.55f;
+        r->verb = 0.15f, r->echo = 0.1f;
+        r->root = e[14] ? e[14] : 60;
+        switch (e[12]) {
+        case RV_SAMPLE:
+            r->osc = O_ROM;
+            r->pcm = (const int8_t *)(p + rd32(e + 28));
+            r->plen = rd32(e + 32), r->ploop = rd32(e + 36);
+            r->ploop_on = e[13] & 1u, r->fixed = (e[13] >> 1) & 1u;
+            r->prate = (float)rd32(e + 24) * (1.0f / 1024.0f);
+            break;
+        case RV_SQUARE:
+            r->osc = O_PULSE, r->steps = 1, r->pw = SQ_DUTY[e[15] & 3u];
+            r->gain *= 0.75f;
+            break;
+        case RV_WAVE:
+            r->osc = O_WAVE, r->steps = 1, r->wt = (uint8_t)(NWAVES + k);
+            for (i = 0; i < 32; i++) {
+                int q = (e[40 + i / 2] >> (i & 1 ? 0 : 4)) & 15;
+                wave_t[NWAVES + k][i] = ((float)q - 7.5f) * (1.0f / 7.5f);
+            }
+            break;
+        default:                                 /* RV_NOISE */
+            r->osc = O_LFSR, r->steps = 1, r->lshort = e[15] & 1u;
+            r->gain *= 0.6f;
+            break;
+        }
+        rom_n++;
+    }
+}
+
 static void drain(void)
 {
     while (q_r != q_w) {
@@ -1513,6 +1675,7 @@ static void drain(void)
                 rng = 1u;
             break;
         case C_PANIC: quiet(); break;
+        case C_BANK: rom_build(); break;
         case C_MUTE:
             muted = (uint8_t)(a != 0);
             if (muted)

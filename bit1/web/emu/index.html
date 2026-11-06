@@ -131,7 +131,7 @@ body.stream .ctl.knob.sv-turn > circle:first-child { stroke: #ff9a3c; stroke-wid
 <header>
   <h1>BIT-1 <span style="font:700 .8rem 'Barlow Semi Condensed',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#1a0f05;background:#e8873a;border-radius:999px;padding:.15em .7em;vertical-align:middle">Experimental</span></h1>
   <p>a generative 8-bit tracker: six tracks, twenty-four chip voices (NES, Game Boy and SID-style kits, pulses, waves, noise and a ring bell), sixteen effects. The same code the FM-1 would run.</p>
-  <nav><a href="../">BIT-1 home</a><a href="../install/">Install</a><a href="../manual/">Manual</a></nav>
+  <nav><a href="../">BIT-1 home</a><a href="../voices/">ROM voices</a><a href="../install/">Install</a><a href="../manual/">Manual</a></nav>
 </header>
 
 <p class="turn">Turn your phone sideways for bigger controls.</p>
@@ -190,7 +190,7 @@ body.stream .ctl.knob.sv-turn > circle:first-child { stroke: #ff9a3c; stroke-wid
       <div>
         <h3>Sound <span>ENV</span></h3>
         <dl>
-          <dt>Sound</dt><dd>Twenty-four chip voices: the <b>NES</b>, <b>GB</b> and <b>SID</b> kits; <b>Tri bass</b>, <b>Pulse bass</b>, <b>SID bass</b>, <b>Wave bass</b>, <b>Octave bass</b>; <b>Square</b>, <b>Thin lead</b>, <b>Duty lead</b>, <b>SID lead</b>, <b>Wave lead</b>; <b>Chip arp</b>, <b>Wave pad</b>, <b>SID pad</b>, <b>Organ</b>, <b>Ring bell</b>; <b>Blip</b>, <b>Laser</b>, <b>Power-up</b>, <b>Pickup</b>, <b>Metal</b>, <b>Noise sweep</b>.</dd>
+          <dt>Sound</dt><dd>Twenty-four chip voices: the <b>NES</b>, <b>GB</b> and <b>SID</b> kits; <b>Tri bass</b>, <b>Pulse bass</b>, <b>SID bass</b>, <b>Wave bass</b>, <b>Octave bass</b>; <b>Square</b>, <b>Thin lead</b>, <b>Duty lead</b>, <b>SID lead</b>, <b>Wave lead</b>; <b>Chip arp</b>, <b>Wave pad</b>, <b>SID pad</b>, <b>Organ</b>, <b>Ring bell</b>; <b>Blip</b>, <b>Laser</b>, <b>Power-up</b>, <b>Pickup</b>, <b>Metal</b>, <b>Noise sweep</b>. Then <b>ROM 1</b> to <b>ROM 16</b>: a GBA game's instruments, from the <a href="../voices/">Voices</a> page (silent until a bank is loaded).</dd>
           <dt>Tone, Decay, Level</dt><dd>A chip pulse's duty in steps (12.5, 25, 50%) and the filter's brightness (a kit: its tuning), the envelope's length, the loudness.</dd>
         </dl>
       </div>
@@ -549,6 +549,14 @@ function loadStore() {
     return out;
   } catch { return {}; }
 }
+// the voice bank: the Voices page (../voices/) keeps it here, base64, and the emulator takes it at switch-on
+const BANK_KEY = "bit1-voices";
+function loadBank() {
+  try {
+    const b64 = localStorage.getItem(BANK_KEY);
+    return b64 ? Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer : null;
+  } catch { return null; }
+}
 function saveStore(store) {
   try {
     const raw = {};
@@ -572,10 +580,11 @@ async function switchOn() {
     ac.destination.channelCount = 2;
     node.connect(ac.destination);
     window.bitAudio = ac;
+    let voices = -1;
     const ready = new Promise((res) => {
       node.port.onmessage = (e) => {
         const m = e.data;
-        if (m.type === "ready") res();
+        if (m.type === "ready") { voices = m.voices; res(); }
         else if (m.type === "midi") midiSend(m.data);
         else if (m.type === "frame") {
           if (m.fb) drawScreen(m.fb);
@@ -587,11 +596,13 @@ async function switchOn() {
         }
       };
     });
-    node.port.postMessage({ type: "load", wasm, store: loadStore(), master }, [wasm]);
+    const bank = loadBank();
+    node.port.postMessage({ type: "load", wasm, store: loadStore(), bank, master }, bank ? [wasm, bank] : [wasm]);
     await ready;
     await ac.resume();
     document.getElementById("start").hidden = true;
-    status.textContent = ac.sampleRate === 44100 ? "On." : `On (the browser runs audio at ${ac.sampleRate} Hz).`;
+    status.textContent = (ac.sampleRate === 44100 ? "On." : `On (the browser runs audio at ${ac.sampleRate} Hz).`) +
+      (voices > 0 ? ` ${voices} ROM voice${voices === 1 ? "" : "s"} loaded: sounds ROM 1 on, after Noise sweep.` : "");
     syncButtons(); syncKeys();
     setSplit();
   } catch (err) {

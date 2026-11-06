@@ -159,6 +159,10 @@ static void ota_service(void)
     uint32_t d = ota_take();
     if (d == 7u && ota_dec[2] == 0x11)
         ota_reply_identity();
+#ifdef OTA_FRAME_HOOK
+    else if (d >= 7u && ota_dec[2] >= 0x60 && ota_dec[2] <= 0x6Fu)   /* another protocol's (BIT-1's voice bank) */
+        OTA_FRAME_HOOK(ota_dec, d);
+#endif
 }
 
 /* one read request (3 tries x 5 s); data -> dst */

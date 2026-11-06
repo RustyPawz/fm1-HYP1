@@ -82,6 +82,9 @@ static int st_prog(uint32_t off, const void *src, uint32_t n)
 
 struct bootguard_s { uint32_t magic, failed, pending; };
 extern struct bootguard_s bootguard;
+/* BIT-1's voice bank (bank.c) takes the frames of its own commands (0x60..) as they come */
+static void bank_frame(const uint8_t *m, uint32_t d);
+#define OTA_FRAME_HOOK(m, d) bank_frame(m, d)
 #include "ota.c"
 static uint32_t ota_now_ms(void) { return fm1_ms; }
 static void ota_idle(void) { fm1_wdt_feed(); }
@@ -127,4 +130,5 @@ static void ota_commit(const uint8_t *parm)
 #include "app/plat_fm1.c"
 #include "app/project.c"
 #include "app/ui.c"
+#include "bank.c"
 #include "app/main_fm1.c"

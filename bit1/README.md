@@ -5,8 +5,9 @@ volume and two effects a cell (after KAWA's), patterns chained into a song, each
 The tracks play chip voices: an NES-style pulse and stepped triangle, Game Boy-style 4-bit waves, an LFSR noise, long or metal, SID-style saws and pulses through a resonant filter, and a
 two-op FM ring bell, with sixteen steps of volume and arpeggios at frame rate, through a ping-pong echo, a
 plate and Lo-fi. Follow writes the other tracks from a melody you write (bass, chords, an arp, a harmony, a
-counter-line, drums, each a new take when you like), or none of it. Evolve lets each pattern drift a little on
-every pass; Grow writes one in eight chip styles. A RedtailWorks project, alongside HYP-1 in this repository.
+counter-line, drums, each a new take when you like), or none of it. ROM voices: a GBA game you own lends its
+instruments, read in your browser and sent to the FM-1. Evolve lets each pattern drift a little on every pass;
+Grow writes one in eight chip styles. A RedtailWorks project, alongside HYP-1 in this repository.
 
 > **Experimental.** Built and tested in the simulator and the browser emulator, not yet on a real FM-1.
 > Versions are 0.x until it has been. Install it at your own risk; HYP-1 or M-VAVE's firmware goes back on
@@ -39,7 +40,8 @@ every pass; Grow writes one in eight chip styles. A RedtailWorks project, alongs
 pass), Chord, Mutate, Length, Crush, Stutter, Swell, Jump. **Grow's tools** after KAWA's MAGIC: Euclid, Vary,
 Rolls, Accents, Shift, Up a step. **Twenty-four sounds:** three kits (NES, GB, SID), Tri bass, Pulse bass, SID bass,
 Wave bass, Octave bass, Square, Thin lead, Duty lead, SID lead, Wave lead, Chip arp, Wave pad, SID pad, Organ,
-Ring bell, Blip, Laser, Power-up, Pickup, Metal, Noise sweep. **Five songs,** each one chip's: Overworld (NES),
+Ring bell, Blip, Laser, Power-up, Pickup, Metal, Noise sweep; then ROM 1 to ROM 16, a GBA game's instruments
+(the Voices page). **Five songs,** each one chip's: Overworld (NES),
 Dungeon (Game Boy), Starfield (SID), Boss Rush (NES), Lullaby (Game Boy).
 
 **To your DAW:** MIDI clock in (USB or TRS) drives the rows, six ticks a row; MIDI out sends each track's notes

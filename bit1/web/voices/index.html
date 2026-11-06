@@ -1,0 +1,98 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-3.0-only
+     BIT-1's Voices page: reads a GBA ROM you own, in this page only (nothing is uploaded), finds the instruments
+     of its MP2K ("Sappy") sound engine, lets you hear and pick up to sixteen, and builds BIT-1's voice bank
+     (firmware/src/dsp/amb.h): for the emulator (kept in this browser), as a file, or sent to the FM-1 over USB
+     (the bank protocol, firmware/src/bank.c). No ROM, and no audio from one, is part of BIT-1. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BIT-1 voices</title>
+<meta name="description" content="BIT-1's ROM voices: take the instruments of a GBA game you own and play them on the FM-1. The ROM is read in your browser and never leaves it.">
+<link rel="icon" type="image/png" href="../img/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600;700&display=swap">
+<style>
+  /* the Arcade theme, as every BIT-1 page */
+  :root { --ground: #06060a; --card: #16141e; --card-2: #1e1b28; --ink: #f4f2fa; --muted: #a6a2b6; --rule: #34303f;
+          --red: #ff4040; --red-2: #d83030; --yel: #ffc828; --cold: #50c8ff; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font: 400 17px/1.6 "Barlow Semi Condensed", "Helvetica Neue", Arial, sans-serif; }
+  main { max-width: 900px; margin: 0 auto; padding: 28px 16px 56px; }
+  h1 { font-size: 1.9rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; margin: 0 0 1rem; display: flex; align-items: center; gap: .7rem; }
+  h1::before { content: ""; width: 34px; height: 5px; background: linear-gradient(90deg, var(--yel) 0 62%, var(--red) 62%); }
+  h2 { font-size: 1.1rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin: 2rem 0 .8rem; padding-top: 1rem; border-top: 1px solid var(--rule); color: var(--red); }
+  p { margin: 0 0 14px; }
+  a { color: var(--ink); text-decoration-color: var(--red); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+  .small { color: var(--muted); font-size: 15px; }
+  .card { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 16px 18px; margin: 0 0 1rem; }
+  .card.note { border-color: var(--yel); }
+  button { font: 700 .95rem "Barlow Semi Condensed", sans-serif; letter-spacing: .08em; text-transform: uppercase; background: var(--red-2); color: #fff;
+           border: 1px solid var(--red); border-radius: 8px; padding: .45em 1.2em; cursor: pointer; }
+  button.quiet { background: var(--card-2); border-color: var(--rule); color: var(--ink); letter-spacing: .04em; padding: .2em .7em; font-size: .85rem; }
+  button:hover:not(:disabled) { background: var(--yel); border-color: var(--yel); color: #1a0c03; }
+  button:disabled { opacity: .35; cursor: default; }
+  input[type=file] { font: inherit; font-size: 15px; color: var(--muted); max-width: 100%; }
+  input[type=text] { font: inherit; font-size: 15px; width: 8.5em; background: var(--ground); color: var(--ink); border: 1px solid var(--rule); border-radius: 5px; padding: 0 .3em; }
+  select { font: inherit; font-size: 15px; background: var(--ground); color: var(--ink); border: 1px solid var(--rule); border-radius: 5px; }
+  .site { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem 1.2rem; margin: 0 0 1.6rem; padding-bottom: .8rem; border-bottom: 1px solid var(--rule); }
+  .site .home { font-size: 1.3rem; font-weight: 700; letter-spacing: .06em; color: var(--ink); text-decoration: none; display: inline-flex; align-items: center; gap: .55rem; }
+  .site .home img { image-rendering: pixelated; display: block; }
+  .site nav { margin-left: auto; display: flex; flex-wrap: wrap; gap: .2rem 1rem; }
+  .site nav a[aria-current] { text-decoration: none; color: var(--red); }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th, td { text-align: left; padding: .25em .4em; border-bottom: 1px solid var(--rule); vertical-align: middle; }
+  th { color: var(--muted); font-weight: 600; }
+  tr.on td { background: #241c10; }
+  .wrap { overflow-x: auto; }
+  .meter { height: 8px; background: var(--card-2); border-radius: 4px; overflow: hidden; margin: .4rem 0 .2rem; }
+  .meter i { display: block; height: 100%; background: var(--yel); width: 0; }
+  .meter.over i { background: var(--red); }
+  #status, #sendstatus { color: var(--yel); min-height: 1.6em; }
+  .row { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin: .6rem 0; }
+  .tag { font-size: 12px; border: 1px solid var(--rule); border-radius: 4px; padding: 0 .35em; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+<header class="site"><a class="home" href="../"><img src="../img/panda.png" width="48" height="38" alt="">BIT-1</a><nav><a href="../emu/">Emulator</a><a href="./" aria-current="page">Voices</a><a href="../install/">Install</a><a href="../manual/">Manual</a><a href="https://github.com/RustyPawz/fm1-HYP1/tree/main/bit1">Source</a></nav></header>
+
+<h1>ROM voices</h1>
+<p>Play a GBA game's instruments on BIT-1. Choose a ROM of a game you own: this page finds the instruments of its
+sound engine, you listen and pick up to sixteen, and they become BIT-1's sounds <b>ROM 1</b> to <b>ROM 16</b>, after
+Noise sweep, on any track.</p>
+<div class="card note"><b>Your ROM stays here.</b> It's read by this page in your browser and nothing is uploaded:
+not the ROM, not the instruments. Use a ROM of a game you own. BIT-1 contains no game or audio from one; the
+bank you build is yours, on your computer and your FM-1.</div>
+<p class="small">Games on Nintendo's MP2K sound engine ("Sappy", most GBA games) work; a game with its own engine shows
+nothing to pick. Samples are the game's own, 8-bit as the GBA plays them; its Game Boy-style voices (square, wave,
+noise) play on BIT-1's own chip voices.</p>
+
+<h2>1 · The ROM</h2>
+<div class="row"><input type="file" id="rom" accept=".gba,.bin,.agb,application/octet-stream"> <span class="small">or a saved bank:</span> <input type="file" id="bankfile" accept=".bitv"></div>
+<div id="status"></div>
+
+<h2>2 · The instruments</h2>
+<p class="small" id="hint">Choose a ROM first. Tick up to sixteen; ▶ plays one at its root (or pick the note). Rename them as you like (up to twelve letters); <b>½</b> halves a sample's rate, for half the room and a crunchier sound.</p>
+<div class="row"><label>Note <select id="note"></select></label> <label><input type="checkbox" id="onlysmp"> Samples only</label> <span class="small" id="count"></span></div>
+<div class="wrap"><table id="list"><thead><tr><th></th><th>▶</th><th>Name</th><th>What</th><th>Length</th><th>Room</th><th>½</th></tr></thead><tbody></tbody></table></div>
+
+<h2>3 · The bank</h2>
+<div class="meter" id="meter"><i></i></div>
+<p class="small" id="room">Nothing picked.</p>
+<div class="row">
+  <button id="useemu" disabled>Use in the emulator</button>
+  <button id="send" disabled>Send to the FM-1</button>
+  <button id="save" class="quiet" disabled>Save the bank</button>
+  <button id="clearemu" class="quiet">Clear the emulator's</button>
+</div>
+<div id="sendstatus"></div>
+<p class="small">The emulator takes the bank the next time you switch it on. Sending to the FM-1 needs Chrome or Edge,
+BIT-1 on the FM-1 and the FM-1 connected by USB (nothing else using its MIDI); it stops the music, writes the bank
+where M-VAVE keeps its user samples (they go), and checks it. Sending again replaces it.</p>
+</main>
+<script type="module" src="page.js"></script>
+</body>
+</html>

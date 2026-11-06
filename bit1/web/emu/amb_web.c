@@ -97,6 +97,24 @@ __attribute__((used, visibility("default"))) uint32_t web_store_writes(void) { r
 __attribute__((used, visibility("default"))) uint32_t web_nobj(void) { return OBJ_NOBJ; }
 __attribute__((used, visibility("default"))) uint32_t web_store_max(void) { return PLAT_STORE_MAX; }
 
+/* the voice bank (the Voices page builds it from a ROM; the page keeps it and gives it after boot) */
+static uint8_t bank_buf[EN_BANK_MAX];
+__attribute__((used, visibility("default"))) uint8_t *web_bank(void) { return bank_buf; }
+__attribute__((used, visibility("default"))) uint32_t web_bank_max(void) { return EN_BANK_MAX; }
+__attribute__((used, visibility("default"))) int web_bank_load(uint32_t n)   /* its voices, or -1 */
+{
+    int v = en_bank_check(bank_buf, n > EN_BANK_MAX ? EN_BANK_MAX : n);
+    en_bank(v >= 0 ? bank_buf : 0, n);
+    return v;
+}
+/* for the tests (tests/host/voices_test.mjs): a key into a track with a sound of its own; the bank in use */
+__attribute__((used, visibility("default"))) void web_test_key(int t, int sound, int note, int on)
+{
+    en_set(P_T(t, TP_SOUND), sound);
+    en_audition(t, note, on);
+}
+__attribute__((used, visibility("default"))) int web_rom_count(void) { return en_rom_count(); }
+
 static float bg_out[12];                         /* for the stream view's background: what the screen shows */
 static void bg_rgb(int at, uint16_t c)
 {

@@ -122,7 +122,7 @@ a.kofi { display: inline-flex; align-items: center; gap: .4em; background: var(-
 <body>
 <main>
 <header class="site"><a class="home" href="./"><img class="panda" src="img/panda.png" width="64" height="50" alt="">BIT-1<span class="exp">Experimental</span></a>
-  <nav><a href="emu/">Emulator</a><a href="install/">Install</a><a href="manual/">Manual</a><a href="__REPO__">Source</a><a class="yt" href="https://www.youtube.com/@RedtailWorks">YouTube</a><a href="https://www.redtail.works">RedtailWorks</a></nav></header>
+  <nav><a href="emu/">Emulator</a><a href="voices/">Voices</a><a href="install/">Install</a><a href="manual/">Manual</a><a href="__REPO__">Source</a><a class="yt" href="https://www.youtube.com/@RedtailWorks">YouTube</a><a href="https://www.redtail.works">RedtailWorks</a></nav></header>
 <div class="expnote"><b>Experimental.</b> BIT-1 is new: built and tested in the simulator and in the emulator here, not yet on a real FM-1. Install it at your own risk; HYP-1, or M-VAVE's own firmware, goes back on the same way.</div>
 <img class="hero" src="img/bit-hero.png" width="1600" height="1161" alt="An M-VAVE FM-1 running BIT-1: a tracker's grid of six tracks, notes and effects, the row playing lit in yellow, the cell's Note, Effect, Value and Pattern below it.">
 <p class="lede"><b>BIT-1</b> turns the M-VAVE FM-1 into a <b>generative 8-bit tracker</b>. Six tracks of sixteen rows,
@@ -133,6 +133,7 @@ an arp, a harmony, a counter-line and drums that answer it, a new take whenever 
 every note yourself. Evolve lets each pattern drift a little every pass; Grow writes one in eight chip styles.</p>
 <nav class="ways" aria-label="Get BIT-1">
   <a href="emu/"><strong>Try it in the browser</strong><span>The same code the FM-1 runs, with sound. Mouse, touch or keyboard; eight channels and MIDI to your DAW.</span></a>
+  <a href="voices/"><strong>ROM voices</strong><span>A GBA game you own: its instruments as BIT-1 sounds, read in your browser, sent to the FM-1 or the emulator.</span></a>
   <a href="install/"><strong>Install <em class="v">v__VERSION__</em></strong><span>From Chrome or Edge, with the FM-1 connected by USB. Experimental: at your own risk.</span></a>
   <a href="manual/"><strong>Manual</strong><span>Every control, every page, every sound and effect, on one page.</span></a>
   <a href="firmware/__PKG__"><strong>Download <em class="v">__PKG__</em></strong><span>For the command-line installer: <code>python3 tools/fm1_install.py __PKG__</code></span></a>
@@ -141,7 +142,7 @@ every note yourself. Evolve lets each pattern drift a little every pass; Grow wr
 <div class="grid">
   <div class="card"><h3>Patterns</h3><p>Sixteen patterns of sixteen rows (a bar of sixteenths), six tracks a row. The keys write notes as the cursor steps down (<b>REC</b>); playing, they go into the row that's playing. Knobs set the cell's <b>note</b>, <b>effect</b> and <b>value</b>.</p></div>
   <div class="card"><h3>The song</h3><p>An order list of up to 32 positions, each playing a pattern; loop the song or one pattern. <b>EDIT</b> on the Song page makes a fresh copy to vary. Five songs, each saved in its own place on the FM-1.</p></div>
-  <div class="card"><h3>The sounds</h3><p>Twenty-four chip voices, synthesised: the <b>NES</b>, <b>GB</b> and <b>SID</b> kits, <b>Tri bass</b>, <b>Wave bass</b>, <b>Octave bass</b>, <b>Square</b>, <b>Duty lead</b>, <b>SID lead</b>, <b>Chip arp</b>, <b>Wave pad</b>, <b>Ring bell</b>, <b>Laser</b>, <b>Power-up</b>, <b>Metal</b> and more. Each track shapes its own with Tone, Decay, Vibrato, Arp and Crush.</p></div>
+  <div class="card"><h3>The sounds</h3><p>Twenty-four chip voices, synthesised: the <b>NES</b>, <b>GB</b> and <b>SID</b> kits, <b>Tri bass</b>, <b>Wave bass</b>, <b>Octave bass</b>, <b>Square</b>, <b>Duty lead</b>, <b>SID lead</b>, <b>Chip arp</b>, <b>Wave pad</b>, <b>Ring bell</b>, <b>Laser</b>, <b>Power-up</b>, <b>Metal</b> and more. Each track shapes its own with Tone, Decay, Vibrato, Arp and Crush. And sixteen <b>ROM voices</b>: a GBA game's own instruments, from <a href="voices/">a ROM you own</a>.</p></div>
   <div class="card"><h3>Two effects a cell</h3><p>A volume and two effects a cell, after KAWA's, from fifteen: <b>G</b>lide, chance (<b>?</b>), <b>R</b>atchet, <b>D</b>elay, <b>T</b>one, <b>V</b>ibrato, <b>B</b>end (a drop over the row), <b>H</b>op (to a row, once a pass), chord (<b>A</b>), <b>M</b>utate, <b>L</b>ength, crush (<b>X</b>), <b>S</b>tutter (30&ndash;60 ms crushed repeats), s<b>W</b>ell and <b>J</b>ump.</p></div>
   <div class="card"><h3>Follow the lead</h3><p>Write a melody on one track and name it the <b>Lead</b>. Give the others a role (<b>Bass</b>, <b>Chords</b>, <b>Arp</b>, <b>Harmony</b>, <b>Counter</b>, <b>Drums</b>, or <b>Auto</b>) and each plays a take written from the chords heard in your lead. <b>Change</b> how often a pass brings a new take; <b>SEL + EDIT</b> writes the takes in to edit by hand.</p></div>
   <div class="card"><h3>Evolve and Grow</h3><p><b>Evolve</b> lets a track's notes drift a degree or two in the scale on each pass, and lean back home. <b>Grow</b> writes a pattern in one of eight chip styles: Driver, Hold, Ostinato, Melody, Triplet, Arp run, Bleeps, Sparse.</p></div>
@@ -235,6 +236,7 @@ def main(pkg, version, out):
     if not (emu / "amb.wasm").exists():
         raise SystemExit("no build/emu/amb.wasm: run web/emu/build_clang.sh")
     shutil.copytree(emu, out / "emu")
+    shutil.copytree(SRC / "web" / "voices", out / "voices")   # ROM voices: read a GBA ROM in the browser
     (out / ".nojekyll").write_text("")
     print(f"site: {out}: index.html, install/ ({product}), manual/, emu/, firmware/{name} ({len(raw)} B)")
 

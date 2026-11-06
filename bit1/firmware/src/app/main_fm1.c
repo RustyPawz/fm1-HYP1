@@ -275,6 +275,10 @@ static void fm1_main(void)
     led_pos_init();
     en_init();
     project_load();                                 /* defaults when nothing (or another format) is saved */
+    if (flash_ok) {                                 /* the voice bank, read in place: flash 0x93000.. unencrypted */
+        fl_plain_window_init();
+        bank_boot();
+    }
     project_apply();
     audio_init();
     usb_start();

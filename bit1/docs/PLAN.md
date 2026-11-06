@@ -42,13 +42,21 @@ which leaves a plain tracker.
 - Still to come: energy over a song (CTY-1's builds and falls), parts on their own clocks, a take per pattern
   kept when a pattern repeats.
 
-## Phase 4: GBA ROM voices
-- In the installer page, in the browser, from a ROM the user owns; nothing uploaded, no ROM or extracted
-  audio in this repository, the site or a release.
-- Sappy (MP2K) games only at first: find the voicegroups, list and preview them, pick up to N.
-- Game Boy-style instruments become chip-voice presets (bytes each); PCM samples go to the sample region
-  (0xA0000 to 0xDBFFF, about 240 KB, which replaces M-VAVE's own user samples).
-- The emulator takes them too.
+## Phase 4: GBA ROM voices (done; the FM-1 side untested on hardware)
+- The Voices page (`web/voices/`, the site's `bit/voices/`): a ROM the user owns, read in the browser, nothing
+  uploaded; no ROM or extracted audio in this repository, the site or a release.
+- MP2K (Sappy) games: voicegroups found as runs of 16+ valid 12-byte entries on 4-byte steps (a DirectSound
+  entry's sample header must check out); samples, squares, waves and noises listed, heard, named, up to 16 picked.
+- The voice bank (`amb.h`): a 4 KB header of 16 voices, then 8-bit PCM; CRC-32; at most 240 KB, in flash at
+  0xA0000..0xDBFFF (M-VAVE's user-sample area). Sounds 24..39, ROM 1..16: samples read in place (the flash's
+  plain window, set at boot: the first firmware here to use it), Game Boy-style voices on the chip voices.
+- To the FM-1: `firmware/src/bank.c`, on M-UPGRADE's SysEx frames (commands 0x60 BEGIN, 0x61 DATA, 0x62 END),
+  the header written last so a send cut short leaves no bank. To the emulator: kept in localStorage.
+- Tests: the engine plays a bank (`bit_test.c`); a made-up ROM read, banked and played by the emulator's
+  WebAssembly (`voices_test.mjs`); the page's frames through the device's own `ota.c` into a NOR in RAM
+  (`bank_test.c`).
+- Not yet: keysplit instruments and drum kits as kits (their samples come as single voices), other engines
+  (Krawall, GAX), playing a ROM's songs.
 
 ## Phase 5: release
 - The workflow (`.github/workflows/firmware.yml`), its pages under `bit/`, the dropdown, front page, 404.

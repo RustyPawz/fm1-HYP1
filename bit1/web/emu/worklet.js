@@ -45,7 +45,13 @@ class Amb extends AudioWorkletProcessor {
       this.sentWrites = this.ex.web_store_writes();
       this.ex.web_master(m.master ?? 2800);
       this.ex.web_boot();
-      this.port.postMessage({ type: "ready" });
+      let voices = -1;
+      if (m.bank && this.ex.web_bank) {           // the voice bank, from the Voices page: after boot
+        const b = new Uint8Array(m.bank).subarray(0, this.ex.web_bank_max());
+        new Uint8Array(this.mem.buffer, this.ex.web_bank(), b.length).set(b);
+        voices = this.ex.web_bank_load(b.length);
+      }
+      this.port.postMessage({ type: "ready", voices });
     } else if (!this.ex) {
       return;
     } else if (m.type === "buttons") {

@@ -527,7 +527,7 @@ int main(void)
     }
 
     /* every sound in the bank: a key into it sounds, stays under full scale, and lets go */
-    for (s = 0; s < EN_NSOUND; s++) {
+    for (s = 0; s < EN_NBUILTIN; s++) {
         blank();
         set(P_T(3, TP_SOUND), s);
         set(P_T(3, TP_LEVEL), 80);
@@ -583,6 +583,110 @@ int main(void)
         }
         CHECK(zc[1] > zc[0] + zc[0] / 10, "Arp Triad: %d crossings, off %d", zc[1], zc[0]);
         set(P_T(3, TP_ARP), 0);
+    }
+
+    /* THE VOICE BANK: a bank built here (a looped sine at 8 kHz, a one-shot drum, a square, a wave, a noise) is
+     * taken, a broken one isn't; each voice sounds; the sample plays at its pitch (an octave up, twice the
+     * crossings); the one-shot ends by itself; no bank, the ROM sounds are silent */
+    {
+        static uint8_t bk[EN_BANK_HDR + 4096];
+        uint32_t size = sizeof bk, k;
+        int zc[2], a;
+#define W16(o, v) (bk[o] = (uint8_t)(v), bk[(o) + 1] = (uint8_t)((v) >> 8))
+#define W32(o, v) (W16(o, (v) & 0xFFFFu), W16((o) + 2, (uint32_t)(v) >> 16))
+        memset(bk, 0, sizeof bk);
+        W32(0, EN_BANK_MAGIC), W16(4, 1), W16(6, 5), W32(8, size);
+        for (k = 0; k < 2048; k++)               /* the sine: 64 samples a cycle, at 8000 Hz: 125 Hz at its root */
+            bk[EN_BANK_HDR + k] = (uint8_t)(int8_t)(100.0 * sin(6.283185307 * (double)k / 64.0));
+        for (k = 0; k < 2048; k++)               /* the drum: noise falling away */
+            bk[EN_BANK_HDR + 2048 + k] = (uint8_t)(int8_t)((int)((k * 2654435761u) >> 25) - 64) * (2048 - (int)k) / 2048;
+        {
+            static const char *const NM[5] = {"Sine", "Drum", "Square", "Wave", "Noise"};
+            for (k = 0; k < 5; k++) {
+                uint32_t e = 16 + 64 * k;
+                memcpy(bk + e, NM[k], strlen(NM[k]));
+                bk[e + 12] = (uint8_t)(k == 0 || k == 1 ? RV_SAMPLE : k == 2 ? RV_SQUARE : k == 3 ? RV_WAVE : RV_NOISE);
+                bk[e + 13] = (uint8_t)(k == 0 ? 1 : k == 1 ? 2 : 0);
+                bk[e + 14] = 60;
+                bk[e + 15] = (uint8_t)(k == 2 ? 2 : 0);
+                W16(e + 16, 2), W16(e + 18, 300), bk[e + 20] = 200, W16(e + 22, 80);
+                W32(e + 24, 8000u * 1024u);
+                W32(e + 28, EN_BANK_HDR + (k == 1 ? 2048 : 0)), W32(e + 32, 2048), W32(e + 36, k == 0 ? 1024 : 0);
+                for (a = 0; a < 16; a++)
+                    bk[e + 40 + a] = (uint8_t)(a < 8 ? 0xFF : 0x00);   /* the wave: a square of 4 bits */
+                bk[e + 56] = 128;
+            }
+        }
+        W32(12, en_crc32(bk + 16, size - 16));
+        CHECK(en_bank_check(bk, size) == 5, "the bank: %d voices", en_bank_check(bk, size));
+        bk[EN_BANK_HDR + 5] ^= 1;
+        CHECK(en_bank_check(bk, size) < 0, "a bank with a bad CRC passes");
+        bk[EN_BANK_HDR + 5] ^= 1;
+        W32(16 + 28, size - 100);                /* the sine running past the end */
+        W32(12, en_crc32(bk + 16, size - 16));
+        CHECK(en_bank_check(bk, size) < 0, "a sample past the bank's end passes");
+        W32(16 + 28, EN_BANK_HDR);
+        W32(12, en_crc32(bk + 16, size - 16));
+        en_bank(bk, size);
+        run(0.05);
+        CHECK(en_rom_count() == 5, "the bank in use: %d voices", en_rom_count());
+        CHECK(!strcmp(en_sound_name(EN_NBUILTIN + 2), "Square") && !strcmp(en_sound_name(EN_NBUILTIN + 9), "ROM 10"),
+              "the ROM sounds' names: %s, %s", en_sound_name(EN_NBUILTIN + 2), en_sound_name(EN_NBUILTIN + 9));
+        for (k = 0; k < 5; k++) {
+            blank();
+            set(P_T(3, TP_SOUND), EN_NBUILTIN + (int)k);
+            set(P_T(3, TP_LEVEL), 80);
+            meter_reset();
+            bad = 0;
+            en_audition(3, 60, 1);
+            run(0.3);
+            en_audition(3, 60, 0);
+            CHECK(!bad && rms_db() > -45.0 && peak < 0.98, "ROM voice %u: rms %.1f dB peak %.2f", k, rms_db(), peak);
+            run(2.0);
+        }
+        for (a = 0; a < 2; a++) {                /* the sine at its root, and an octave up */
+            int prev = 0, b2, j2;
+            blank();
+            set(P_T(3, TP_SOUND), EN_NBUILTIN);
+            set(P_T(3, TP_ECHO), 0);
+            set(P_T(3, TP_VERB), 0);
+            en_audition(3, a ? 72 : 60, 1);
+            run(0.1);
+            zc[a] = 0;
+            for (b2 = 0; b2 < 86; b2++) {        /* half a second */
+                en_render(blk, 256, 2048);
+                for (j2 = 0; j2 < 256; j2++) {
+                    int sg = blk[2 * j2] > 0;
+                    if (sg != prev)
+                        zc[a]++;
+                    prev = sg;
+                }
+            }
+            en_audition(3, a ? 72 : 60, 0);
+            run(1.0);
+        }
+        CHECK(zc[0] > 110 && zc[0] < 140, "the sine at its root: %d crossings in 0.5 s, wanted 125", zc[0]);
+        CHECK(zc[1] > 2 * zc[0] - 20 && zc[1] < 2 * zc[0] + 20, "an octave up: %d crossings, at the root %d", zc[1], zc[0]);
+        blank();                                 /* the one-shot drum ends by itself, held or not */
+        set(P_T(3, TP_SOUND), EN_NBUILTIN + 1);
+        en_audition(3, 60, 1);
+        run(0.6);                                /* 2048 samples at 8 kHz: a quarter of a second */
+        meter_reset();
+        run(0.3);
+        CHECK(rms_db() < -50.0, "the one-shot still sounds: %.1f dB", rms_db());
+        en_audition(3, 60, 0);
+        en_bank(0, 0);                           /* no bank: the ROM sounds silent */
+        run(0.05);
+        CHECK(en_rom_count() == 0, "no bank: %d voices", en_rom_count());
+        set(P_T(3, TP_SOUND), EN_NBUILTIN);
+        meter_reset();
+        en_audition(3, 60, 1);
+        run(0.3);
+        en_audition(3, 60, 0);
+        CHECK(rms_db() < -60.0, "no bank, a ROM sound plays: %.1f dB", rms_db());
+        set(P_T(3, TP_SOUND), 8);
+#undef W16
+#undef W32
     }
 
     printf(fails ? "bit: %d FAILED\n" : "bit: all passed\n", fails);

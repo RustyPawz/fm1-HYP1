@@ -15,6 +15,7 @@ your recipients its complete corresponding source under the same licence.
 | The idea of a browser emulator for FM-1 firmware (`web/emu/`) | [Groove OS](https://www.groove-os.com/) by Peter Gombos, whose site runs its firmware in the browser; no code from it | credit only |
 | The tracker, the voices, the sound bank, GROW and the songs (`firmware/src/dsp/amb.c` but its plate), the screen (`firmware/src/app/ui.c`), the project (`firmware/src/app/project.c`), the pages, the boot cards, `tests/`, `tools/site/` | BIT-1 (RedtailWorks), from AMB-1 by way of HYP-1, GRAV-1, CTY-1 and EVOL-1 | GPL-3.0-only |
 | The sound bank and the five songs | BIT-1's own, synthesised (the chip voices after CTY-1's); no audio from any game or album is in this tree | GPL-3.0-only |
+| The ROM voices: the Voices page (`web/voices/`), the bank (`firmware/src/bank.c`, the bank in `amb.c`), their tests | BIT-1's own; reads the MP2K format as documented by the GBA homebrew community; no game, ROM or audio from one is in this tree, the site or a release | GPL-3.0-only |
 | Tracker ideas | [KAWA](https://github.com/Guizmoh/Kawa-Tracker-Fm1) by Omnipotard (GPL-3.0); ideas so far, no code from it; code ported from it later will be marked where it is used | credit only |
 | `firmware/src/app/` and the rest not named above | AMB-1 (Charles Vestal), changed for BIT-1 | GPL-3.0-only |
 
