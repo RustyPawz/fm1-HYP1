@@ -26,51 +26,50 @@ CONTENT = SRC / "open1"
 
 PHASES = [  # name, what happens
     ("Idea and pitch", "The spec, the parts list, drawings of the board, a pitch deck and the concept video."),
-    ("Breadboard prototype", "A Daisy Seed (the same chip as OPEN-1) on the bench, and the beta board design in KiCad, to work out the product and test it."),
+    ("Board design and breadboard", "The full circuit boards designed in KiCad, a breadboard build for firmware, and an outside review of the boards before any are made."),
     ("First boards", "The first custom circuit boards and a hand-built case, to test the real keys, pads, screen and audio."),
     ("Emulator, SDK and firmware jam", "Developers build firmware in the browser before the hardware ships; the community votes on the pack that comes with it."),
     ("Crowdfunding", "Early-bird and backer pricing for the first production run."),
     ("Manufacturing and shipping", "The first 1,000 units, with the community firmware pack preloaded."),
 ]
 
-ENGINE = [  # what, OPEN-1 v0.4 beta, the FM-1 today
-    ("Processor", "480 MHz Arm Cortex-M7 (STM32H750, on a Daisy Seed)", "240 MHz"),
-    ("Working memory", "64 MB + 1 MB on the chip", "About 432 KB"),
-    ("Firmware storage", "8 MB built in, plus one microSD card for firmware, samples and projects", "1 MB"),
+ENGINE = [  # what, OPEN-1 KIT v0.8, the FM-1 today
+    ("Processor", "Two 150 MHz Arm Cortex-M33 cores (Raspberry Pi RP2350, on a plug-in Pimoroni Pico Plus 2)", "240 MHz"),
+    ("Working memory", "8 MB + 520 KB on the chip", "About 432 KB"),
+    ("Firmware storage", "16 MB built in, plus a microSD card for firmware, samples and projects", "1 MB"),
     ("Firmwares installed", "Several, swapped from the menu", "One at a time"),
     ("Keys", "Bring your own: an FM-1 or any USB or TRS MIDI controller", "Built in"),
-    ("Audio", "Stereo line in; stereo out and headphones, 24-bit; built-in speaker", "Stereo out"),
+    ("Audio", "Stereo line in; stereo line out and headphones, 24-bit; built-in speaker", "Stereo out"),
     ("MIDI", "TRS in and out (type A), plus USB", "TRS in, USB, Bluetooth"),
-    ("USB", "USB-A host for your controller, USB-C for your computer and charging (one at a time)", "USB-C device"),
+    ("USB", "USB-A host for your controller, USB-C for your computer and charging", "USB-C device"),
 ]
 
 INSTRUMENT = [
-    ("Keys", "None built in: plug in the keys you already own"),
-    ("Pads", "16 RGB pads in two rows of 8 on Cherry MX switches, so they also play as a keyboard"),
-    ("Menu keys", "8 Cherry MX keys; each firmware names them on screen"),
-    ("Controls", "4 knobs and 2 touch strips (pitch and mod by default)"),
-    ("Screen", "2.0″ colour IPS, 320 × 240"),
-    ("Sound out", "Built-in speaker and a stereo out / headphones jack"),
+    ("Screen", "Any common 40-pin RGB panel, 4.3″ or 5″, 800 × 480, with touch. The screen controller is on the board, so the panel itself is cheap"),
+    ("Controls", "4 push encoders and a volume knob"),
+    ("Keys", "6 RGB-lit Cherry MX keys on hot-swap sockets; each firmware names them on screen"),
+    ("Sound out", "Built-in speaker, headphones and a stereo line out"),
     ("Sound in", "Stereo line in, for sampling and effects"),
-    ("Power", "Rechargeable LiPo battery, charges over USB-C"),
+    ("Storage", "microSD card for firmware, samples and projects"),
+    ("Power", "Rechargeable LiPo battery with a fuel gauge, charges over USB-C"),
+    ("Brain", "A plug-in RP2350 module, with a socket for a second one"),
+    ("Expansion", "2 rails on the sides and 2 Qwiic ports, for modules and your own add-ons"),
+    ("Modules", "PADS: 16 MX pads and 4 encoders. TOUCH: two 195 mm touch strips. KEYS: 25 touch keys (in progress)"),
     ("Connections", "Wired only: no Bluetooth, for low latency"),
-    ("Two boards", "A main board that carries everything, and a faceplate PCB that is the switch plate and holds the touch strips"),
-    ("Size", "About 161 × 96 mm, close to the FM-1's footprint, a little taller to fit Cherry MX"),
+    ("Size", "Base board 234 × 130 mm"),
 ]
 
 GOALS = [
-    ("Cheap and easy to carry", "No keybed to pay for: pads, sounds and effects in a box about the size of an FM-1, played from the keys you already own."),
+    ("Built your way", "Start with the KIT base, then add modules on its side rails: pads, touch strips, keys, or something you design yourself."),
     ("Open firmware", "A documented chip, an open SDK and a free toolchain. Anyone can write firmware for it, and anyone can install it."),
     ("Many machines in one", "Keep several firmwares on the device and a library on the SD card. Techno box tonight, plant simulator tomorrow."),
-    ("Room to grow", "Twice the clock speed and about 150 times the working memory of the FM-1, for longer delays, samples and bigger engines."),
+    ("Room to grow", "Two cores and about 20 times the working memory of the FM-1, for longer delays, samples and bigger engines."),
     ("Bring your own keys", "USB-A host and TRS MIDI in mean an FM-1, a MIDI keyboard or a pad controller can all play it. All the compute happens on OPEN-1."),
     ("Firmware before hardware", "A browser emulator and a firmware jam before launch, so it ships with a library already full."),
 ]
 
 PRICES = [  # label, price, note, featured
-    ("Early bird", "$159", "Crowdfunding, a limited first batch", False),
-    ("Crowdfunding", "$179", "Backer price for the first run", False),
-    ("Retail", "$199", "The target price after launch", True),
+    ("Core", "$199", "The KIT base with a 5″ screen: knobs, keys, audio and MIDI", True),
 ]
 
 PAGE = """<!doctype html>
@@ -256,15 +255,15 @@ footer .rw span:nth-of-type(1) { color: var(--purple); } footer .rw span:nth-of-
 
 <div class="hero">
   <div>
-    <span class="badge"><i></i>Beta design &middot; breadboard phase</span>
+    <span class="badge"><i></i>KIT v0.8 &middot; boards designed, in review</span>
     <h1>OPEN<span>-1</span></h1>
     <p class="line">One synth, every firmware.</p>
-    <p class="lede">An open synth you rewrite from an SD card. Bring your own keys: plug in an FM-1 or any USB or MIDI controller, and OPEN-1 does the rest, with 16 RGB pads, touch strips, knobs, a screen and a library of firmware you swap from the menu.</p>
-    <div class="ctas"><a class="btn primary" href="#join">Get updates</a><a class="btn" href="#video">Watch the video</a></div>
+    <p class="lede">An open synth you rewrite from an SD card. Start with the KIT base: a screen, knobs, keys, audio and MIDI, and a library of firmware you swap from the menu. Add pad and touch modules on its side rails, and play it from the keys you already own.</p>
+    <div class="ctas"><a class="btn primary" href="#join">Get updates</a><a class="btn" href="#specs">See the design</a></div>
   </div>
-  <img src="media/open1-v04.jpg" width="1600" height="1025" alt="Render of the OPEN-1 v0.4 beta design: a screen and four knobs top left, eight Cherry MX menu keys, two touch strips across the middle and sixteen RGB pads in two rows of eight.">
+  <img src="media/open1-v08-kit.jpg" width="1600" height="971" alt="Render of the OPEN-1 KIT v0.8 base board: a 5-inch screen showing a step grid, four knobs below it, six coloured MX keys and a volume knob on the right, the plug-in RP2350 module, and expansion headers on both sides.">
 </div>
-<p class="disclaimer"><b>Not a product yet.</b> OPEN-1 is a very early design I'm sharing to work out the product and test it. Nothing is for sale; the renders are design previews, and every spec and price on this page is a target, not a promise.</p>
+<p class="disclaimer"><b>Not a product yet.</b> OPEN-1 is an early design I'm sharing as I build it. The circuit boards are designed but haven't been made or tested. Nothing is for sale; the renders are design previews, and every spec and price on this page is a target, not a promise.</p>
 
 <section id="video">
   <h2>The latest video</h2>
@@ -289,19 +288,19 @@ __GOALS__
 </section>
 
 <section id="specs">
-  <h2>The beta design</h2>
-  <p class="sub">The v0.4 beta design: two boards, no built-in keys. It's an early design for testing, so expect some of it to change once it's on the bench.</p>
+  <h2>The KIT design</h2>
+  <p class="sub">KIT v0.8: a base board with the brain, screen, controls and audio, plus modules that plug into its side rails. The boards are fully designed; expect changes once the first ones are on the bench.</p>
   <div class="specs">
     <div>
       <div class="tablewrap"><table>
-        <caption>v0.4 beta, next to the FM-1</caption>
-        <thead><tr><th scope="col">&nbsp;</th><th scope="col" class="open">OPEN-1 v0.4</th><th scope="col">FM-1 today</th></tr></thead>
+        <caption>KIT v0.8, next to the FM-1</caption>
+        <thead><tr><th scope="col">&nbsp;</th><th scope="col" class="open">OPEN-1 KIT v0.8</th><th scope="col">FM-1 today</th></tr></thead>
         <tbody>
 __ENGINE__
         </tbody>
       </table></div>
-      <figure class="ports"><img src="media/open1-v04-faceplate.jpg" width="1400" height="865" alt="The faceplate PCB layout: a window for the screen, holes for four knobs, cutouts for eight menu keys and sixteen pads, and two touch strips of four slanted copper segments labelled PITCH and MOD." loading="lazy">
-        <figcaption>Board 2, the faceplate: it's the Cherry MX plate, and the touch strips are copper pads on it. Board 1, underneath, carries the Seed, the ports and everything else.</figcaption></figure>
+      <figure class="ports"><img src="media/open1-v08-underside.jpg" width="1600" height="1037" alt="The underside of the KIT v0.8 base board: the audio, MIDI, USB and microSD ports along the top edge, the plug-in RP2350 module on the right, the battery bay in the middle, and the screen controller and its 40-pin screen connector below it." loading="lazy">
+        <figcaption>The underside: every port along one edge, the plug-in brain, the battery bay, and the screen controller next to the 40-pin connector. The screen's cable folds through a slot in the board.</figcaption></figure>
     </div>
     <div class="tablewrap">
       <p class="cap">The instrument</p>
@@ -314,13 +313,13 @@ __INSTRUMENT__
 
 <section id="price">
   <h2>Price targets</h2>
-  <p class="sub">The goal is an entry instrument, so the price is a design constraint from the first sketch. These targets were set for the keyboard design; the keyless beta is being re-costed and they'll be updated here.</p>
+  <p class="sub">The goal is an entry instrument, so the price is a design constraint from the first sketch. The Core price is the target for the KIT base; module and bundle prices will follow once the first boards are tested.</p>
   <div class="prices">
 __PRICES__
   </div>
   <div class="costs">
-    <div><b>TBD</b><span>Parts cost per unit for the beta design, being re-costed</span></div>
-    <div><b>~$80&ndash;250</b><span>Breadboard prototype, the current phase</span></div>
+    <div><b>~$100</b><span>Estimated factory cost of a KIT base with its screen, at 1,000 units</span></div>
+    <div><b>~$300&ndash;550</b><span>Breadboard build for firmware work, tools included</span></div>
     <div><b>$100&ndash;120k</b><span>Estimated cost of the first 1,000 units</span></div>
   </div>
   <p class="small">Prices in US dollars, before tax and shipping. Estimates from the current parts list; they'll be updated here as quotes come in.</p>
@@ -344,7 +343,7 @@ __POSTS__
 </section>
 
 <section id="support" class="support">
-  <p><b>Want to help it happen?</b> Ko-fi tips fund the breadboard prototype and keep the free FM-1 firmware coming. For partnerships, manufacturing or firmware, email me.</p>
+  <p><b>Want to help it happen?</b> Ko-fi tips fund the first boards and keep the free FM-1 firmware coming. For partnerships, manufacturing or firmware, email me.</p>
   <div class="ctas"><a class="btn kofi" href="__KOFI__">Support on Ko-fi</a>
     <span class="contact"><code>__EMAIL__</code><a class="btn" href="mailto:__EMAIL__">Email</a></span></div>
 </section>
@@ -428,7 +427,7 @@ def main(root):
     if yt:
         video = (f'    <iframe src="https://www.youtube-nocookie.com/embed/{esc(yt)}?rel=0" title="OPEN-1 beta prototype design" loading="lazy" '
                  'allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>\n'
-                 f'    <figcaption><span>The v0.4 beta prototype design: why the built-in keys went, what&rsquo;s on the board, and the KiCad files so far. A very early design, for working out the product.</span>'
+                 f'    <figcaption><span>The v0.4 beta design video: why the built-in keys went. The design has moved on since; the current KIT design is further down the page.</span>'
                  f'<a href="https://www.youtube.com/watch?v={esc(yt)}">Watch on YouTube</a></figcaption>')
     else:
         video = ('    <video controls preload="metadata" playsinline poster="media/pitch-poster.jpg" width="1920" height="1080">'
