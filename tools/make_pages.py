@@ -111,6 +111,10 @@ a.kofi { display: inline-flex; align-items: center; gap: .4em; background: var(-
 .support p { margin: 0; color: var(--muted); flex: 1 1 22rem; }
 .support p b { color: var(--ink); font-weight: 600; }
 .support a.kofi { font-size: 1.05rem; padding: .5em 1.2em; }
+.notice { background: var(--card); border: 1px solid var(--orange); border-left-width: 5px; border-radius: 10px; padding: 14px 18px; margin: 0 0 1rem; }
+.notice h3 { color: var(--orange); margin: 0 0 .4rem; }
+.notice p { margin: 0 0 .5rem; color: var(--muted); } .notice p:last-child { margin: 0; }
+.notice p b { color: var(--ink); font-weight: 600; }
 @media (max-width: 560px) { .lede { font-size: 1.15rem; } h2 { font-size: 1.25rem; } }
 </style>
 </head>
@@ -140,6 +144,19 @@ the whole performance into your DAW.</p>
   <a href="board/"><strong>Board</strong><span>Request a feature, vote for others, or tell us how it's going on your FM-1.</span></a>
   <a href="firmware/__PKG__"><strong>Download <em class="v">__PKG__</em></strong><span>For the command-line installer: <code>python3 tools/fm1_install.py __PKG__</code></span></a>
 </nav>
+
+<aside class="notice" aria-label="Update: newer FM-1s">
+  <h3>Update: newer FM-1s, and testers wanted</h3>
+  <p>Recently sold FM-1s have a different flash chip. On those, HYP-1 before 1.5.63 could not save and could not
+  be updated or replaced. <b>From 1.5.63 on, HYP-1 accepts both chips</b>, and M-VAVE's updater, M-UPGRADE 3.11,
+  finds it again.</p>
+  <p>It runs well on an earlier FM-1, but <b>it has not been tested on a newer one yet</b>. If you have a recently
+  bought FM-1 and try this version, please say how it went (does it save, does the installer run a second time):
+  on <a href="__REPO__/issues/11">the issue on GitHub</a>, or by email to
+  <a href="mailto:itsme@redtail.works">itsme@redtail.works</a>.</p>
+  <p>A newer FM-1 stuck on 1.5.62 or earlier can't take this update over USB:
+  <a href="__REPO__/issues/11">the same issue</a> describes the way out.</p>
+</aside>
 
 <h2>The voices</h2>
 <div class="grid">
