@@ -94,7 +94,7 @@ jobs:
               https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK.git ~/fw-AC79_AIoT_SDK
           }
           [ -f ~/fw-AC79_AIoT_SDK/cpu/wl82/tools/uboot.boot ] || try fetch_sdk
-      - name: The firmware (a test build: not a release)
+      - name: The firmware, a test build (not a release)
         run: |
           set -o pipefail
           ./build.sh --release "1.6.0-test$GITHUB_RUN_NUMBER" 2>&1 | tee build.log
