@@ -52,6 +52,8 @@
   .site nav a.yt { color: var(--orange); }
   .card { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 16px 18px; margin: 0 0 1rem; }
   .card.warn { border-color: var(--rust); }
+  .card.note { border-color: var(--orange); border-left-width: 5px; padding: 10px 14px; }
+  .card.note p { margin: 0; } .card.note b { color: var(--orange); } .card.note a { color: inherit; }
   a.kofi { display: inline-flex; align-items: center; gap: .4em; background: var(--rust, #c85420); color: #fff8f0 !important; text-decoration: none; border-radius: 999px; padding: .15em .8em; font-weight: 600; } a.kofi:hover { background: var(--orange, #e8873a); color: #1a0c03 !important; }
 </style>
 </head>
@@ -61,6 +63,13 @@
   <button class="lang" id="lang"></button>
   <h1>Install ECO-1</h1>
   <p style="background:#2a1d10;border:1px solid #e8873a;border-radius:10px;padding:10px 14px;color:#f3dcc4"><b style="color:#ffb070">Experimental.</b> ECO-1 hasn't been tested on a real FM-1 yet. If it misbehaves, put HYP-1 or the stock firmware back from their pages, the same way.</p>
+  <div class="card note" role="note">
+  <p class="small"><b>Newer FM-1s:</b> from version 0.0.96 on, this firmware works with the flash chip in recently sold
+  FM-1s (earlier versions could not save or be updated on them). It has not been tested on one yet. If you try it
+  on a recently bought FM-1, please say how it went: on
+  <a href="https://github.com/RustyPawz/fm1-HYP1/issues/11" target="_blank" rel="noopener">GitHub</a> or by email to
+  <a href="mailto:itsme@redtail.works">itsme@redtail.works</a>.</p>
+  </div>
   <div class="card">
   <p data-t="intro"></p>
   <p data-t="warn"></p>
