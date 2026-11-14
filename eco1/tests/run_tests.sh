@@ -29,6 +29,12 @@ run eco sh -c "$CC -O2 -ffp-contract=off -std=c99 -Wall -Wextra -Wdouble-promoti
 run engine-device-flags sh -c "$CC -O2 -std=c99 -Wall -Wextra -Wdouble-promotion -Werror -Ifirmware/src/dsp -c \
     -o $OUT/amb_dev.o firmware/src/dsp/amb.c"
 run storage sh -c "$CC -O2 -o $OUT/storage_test tests/storage_test.c && $OUT/storage_test"
+# the flash driver's wait for an erase / page program (never back to XIP while the part is busy), and the update
+# handshake's identity: cut for M-UPGRADE 3.11, whole to the installers; a dev build's; the update loader's
+run flash-wait sh -c "$CC -O1 -w -o $OUT/flash_wait_test tests/flash_wait_test.c && $OUT/flash_wait_test"
+run ota-identity sh -c "$CC -std=c11 -O1 -w -o $OUT/ota_hs_long tests/ota_hs_test.c && $OUT/ota_hs_long && \
+    $CC -std=c11 -O1 -w '-DTEST_ID=\"FM-1_700\"' -o $OUT/ota_hs_short tests/ota_hs_test.c && $OUT/ota_hs_short && \
+    $CC -std=c11 -O1 -w -DFELUCCA_LOADER=1 -o $OUT/ota_hs_loader tests/ota_hs_test.c && $OUT/ota_hs_loader"
 # the update path, against the firmware package (Felucca's tests; needs ./build.sh)
 if [ -f build/amb.fwsc ]; then
     run ota-entry sh -c "$CC -o $OUT/ota_test tests/ota_test.c && $OUT/ota_test build/amb.fwsc"
