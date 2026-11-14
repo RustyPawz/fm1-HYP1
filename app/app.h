@@ -1,14 +1,25 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* HYP-1 app: the project (the pieces as they are while the power is on; the bank, saved) and the app's entry points. Included by the unity
- * build after gfx.c (drawing helpers in scope) and by the host simulator. */
+/* HYP-1 app: the project (the pieces as they are while the power is on; the bank, saved), the app's entry points and
+ * its half of the contract with fm1-base (base/device/unity.c, base/host/plat_host.c). */
 #pragma once
 #include <stdint.h>
 #include "plat.h"
-#include "../dsp/amb.h"
+#include "amb.h"
 
-#ifndef EN_VERSION                       /* a release build passes its own (tools/build.py --release) */
+#define APP_NAME "HYP-1"
+#define APP_BLOCK 256u                   /* frames per audio block: 5.8 ms at 44.1 kHz */
+#define APP_SPLASH                       /* the first screen: charcoal, until the UI's RedtailWorks card (ui_init) */
+void app_splash(void);
+#ifdef APP_VERSION                       /* a release build passes its own (base/tools/build.py --release) */
+#define EN_VERSION APP_VERSION
+#else
 #define EN_VERSION "DEV"
 #endif
+
+/* the store: the bank at 0xFC000 and the panel calibration at 0xDC000, where HYP-1 kept them on its own copy of
+ * Felucca's platform (an update keeps the saved pieces) */
+enum { OBJ_PROJ, OBJ_PANEL, OBJ_NOBJ };
+#define APP_STORE_MAP {0xFC000u, 0xDC000u}
 #define NPIECES EN_NPIECES
 
 typedef struct {
@@ -51,3 +62,22 @@ int ui_remote(void);                   /* remote (SEL + GLO): the panel plays th
 extern uint32_t ui_splash_ms;            /* the RedtailWorks card's time at power-on (0: none) */
 int ui_dirty(void);
 void ui_say(const char *a, const char *b);
+
+uint32_t plat_seed(void);                /* at power-on: a seed, different each time (0 on the host: no chance); app.c */
+
+/* the contract: the platform calls these */
+void app_init(void);                     /* boot: the engine, then the bank (or the recipes) */
+void app_render(int32_t *lr, uint32_t n, uint32_t gain_q12);   /* audio interrupt: n stereo frames, 24-bit */
+void app_panic(void);                    /* silence now (before an update rewrites the flash) */
+void app_ui_init(void);
+void app_frame(void);
+void app_input_only(void);
+void app_say(const char *a, const char *b);
+
+/* the host simulator's part (app/host.c): HYP-1's checks, its command, a reboot */
+#define APP_HOST_EXPECT
+int app_expect(const char *what, int *got);
+#define APP_HOST_CMD
+int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, const char *d);
+#define APP_HOST_REBOOT
+void app_host_reboot(void);              /* the project forgotten, as RAM is at a restart */

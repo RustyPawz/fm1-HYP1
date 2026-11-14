@@ -3,7 +3,7 @@
 #include "amb.h"
 #include "fastmath.h"
 
-#ifdef EN_HOST
+#if defined EN_HOST || defined PLAT_HOST
 #define EN_POOL
 #else
 #define EN_POOL __attribute__((section(".pool")))

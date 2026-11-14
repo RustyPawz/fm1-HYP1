@@ -34,7 +34,7 @@
  * stored, or its factory settings nudged a little if it never was (project_start). A store is written
  * at once (store_now: playing, the music hushes around the write); the theme, Tune and MIDI out two
  * seconds after a change. */
-#include "../dsp/fastmath.h"
+#include "fastmath.h"
 
 /* --------------------------------------------------------------- pages --- */
 enum { V_TEMPO, V_PAD, V_PADENV, V_PADLFO, V_CHORDS, V_NOISE, V_DRONE, V_DRENV, V_DRLFO, V_ACID, V_ACENV, V_ACLINE,
@@ -622,7 +622,7 @@ static void button(int b)
 static void midi_in(void)
 {
     uint32_t pkt;
-    while (plat_midi_in(&pkt)) {
+    while (plat_midi_in(&pkt, 0)) {
         uint32_t st = (pkt >> 8) & 0xFFu, n = (pkt >> 16) & 0x7Fu, v = pkt >> 24;
         if (st == 0xF8u || st == 0xFAu || st == 0xFBu || st == 0xFCu)
             en_clock(st == 0xF8u ? EN_CLK_TICK : st == 0xFAu ? EN_CLK_START : st == 0xFBu ? EN_CLK_CONTINUE : EN_CLK_STOP);
@@ -737,7 +737,7 @@ static void rm_tick(void)
 {
     uint32_t b = plat_buttons(), k = plat_keys(), now = plat_ms(), ch, i, pkt;
     int e;
-    while (plat_midi_in(&pkt)) {                 /* the browser's lights (channel 16); the rest, ignored */
+    while (plat_midi_in(&pkt, 0)) {                 /* the browser's lights (channel 16); the rest, ignored */
         uint32_t st = (pkt >> 8) & 0xFFu, n = (pkt >> 16) & 0x7Fu, v = pkt >> 24;
         if (st == RM_ST_NOTE || st == RM_ST_OFF) {
             if (n >= RM_KEY0 && n < RM_KEY0 + NKEYS) {

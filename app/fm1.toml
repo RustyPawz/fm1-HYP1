@@ -1,0 +1,24 @@
+# HYP-1's build settings (fm1-base's tools/build.py: ./build.sh)
+name = "HYP"                   # the build's files: hyp.fwsc, hyp-X.Y.Z.fwsc
+id_prefix = "FM-1_7"           # package identity: dev FM-1_700, releases FM-1_7XXYYZZ (as every HYP-1 so far)
+usb_manufacturer = "RedtailWorks"
+usb_product = "HYP-1 FM-1"
+ble = false                    # HYP-1 doesn't use the radio
+usb_audio_in = true            # the music recordable over USB
+usb_audio_out = false
+words = "words.tsv"
+include = ["dsp"]
+o2 = ["dsp/amb.c"]             # the engine, at -O2
+# the site
+tagline = "A generative techno machine for the FM-1"
+repo = "https://github.com/RustyPawz/fm1-HYP1"
+licence = "GPL-3.0-only"
+credits = "A RedtailWorks fork of AMB-1 by Charles Vestal, built on fm1-base and felucca-bsp, from Felucca by Leo Kuroshita (Hügelton Instruments)."
+
+# firmware.json, for firmware hubs (fm1-base docs/FIRMWARE-JSON.md)
+author = "RedtailWorks"
+description = "HYP-1 turns the M-VAVE FM-1 into a hypnotic techno and acid machine. It plays from the moment it's switched on: a breathing pad, a deep drone, a generative 303 line and grain, over drums you sequence."
+tags = ["groovebox", "generative", "sequencer"]
+install = "https://rustypawz.github.io/fm1-HYP1/install/"
+site = "https://rustypawz.github.io/fm1-HYP1/hyp/"
+screenshot = "docs/img/hyp-screen-home.png"
