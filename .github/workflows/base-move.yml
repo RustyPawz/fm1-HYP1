@@ -66,6 +66,36 @@ jobs:
           for n in first sounds; do
             echo "--- $n stdout diff (first 40 lines)"; diff "old/$n/stdout.txt" "new/$n/stdout.txt" | head -40 || true
           done
+      - name: The same, with the simulators' own differences matched
+        if: always()
+        run: |
+          # fm1-base's simulator gives the render MASTER squared (as both devices do); HYP-1's old one gave it the
+          # script's number. Its MIDI log names the port, and the last line times the host. Match those three and
+          # everything a scenario writes should be the same, byte for byte.
+          printf '#!/bin/sh\nexec cc "-DAPP_GAIN(m)=(m)" "$@"\n' > "$RUNNER_TEMP/cc-lin" && chmod +x "$RUNNER_TEMP/cc-lin"
+          cp app/build/host/hyp_host "$RUNNER_TEMP/hyp_host_square"
+          rm -rf app/build/host
+          CC="$RUNNER_TEMP/cc-lin" ./build.sh --host > host-build-lin.log 2>&1 || { tail -20 host-build-lin.log; exit 1; }
+          mkdir -p cmp/newlin
+          for s in tests/scenarios/*.amb; do
+            n=$(basename "$s" .amb); mkdir -p "cmp/newlin/$n"
+            app/build/host/hyp_host "$s" "cmp/newlin/$n" > "cmp/newlin/$n/stdout.txt" 2>&1 || echo "newlin: $n exit $?"
+          done
+          cp "$RUNNER_TEMP/hyp_host_square" app/build/host/hyp_host
+          cd cmp
+          norm() { case "$1" in *midi_out.txt) sed 's/ -> USB$//' "$1" ;; *stdout.txt) grep -v '^host: ' "$1" ;; *) cat "$1" ;; esac; }
+          SAME=0; DIFF=0
+          for d in old/*/; do
+            n=$(basename "$d")
+            for f in "$d"*; do
+              b=$(basename "$f")
+              if norm "$f" | cmp -s - <(norm "newlin/$n/$b"); then SAME=$((SAME + 1)); else
+                DIFF=$((DIFF + 1)); echo "DIFFERS $n/$b"
+                case "$b" in *.txt) diff <(norm "$f") <(norm "newlin/$n/$b") | head -12 | sed 's/^/    /' ;; esac
+              fi
+            done
+          done
+          echo "matched: same $SAME, differ $DIFF"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
