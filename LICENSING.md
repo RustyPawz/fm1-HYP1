@@ -2,20 +2,23 @@
 
 HYP-1 (a RedtailWorks fork of Charles Vestal's AMB-1) is free software under the GNU General Public
 License, version 3 only
-(`GPL-3.0-only`, full text in `LICENSE`). It is built on Felucca's platform layer (through X0X and FoMni)
-and keeps Felucca's licence. If you distribute HYP-1, or firmware derived from it, you must give
+(`GPL-3.0-only`, full text in `LICENSE`). It is built on fm1-base and felucca-bsp (MPL-2.0, from Felucca),
+and keeps the licence it has had from the start. If you distribute HYP-1, or firmware derived from it, you must give
 your recipients its complete corresponding source under the same licence.
 
 ## Where the code comes from
 
 | What | Origin | Licence |
 | --- | --- | --- |
-| Platform: `firmware/hal/`, `firmware/loader/`, `firmware/src/{libc,lcd,gfx,usb,storage,ota,midi_uart}.c`, `tools/` (build, package, install, rescue), `web/fm1*.js` | [Felucca](https://github.com/hugelton/Felucca), Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments, as changed for [X0X](https://github.com/charlesvestal/fm1-x0x) and FoMni, then AMB-1 | GPL-3.0-only |
-| `firmware/hal/fm1_flash_wait.h`, `tests/flash_wait_test.c` (an erase or page program never returns to the firmware while the flash is busy) and `tests/ota_hs_test.c`; the same change in `firmware/hal/fm1_flash.h`, and the update handshake's short identity for M-UPGRADE 3.11 in `firmware/src/ota.c`, `tools/fm1_install.py`, `web/fm1ota.js` | [felucca-bsp](https://github.com/hugelton/felucca-bsp) (commits 2d37ec8, 41a6e86): Julius Vitkauskas, Charles Vestal, Leo Kuroshita; the identity scheme is PERF-1's | MPL-2.0 (the three files keep their notices), used here under GPL-3.0-only as MPL-2.0 section 3.3 allows |
-| `firmware/src/app/{panel,plat_fm1,main_fm1}.c`, `host/amb_host.c`, `web/emu/`, `tools/{make_pages,manual_html}.py`, `tools/publish_pages.sh` | adapted from X0X (itself from Felucca's `panel.c`, `main.c`, `audio.c`) | GPL-3.0-only |
-| Dattorro's plate reverb in `firmware/src/dsp/amb.c` | from [FoMni](https://github.com/charlesvestal/fm1-fomni) | GPL-3.0-only |
-| The idea of a browser emulator for FM-1 firmware (`web/emu/`) | [Groove OS](https://www.groove-os.com/) by Peter Gombos, whose site runs its firmware in the browser; no code from it | credit only |
-| Everything else in `firmware/src/{app,dsp}`, `tests/` | AMB-1 (Charles Vestal), HYP-1 changes (RedtailWorks) | GPL-3.0-only |
+| The platform, in `base/` (a git submodule): the chip and board layer, the update loader, USB, storage, the screen and panel, the host simulator, the browser emulator's glue, the build, package, install and rescue tools, the web installer | [fm1-base](https://github.com/charlesvestal/fm1-base) (Charles Vestal and contributors) and, inside it as `base/bsp`, [felucca-bsp](https://github.com/hugelton/felucca-bsp), from [Felucca](https://github.com/hugelton/Felucca) by Leo Kuroshita (@kurogedelic), Hügelton Instruments | MPL-2.0, file by file (see `base/LICENSING.md`); part of this GPL-3.0-only work as MPL-2.0 section 3.3 allows |
+| `app/app.c`, `app/host.c`, `app/web.c`, `build.sh`, `tests/run_tests.sh`: the glue between HYP-1 and fm1-base | after AMB-1's on fm1-base (Charles Vestal, MPL-2.0 there), with HYP-1's own parts (RedtailWorks) | GPL-3.0-only (`build.sh` keeps its MPL-2.0 notice) |
+| `app/web/emu/` (the browser emulator's page and worklet), `tools/{make_pages,manual_html}.py` | adapted from AMB-1's and X0X's (themselves from Felucca's) | GPL-3.0-only |
+| Dattorro's plate reverb in `app/dsp/amb.c` | from [FoMni](https://github.com/charlesvestal/fm1-fomni) | GPL-3.0-only |
+| The idea of a browser emulator for FM-1 firmware | [Groove OS](https://www.groove-os.com/) by Peter Gombos, whose site runs its firmware in the browser; no code from it | credit only |
+| Everything else in `app/`, `tests/` | AMB-1 as it was on 2026-10-10 (Charles Vestal, GPL-3.0-only then), HYP-1 changes (RedtailWorks) | GPL-3.0-only |
+
+Until November 2026 HYP-1 carried its own copy of Felucca's platform (GPL-3.0-only). The experimental firmwares in
+`lof1/`, `eco1/`, `grav1/`, `cty1/` and `bit1/` still do: each has its own `LICENSING.md`.
 
 ## Third-party material
 

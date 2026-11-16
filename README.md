@@ -161,17 +161,17 @@ toolchain, the tests, and the site (installer, emulator, manual, download) publi
 Each build is numbered 1.B.N from the run. To build locally (see [BUILDING.md](BUILDING.md)):
 
 ```
-tests/run_tests.sh      # the instrument, the platform pieces, the app in a simulator, the web builds
-./build.sh              # build/amb.fwsc
-python3 tools/fm1_install.py build/amb.fwsc     # install it over USB
+git submodule update --init --recursive   # fm1-base (base/), the platform HYP-1 is built on
+./build.sh              # app/build/hyp.fwsc
+tests/run_tests.sh      # the instrument, the app in a simulator, the browser emulator, the update path
+python3 base/tools/fm1_install.py app/build/hyp.fwsc     # install it over USB
 ```
 
-`build/host/amb_host SCRIPT OUTDIR` runs the whole app on a computer from a script
-(`tests/scenarios/*.amb`), with audio and screenshots coming out. `web/emu/build_clang.sh` builds the
-same code for the browser with plain clang. The drum patterns are written as grids in
-`tools/gen_pats.py`; the site's pictures come from `tools/site/mockups.py`, its videos from
-`tools/site/video.py` (all from the firmware itself, in the simulator). [BUILDING.md](BUILDING.md) has
-the details.
+`app/build/host/hyp_host SCRIPT OUTDIR` (from `./build.sh --host`) runs the whole app on a computer from a
+script (`tests/scenarios/*.amb`), with audio and screenshots coming out. `./build.sh --web` builds the same
+code for the browser (Emscripten). The drum patterns are written as grids in `tools/gen_pats.py`; the site's
+pictures come from `tools/site/mockups.py`, its videos from `tools/site/video.py` (all from the firmware
+itself, in the simulator). [BUILDING.md](BUILDING.md) has the details.
 
 ## Credits
 

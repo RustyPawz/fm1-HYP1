@@ -46,7 +46,7 @@ while it's writing; when it finishes, the FM-1 restarts into HYP-1.
 **Go back:** "Back to the stock firmware", at the bottom of the same page, puts M-VAVE's firmware back.
 M-VAVE's own updater, M-UPGRADE, works too.
 
-> Installing firmware is at your own risk. If an install is cut off, run it again: the FM-1 stays in update mode until it finishes. Holding OCT− and OCT+ for 5 seconds also enters update mode.
+> Installing firmware is at your own risk. If an install is cut off, run it again: the FM-1 stays in update mode until it finishes. Holding REC while switching the FM-1 on also enters update mode.
 
 ---
 
