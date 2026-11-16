@@ -49,9 +49,6 @@ jobs:
           "$RUNNER_TEMP/emsdk/emsdk" activate 6.0.10 >/dev/null
           source "$RUNNER_TEMP/emsdk/emsdk_env.sh" >/dev/null 2>&1
           emcc --version | head -1
-          echo "$PATH" | tr ':' '\n' | grep -i emsdk >> "$GITHUB_PATH"
-          echo "EMSDK=$EMSDK" >> "$GITHUB_ENV"
-          echo "EM_CONFIG=$EM_CONFIG" >> "$GITHUB_ENV"
       - name: JieLi toolchain and SDK (cached)
         id: jl
         uses: actions/cache/restore@v4
@@ -104,6 +101,7 @@ jobs:
       - name: Tests
         run: |
           set -o pipefail
+          source "$RUNNER_TEMP/emsdk/emsdk_env.sh" >/dev/null 2>&1   # emcc, for the browser emulator
           cp "app/build/hyp-$V.fwsc" app/build/hyp.fwsc     # the update path's tests: against the release package itself
           sh tests/run_tests.sh 2>&1 | tee tests.log || {
             echo "::error title=tests failed::$(grep -A12 FAIL tests.log | head -60 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
@@ -121,6 +119,7 @@ jobs:
           python3 -c "import json; r=json.load(open('build/board.json')).get('data',{}).get('repository') or {}; print('::notice title=board::' + ('Discussions on: ' + ', '.join(c['name'] for c in r['discussionCategories']['nodes']) if r.get('hasDiscussionsEnabled') else 'Discussions are off: the board waits (Settings > General > Features > Discussions)'))"
       - name: Site (installer, emulator, board, download)
         run: |
+          source "$RUNNER_TEMP/emsdk/emsdk_env.sh" >/dev/null 2>&1   # emcc, for the browser emulator
           ./build.sh --web --release "$V" > web-build.log 2>&1 || { tail -40 web-build.log; exit 1; }
           BOARD_JSON=build/board.json REPO_URL="https://github.com/$GITHUB_REPOSITORY" python3 tools/make_pages.py "app/build/hyp-$V.fwsc" "$V" build/pages
       # LOF-1, experimental, in lof1/: its own build, tests, renders and pages under lof/. Its failure
