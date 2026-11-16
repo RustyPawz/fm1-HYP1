@@ -49,8 +49,7 @@ jobs:
           "$RUNNER_TEMP/emsdk/emsdk" activate 6.0.10 >/dev/null
           source "$RUNNER_TEMP/emsdk/emsdk_env.sh" >/dev/null 2>&1
           emcc --version | head -1
-          echo "$PATH" | tr ':' '
-' | grep -i emsdk >> "$GITHUB_PATH"
+          echo "$PATH" | tr ':' '\n' | grep -i emsdk >> "$GITHUB_PATH"
           echo "EMSDK=$EMSDK" >> "$GITHUB_ENV"
           echo "EM_CONFIG=$EM_CONFIG" >> "$GITHUB_ENV"
       - name: JieLi toolchain and SDK (cached)
