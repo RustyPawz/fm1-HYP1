@@ -299,7 +299,8 @@ def main(pkg, version, out):
     page = page.replace("</head>", INSTALL_STYLE + "</head>").replace("<h1>Install {{NAME}}</h1>",
                                                                       "<h1>Install {{NAME}}</h1>\n" + INSTALL_NOTE)
     for key, val in (("NAME", "HYP-1"), ("REPO", REPO), ("REPO_SHORT", re.sub(r"^https?://", "", REPO)),
-                     ("LICENSE", conf.get("licence", "GPL-3.0-only")), ("CREDITS", " " + conf.get("credits", ""))):
+                     ("LICENSE", conf.get("licence", "GPL-3.0-only")), ("CREDITS", " " + conf.get("credits", "")),
+                     ("RES", ""), ("RES_JA", "")):          # (no resource region: those lines are never shown)
         page = page.replace("{{" + key + "}}", val)
     # the firmware's own steps around an install (fm1.toml install_app; base/web/installer.html APP): HYP-1 has none
     app_js = (SRC / "app" / conf["install_app"]).read_text(encoding="utf-8") if conf.get("install_app") else "null"
