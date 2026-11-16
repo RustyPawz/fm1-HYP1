@@ -6,6 +6,7 @@
 /* the power-on seed (a piece at random, a little changed) */
 #ifdef PLAT_HOST
 static uint32_t host_seed;               /* the script's "seed N": the next power-on's (0: the first piece, exact) */
+static uint32_t host_splash_ms;          /* the script's "splash MS": the boot cards' time (0: the tests start at the UI) */
 uint32_t plat_seed(void) { return host_seed; }
 
 /* the last MIDI out but the clock, for the script's "expect lastout": status << 16 | d1 << 8 | d2 */
@@ -44,8 +45,8 @@ void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2) { plat_midi_out(st >> 4 
 void app_splash(void) { lcd_fill(0, 0, 240, 240, RGB(22, 21, 27)); }   /* charcoal, until the UI's RedtailWorks card */
 void app_init(void)
 {
-#ifdef PLAT_HOST
-    ui_splash_ms = 0u;                   /* the tests start at the UI */
+#if defined PLAT_HOST && !defined PLAT_WEB
+    ui_splash_ms = host_splash_ms;       /* 0: the tests start at the UI (the browser's emulator shows the boot cards) */
 #endif
     en_init();
     project_start(plat_seed());          /* a piece at random, a little changed */

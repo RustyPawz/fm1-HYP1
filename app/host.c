@@ -2,8 +2,9 @@
 /* HYP-1 in fm1-base's host simulator (base/host/plat_host.c, which includes app.c and so this): HYP-1's checks for
  * "expect", its command and a reboot, as host/amb_host.c had them on HYP-1's own simulator.
  *
- * Its checks: see below (fm1-base's own: store_writes clocks_out midi_out peak_db_max peak_db_min). Its command:
- * seed N (the next power-on's seed; 0: the first piece, exact). */
+ * Its checks: see below (fm1-base's own: store_writes clocks_out midi_out peak_db_max peak_db_min). Its commands:
+ * seed N (the next power-on's seed; 0: the first piece, exact); splash MS (the next boot's RedtailWorks card).
+ * Not carried over yet from the old simulator: frames and autopilot (the videos' tools), bank76, storefuzz. */
 
 int app_expect(const char *what, int *got)
 {
@@ -126,6 +127,10 @@ int app_host_cmd(const char *cmd, const char *a, const char *b, const char *c, c
     (void)b, (void)c, (void)d;
     if (!strcmp(cmd, "seed")) {                  /* seed N: the next power-on's (reboot) */
         host_seed = (uint32_t)strtoul(a, 0, 10);
+        return 1;
+    }
+    if (!strcmp(cmd, "splash")) {                /* splash MS: the next boot's RedtailWorks card (0: none) */
+        host_splash_ms = (uint32_t)strtoul(a, 0, 10);
         return 1;
     }
     return 0;

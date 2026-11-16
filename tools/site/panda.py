@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-"""The boot screen's pixel red panda (firmware/src/app/ui.c, PANDA) as the site's mark:
+"""The boot screen's pixel red panda (app/ui.c, PANDA) as the site's mark:
 docs/img/panda.png (1 px a pixel, transparent; scale it up with image-rendering: pixelated) and
 docs/img/favicon.png (64 x 64).   python3 tools/site/panda.py"""
 import re
@@ -13,7 +13,7 @@ COL = {"R": (200, 84, 32), "D": (140, 52, 20), "T": (232, 156, 92), "W": (246, 2
 
 
 def sprite():
-    ui = (SRC / "firmware" / "src" / "app" / "ui.c").read_text()
+    ui = (SRC / "app" / "ui.c").read_text()
     body = re.search(r"PANDA\[PANDA_H\] = \{(.*?)\};", ui, re.S).group(1)
     rows = re.findall(r'"([^"]*)"', body)
     im = Image.new("RGBA", (len(rows[0]), len(rows)), (0, 0, 0, 0))

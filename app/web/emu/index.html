@@ -783,7 +783,7 @@ async function switchOn() {
   go.textContent = "Starting...";
   try {
     const ac = new AudioContext({ sampleRate: 44100, latencyHint: "interactive" });
-    const [wasm] = await Promise.all([fetch("amb.wasm").then((r) => { if (!r.ok) throw new Error(`amb.wasm: ${r.status}`); return r.arrayBuffer(); }),
+    const [wasm] = await Promise.all([fetch("app.wasm").then((r) => { if (!r.ok) throw new Error(`amb.wasm: ${r.status}`); return r.arrayBuffer(); }),
                                       ac.audioWorklet.addModule("worklet.js")]);
     node = new AudioWorkletNode(ac, "amb", { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2] });
     node.connect(ac.destination);

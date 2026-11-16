@@ -8,6 +8,10 @@
 
 #define APP_NAME "HYP-1"
 #define APP_BLOCK 256u                   /* frames per audio block: 5.8 ms at 44.1 kHz */
+#ifdef PLAT_WEB
+#define APP_WEB                          /* the browser emulator's own exports (web.c): the seed, the stream view's colours */
+#define APP_GAIN(m) (m)                  /* and MASTER as its page's slider gives it, as HYP-1's emulator always took it */
+#endif
 #define APP_SPLASH                       /* the first screen: charcoal, until the UI's RedtailWorks card (ui_init) */
 void app_splash(void);
 #ifdef APP_VERSION                       /* a release build passes its own (base/tools/build.py --release) */

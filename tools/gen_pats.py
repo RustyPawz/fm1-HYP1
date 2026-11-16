@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The pieces' factory drum patterns, as grids: writes firmware/src/dsp/pats.h (included by amb.c).
+"""The pieces' factory drum patterns, as grids: writes app/dsp/pats.h (included by amb.c).
 Each piece has six patterns of six lanes (kick, snare, clap, closed hat, open hat, perc), 16 steps:
 x a hit, . a rest. Roughly: 1 an intro, 2-4 the groove building, 5 a variation, 6 a tool (thin or
 broken), so turning Pattern from 1 to 6 is an arrangement."""
@@ -110,6 +110,6 @@ for name, what, pats in PIECES:
         out.append("        {" + ", ".join(f"0x{bits(s):04X}u" for s in lanes) + "},")
     out.append("    },")
 out.append("};")
-path = os.path.join(os.path.dirname(__file__), "..", "firmware", "src", "dsp", "pats.h")
+path = os.path.join(os.path.dirname(__file__), "..", "app", "dsp", "pats.h")
 open(path, "w").write("\n".join(out) + "\n")
 print("wrote", os.path.normpath(path))

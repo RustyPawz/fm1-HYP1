@@ -10,9 +10,12 @@
 #   https://<you>.github.io/<repo>/install/
 # Each build is a release build 1.B.N (from the run number), so the FM-1 can tell builds apart.
 name: firmware
+# HYP-1 is built on fm1-base (base/, a git submodule: the platform, the update loader, the installer page, the browser
+# emulator's glue); the experimental firmwares in their folders still carry their own copies of Felucca's platform.
+# The branch fm1-base-move builds and tests the same way and publishes nothing (the deploy job is main's alone).
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, fm1-base-move]
   workflow_dispatch:
 permissions:
   contents: read
@@ -20,13 +23,15 @@ permissions:
   pages: write
   id-token: write
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -36,6 +41,18 @@ jobs:
           sudo apt-get update -qq && sudo apt-get install -y -qq clang lld >/dev/null
           command -v wasm-ld >/dev/null || sudo ln -sf "$(ls /usr/bin/wasm-ld* | head -1)" /usr/local/bin/wasm-ld
           mkdir -p ~/.fonts && cp lof1/assets/fonts/*.ttf ~/.fonts/ && fc-cache -f >/dev/null || true
+      - name: Emscripten (HYP-1's browser emulator, by fm1-base's build), a fixed version from emsdk at a fixed commit
+        run: |
+          git clone -q https://github.com/emscripten-core/emsdk.git "$RUNNER_TEMP/emsdk"
+          git -C "$RUNNER_TEMP/emsdk" checkout -q a2b92777574c2feda07994cd4f1079a3dfc151f8   # emsdk 6.0.10
+          "$RUNNER_TEMP/emsdk/emsdk" install 6.0.10 >/dev/null
+          "$RUNNER_TEMP/emsdk/emsdk" activate 6.0.10 >/dev/null
+          source "$RUNNER_TEMP/emsdk/emsdk_env.sh" >/dev/null 2>&1
+          emcc --version | head -1
+          echo "$PATH" | tr ':' '
+' | grep -i emsdk >> "$GITHUB_PATH"
+          echo "EMSDK=$EMSDK" >> "$GITHUB_ENV"
+          echo "EM_CONFIG=$EM_CONFIG" >> "$GITHUB_ENV"
       - name: JieLi toolchain and SDK (cached)
         id: jl
         uses: actions/cache/restore@v4
@@ -48,7 +65,7 @@ jobs:
         if: steps.jl.outputs.cache-hit != 'true'
         run: |
           try() { for i in 1 2 3 4; do "$@" && return 0; echo "retry $i: $*"; sleep $((i * 15)); done; return 1; }
-          [ -x ~/.jieli/toolchain/pi32v2/bin/clang ] || try tools/get_toolchain.sh
+          [ -x ~/.jieli/toolchain/pi32v2/bin/clang ] || try base/tools/get_toolchain.sh
           fetch_sdk() {
             rm -rf ~/fw-AC79_AIoT_SDK
             git clone --depth 1 --branch AC79NN_SDK_V1.2.1_2023-12-13 \
@@ -88,7 +105,8 @@ jobs:
       - name: Tests
         run: |
           set -o pipefail
-          tests/run_tests.sh 2>&1 | tee tests.log || {
+          cp "app/build/hyp-$V.fwsc" app/build/hyp.fwsc     # the update path's tests: against the release package itself
+          sh tests/run_tests.sh 2>&1 | tee tests.log || {
             echo "::error title=tests failed::$(grep -A12 FAIL tests.log | head -60 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
             exit 1
           }
@@ -96,6 +114,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          mkdir -p build
           gh api graphql -F owner="${GITHUB_REPOSITORY%/*}" -F name="${GITHUB_REPOSITORY#*/}" -f query='
             query($owner: String!, $name: String!) { repository(owner: $owner, name: $name) {
               id hasDiscussionsEnabled discussionCategories(first: 25) { nodes { id name } } } }' > build/board.json \
@@ -103,8 +122,8 @@ jobs:
           python3 -c "import json; r=json.load(open('build/board.json')).get('data',{}).get('repository') or {}; print('::notice title=board::' + ('Discussions on: ' + ', '.join(c['name'] for c in r['discussionCategories']['nodes']) if r.get('hasDiscussionsEnabled') else 'Discussions are off: the board waits (Settings > General > Features > Discussions)'))"
       - name: Site (installer, emulator, board, download)
         run: |
-          EN_VERSION="$V" sh web/emu/build_clang.sh
-          BOARD_JSON=build/board.json REPO_URL="https://github.com/$GITHUB_REPOSITORY" python3 tools/make_pages.py "build/amb-$V.fwsc" "$V" build/pages
+          ./build.sh --web --release "$V" > web-build.log 2>&1 || { tail -40 web-build.log; exit 1; }
+          BOARD_JSON=build/board.json REPO_URL="https://github.com/$GITHUB_REPOSITORY" python3 tools/make_pages.py "app/build/hyp-$V.fwsc" "$V" build/pages
       # LOF-1, experimental, in lof1/: its own build, tests, renders and pages under lof/. Its failure
       # never holds HYP-1 back: the site then goes out without LOF-1 (and without the dropdown).
       - name: LOF-1 (experimental) — build
@@ -231,7 +250,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: hyp1-firmware-${{ env.V }}
-          path: build/amb-${{ env.V }}.fwsc
+          path: app/build/hyp-${{ env.V }}.fwsc
       - uses: actions/upload-artifact@v4
         if: steps.lof.outcome == 'success'
         with:
@@ -262,6 +281,7 @@ jobs:
           path: build/pages
   deploy:
     needs: build
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

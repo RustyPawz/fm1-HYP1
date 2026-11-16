@@ -693,7 +693,7 @@ static void rm_draw(void)
     rm.drawn = (uint8_t)(1u + rm.link);
 }
 
-#ifndef EN_WEB
+#if !defined EN_WEB && !defined PLAT_WEB
 static void rm_enter(void)
 {
     int e;
@@ -855,7 +855,7 @@ static void input(void)
             }
             if (i == B_SEQ)
                 ui.seq_held = 0;
-#ifndef EN_WEB
+#if !defined EN_WEB && !defined PLAT_WEB
             if (i == B_GLO && (btn >> B_SEL & 1u)) {   /* shift: remote, the panel plays the browser */
                 rm_enter();
                 return;

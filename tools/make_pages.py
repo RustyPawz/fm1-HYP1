@@ -5,7 +5,7 @@
   index.html                  what HYP-1 is, the video, and the ways in: try, install, manual, download, source
   img/                        screenshots (docs/img)
   emu/                        HYP-1 in the browser (build/emu, from web/emu/build.sh)
-  install/index.html          the web installer (web/amb_installer.html, with fm1pkg.js, fm1ota.js and
+  install/index.html          the web installer (base/web/installer.html, with fm1-base's fm1ports.js, fm1pkg.js, fm1ota.js and
                               the package's metadata inlined; Chrome or Edge, Web MIDI)
   manual/index.html, img/     the manual (tools/manual_html.py, from docs/MANUAL.md)
   firmware/amb-VERSION.fwsc   the package the installer writes; also the download
@@ -15,6 +15,7 @@
 The package must be a release build (./build.sh --release X.Y): its identity, FM-1_7XXYYZZ, is what
 the installer checks the download against and what the FM-1 reports after the install."""
 import html
+import hashlib
 import json
 import os
 import re
@@ -24,8 +25,9 @@ import sys
 from pathlib import Path
 
 SRC = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(SRC / "web"))
-from make_site import product_of, strip_module  # noqa: E402  (Felucca's: the package format)
+BASE = SRC / "base"
+sys.path.insert(0, str(BASE / "tools"))
+from make_site import MBOOT_VERSION, product_of, read_conf, strip_module  # noqa: E402  (fm1-base's: the package format)
 
 REPO = os.environ.get("REPO_URL", "https://github.com/RustyPawz/fm1-HYP1")
 
@@ -244,6 +246,24 @@ Installing firmware is at your own risk.</p>
 """
 
 
+# the installer in HYP-1's colours (fm1-base's page takes its own from these variables, light or dark), and the note
+INSTALL_STYLE = """<style>
+  :root, :root[data-theme="light"], :root[data-theme="dark"], :root:not([data-theme="light"]) {
+    --bg: #141318; --fg: #f1ecf4; --dim: #aaa1b8; --accent: #ff8020; --on-accent: #1a0c03; --bad: #ff8a73; --focus: #c18cff; }
+  .hyp-note { border: 1px solid #ff8020; border-left-width: 5px; border-radius: 10px; padding: 10px 14px; margin: 0 0 1rem; font-size: .92em; }
+  .hyp-note p { margin: 0; } .hyp-note b { color: #ff8020; } .hyp-note a { color: inherit; }
+</style>
+"""
+INSTALL_NOTE = """  <div class="hyp-note" role="note">
+  <p><b>Newer FM-1s:</b> from version 1.5.63 on, this firmware works with the flash chip in recently sold
+  FM-1s (earlier versions could not save or be updated on them). It has not been tested on one yet. If you try it
+  on a recently bought FM-1, please say how it went: on
+  <a href="https://github.com/RustyPawz/fm1-HYP1/issues/11" target="_blank" rel="noopener">GitHub</a> or by email to
+  <a href="mailto:itsme@redtail.works">itsme@redtail.works</a>.</p>
+  </div>
+"""
+
+
 def main(pkg, version, out):
     pkg, out = Path(pkg), Path(out)
     raw = pkg.read_bytes()
@@ -258,16 +278,33 @@ def main(pkg, version, out):
     for d in ("install", "manual", "firmware"):
         (out / d).mkdir(parents=True)
     shutil.copy(pkg, out / "firmware" / name)
-    # the installer
-    page = (SRC / "web" / "amb_installer.html").read_text(encoding="utf-8")
-    lib = strip_module((SRC / "web" / "fm1pkg.js").read_text(encoding="utf-8")) + "\n" + \
-        strip_module((SRC / "web" / "fm1ota.js").read_text(encoding="utf-8"))
-    meta = json.dumps({"version": version, "product": product, "pkg": "../firmware/" + name})
-    for mark in ("/*LIB*/", "/*META*/"):
+    # the installer: fm1-base's page (as AMB-1's make_pages.py), filled in from app/fm1.toml, in HYP-1's colours,
+    # with the note about the newer FM-1s under its title
+    conf = read_conf(SRC / "app" / "fm1.toml")
+    page = (BASE / "web" / "installer.html").read_text(encoding="utf-8")
+    lib = "\n".join(strip_module((BASE / "web" / f).read_text(encoding="utf-8"))   # (fm1ota.js asks fm1ports.js's)
+                    for f in ("fm1ports.js", "fm1pkg.js", "fm1ota.js"))
+    # m-bootloader (MIT), which the installer offers to install after HYP-1, with its licence (as fm1-base's make_site)
+    boot = BASE / "web" / "m-bootloader" / f"fm1-uboot-{MBOOT_VERSION}.fwsc"
+    boot_name = f"m-bootloader-{MBOOT_VERSION}.fwsc"
+    shutil.copy(boot, out / "firmware" / boot_name)
+    shutil.copy(BASE / "web" / "m-bootloader" / "LICENSE", out / "firmware" / "m-bootloader-LICENSE.txt")
+    meta = json.dumps({"version": version, "product": product, "pkg": "../firmware/" + name,
+                       "backup": bool(conf.get("backup")),
+                       "boot": {"pkg": "../firmware/" + boot_name, "version": MBOOT_VERSION,
+                                "sha256": hashlib.sha256(boot.read_bytes()).hexdigest()}})
+    for mark in ("/*LIB*/", "/*META*/", "/*APP*/", "</head>", "<h1>Install {{NAME}}</h1>"):
         if page.count(mark) != 1:
-            raise SystemExit(f"amb_installer.html must contain {mark} once")
-    page = page.replace("https://github.com/charlesvestal/fm1-amb", REPO).replace("github.com/charlesvestal/fm1-amb", REPO[8:])
-    (out / "install" / "index.html").write_text(page.replace("/*LIB*/", lib).replace("/*META*/", meta), encoding="utf-8")
+            raise SystemExit(f"base/web/installer.html must contain {mark} once")
+    page = page.replace("</head>", INSTALL_STYLE + "</head>").replace("<h1>Install {{NAME}}</h1>",
+                                                                      "<h1>Install {{NAME}}</h1>\n" + INSTALL_NOTE)
+    for key, val in (("NAME", "HYP-1"), ("REPO", REPO), ("REPO_SHORT", re.sub(r"^https?://", "", REPO)),
+                     ("LICENSE", conf.get("licence", "GPL-3.0-only")), ("CREDITS", " " + conf.get("credits", ""))):
+        page = page.replace("{{" + key + "}}", val)
+    # the firmware's own steps around an install (fm1.toml install_app; base/web/installer.html APP): HYP-1 has none
+    app_js = (SRC / "app" / conf["install_app"]).read_text(encoding="utf-8") if conf.get("install_app") else "null"
+    (out / "install" / "index.html").write_text(page.replace("/*LIB*/", lib).replace("/*META*/", meta)
+                                                .replace("/*APP*/", app_js), encoding="utf-8")
     # the manual (a complete page; its images beside it)
     subprocess.run([sys.executable, str(SRC / "tools" / "manual_html.py"), str(SRC / "docs" / "MANUAL.md"),
                     str(out / "manual" / "index.html")], check=True, capture_output=True)
@@ -297,10 +334,13 @@ def main(pkg, version, out):
     except (KeyError, TypeError, ValueError, OSError):
         pass
     (out / "board" / "config.json").write_text(json.dumps(board), encoding="utf-8")
-    emu = SRC / "build" / "emu"
-    if not (emu / "amb.wasm").exists():
-        raise SystemExit("no build/emu/amb.wasm: run web/emu/build.sh (needs Emscripten)")
+    emu = SRC / "app" / "build" / "emu"
+    if not (emu / "app.wasm").exists():
+        raise SystemExit("no app/build/emu/app.wasm: run ./build.sh --web (needs Emscripten)")
     shutil.copytree(emu, out / "emu")
+    # the screen reader's words files (fm1-reader): every one ever made, for the devices that point at them
+    if (SRC / "app" / "web" / "words").exists():
+        shutil.copytree(SRC / "app" / "web" / "words", out / "words")
     (out / ".nojekyll").write_text("")
     print(f"site: {out}: index.html, install/ ({product}), manual/, emu/, board/ ({'ready' if board else 'waiting for Discussions'}), firmware/{name} ({len(raw)} B)")
 

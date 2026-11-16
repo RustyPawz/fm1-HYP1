@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-"""Stream view, for livestreams, put into every emulator of the pack (web/emu, lof1, eco1, grav1, cty1):
+"""Stream view, for livestreams, put into every emulator of the pack (app/web/emu, lof1, eco1, grav1, cty1):
 
   the page's emulator on a 16:9 stage (1920 x 1080, scaled to the window): the FM-1 on the left, its screen
   large and sharp on the right, the firmware's name above. Behind it all, a background of each firmware's own,
@@ -24,7 +24,7 @@
 from pathlib import Path
 
 SRC = Path(__file__).resolve().parents[2]
-PAGES = [SRC / "web/emu/index.html", SRC / "lof1/web/emu/index.html", SRC / "eco1/web/emu/index.html",
+PAGES = [SRC / "app/web/emu/index.html", SRC / "lof1/web/emu/index.html", SRC / "eco1/web/emu/index.html",
          SRC / "grav1/web/emu/index.html", SRC / "cty1/web/emu/index.html"]
 A, B = "/* stream view: begin */", "/* stream view: end */"          # the old single marker (cleared)
 CA, CB = "/* stream view css: begin */", "/* stream view css: end */"
